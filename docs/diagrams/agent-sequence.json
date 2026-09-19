@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "llama-engine-agent — Agent Loop Sequence",
+    "subtitle": "Message flow from user input to final response",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "column_fit": "spread",
+    "viewBox": [1000, 800],
+    "views": [
+      {
+        "id": "happy-path",
+        "label": "Happy path",
+        "focus": ["user", "frontend", "backend", "agent", "llm"],
+        "note": "Normal flow without tool calls"
+      },
+      {
+        "id": "tool-call-flow",
+        "label": "Tool call flow",
+        "focus": ["agent", "llm", "tools", "db"],
+        "note": "Agent executes tools and continues loop"
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "User",
+      "sublabel": "Browser"
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "React UI",
+      "sublabel": "engine-ui-agent"
+    },
+    {
+      "id": "backend",
+      "type": "backend",
+      "label": "Express API",
+      "sublabel": "engine-agent"
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "Agent Loop",
+      "sublabel": "loop.ts"
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "llama.cpp",
+      "sublabel": "LLM Server"
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "Tool Registry",
+      "sublabel": "9 tools"
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "SQLite",
+      "sublabel": "agent.db"
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg-1",
+      "from": "user",
+      "to": "frontend",
+      "y": 160,
+      "label": "Send message"
+    },
+    {
+      "id": "msg-2",
+      "from": "frontend",
+      "to": "backend",
+      "y": 200,
+      "label": "POST /api/chat or WS 'chat'"
+    },
+    {
+      "id": "msg-3",
+      "from": "backend",
+      "to": "db",
+      "y": 240,
+      "label": "Save user message",
+      "variant": "dashed"
+    },
+    {
+      "id": "msg-4",
+      "from": "backend",
+      "to": "db",
+      "y": 280,
+      "label": "Load memories",
+      "variant": "dashed"
+    },
+    {
+      "id": "msg-5",
+      "from": "backend",
+      "to": "agent",
+      "y": 320,
+      "label": "runAgent(config, options)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "msg-6",
+      "from": "agent",
+      "to": "llm",
+      "y": 370,
+      "label": "sendMessageStream(history, tools)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "msg-7",
+      "from": "llm",
+      "to": "agent",
+      "y": 410,
+      "label": "Content chunks / tool_calls",
+      "variant": "return"
+    },
+    {
+      "id": "msg-8",
+      "from": "agent",
+      "to": "tools",
+      "y": 460,
+      "label": "execute(name, args)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "msg-9",
+      "from": "tools",
+      "to": "db",
+      "y": 500,
+      "label": "Save tool result",
+      "variant": "dashed"
+    },
+    {
+      "id": "msg-10",
+      "from": "tools",
+      "to": "agent",
+      "y": 540,
+      "label": "Tool result",
+      "variant": "return"
+    },
+    {
+      "id": "msg-11",
+      "from": "agent",
+      "to": "llm",
+      "y": 590,
+      "label": "Continue with tool result"
+    },
+    {
+      "id": "msg-12",
+      "from": "llm",
+      "to": "agent",
+      "y": 630,
+      "label": "Final text response",
+      "variant": "return"
+    },
+    {
+      "id": "msg-13",
+      "from": "agent",
+      "to": "backend",
+      "y": 670,
+      "label": "Return result",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "frontend",
+      "from": 200,
+      "to": 670,
+      "type": "frontend"
+    },
+    {
+      "participant": "backend",
+      "from": 200,
+      "to": 670,
+      "type": "backend"
+    },
+    {
+      "participant": "agent",
+      "from": 320,
+      "to": 670,
+      "type": "backend"
+    },
+    {
+      "participant": "llm",
+      "from": 370,
+      "to": 630,
+      "type": "external"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Streaming",
+      "items": [
+        "Content chunks arrive in real-time via SSE/WS",
+        "Tool start/end events notify UI of execution"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Agent Loop",
+      "items": [
+        "Max 10 iterations per user message",
+        "Loop continues while LLM returns tool_calls"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Persistence",
+      "items": [
+        "User message saved before processing",
+        "Tool results saved with tool_call_id"
+      ]
+    }
+  ]
+}

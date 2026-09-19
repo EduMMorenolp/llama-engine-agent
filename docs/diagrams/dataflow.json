@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "llama-engine-agent — Data Flow",
+    "subtitle": "Data flows between sessions, messages, and LLM context",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "views": [
+      {
+        "id": "main-flow",
+        "label": "Main data flow",
+        "focus": ["user-input", "sessions", "messages", "llm-input"],
+        "note": "How user input becomes LLM context"
+      }
+    ]
+  },
+  "stages": [
+    { "label": "Input" },
+    { "label": "Storage" },
+    { "label": "LLM Input" }
+  ],
+  "nodes": [
+    {
+      "id": "user-input",
+      "type": "external",
+      "label": "User Input",
+      "sublabel": "Chat message",
+      "stage": 0,
+      "row": 0
+    },
+    {
+      "id": "sessions",
+      "type": "backend",
+      "label": "Sessions",
+      "sublabel": "CRUD service",
+      "stage": 1,
+      "row": 0
+    },
+    {
+      "id": "messages",
+      "type": "database",
+      "label": "Messages",
+      "sublabel": "Chat history",
+      "stage": 1,
+      "row": 1
+    },
+    {
+      "id": "memories",
+      "type": "database",
+      "label": "Memories",
+      "sublabel": "Persistent context",
+      "stage": 1,
+      "row": 2
+    },
+    {
+      "id": "llm-input",
+      "type": "external",
+      "label": "LLM Input",
+      "sublabel": "Combined context",
+      "stage": 2,
+      "row": 0
+    }
+  ],
+  "flows": [
+    {
+      "id": "input-to-sessions",
+      "from": "user-input",
+      "to": "sessions",
+      "label": "Create session"
+    },
+    {
+      "id": "sessions-to-messages",
+      "from": "sessions",
+      "to": "messages",
+      "label": "Store messages",
+      "labelAt": [315, 200]
+    },
+    {
+      "id": "messages-to-llm",
+      "from": "messages",
+      "to": "llm-input",
+      "label": "History array",
+      "labelAt": [500, 238]
+    },
+    {
+      "id": "memories-to-llm",
+      "from": "memories",
+      "to": "llm-input",
+      "label": "Context injection",
+      "labelAt": [422, 314]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Storage",
+      "items": [
+        "SQLite via sql.js (WASM)",
+        "4 tables: sessions, messages, memories, custom_tools"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Context Assembly",
+      "items": [
+        "History trimmed to fit context window",
+        "Memories injected in system prompt"
+      ]
+    }
+  ]
+}

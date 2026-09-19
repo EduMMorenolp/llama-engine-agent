@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "llama-engine-agent — System Architecture",
+    "subtitle": "AI Agent platform with local llama.cpp backend",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "views": [
+      {
+        "id": "full-system",
+        "label": "Full system overview",
+        "focus": ["frontend", "backend", "agent", "llm", "tools", "db"],
+        "note": "Complete view of all components and their connections"
+      },
+      {
+        "id": "agent-core",
+        "label": "Agent core loop",
+        "focus": ["agent", "llm", "tools", "db"],
+        "note": "How the agent processes messages and executes tools"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "User",
+      "sublabel": "Browser / Telegram",
+      "pos": [40, 200],
+      "size": [120, 60]
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "React UI",
+      "sublabel": "engine-ui-agent :3061",
+      "pos": [240, 200],
+      "size": [140, 60],
+      "tag": "React 19 + Vite 6"
+    },
+    {
+      "id": "backend",
+      "type": "backend",
+      "label": "Express API",
+      "sublabel": "engine-agent :3060",
+      "pos": [480, 200],
+      "size": [140, 60],
+      "tag": "TypeScript + Zod"
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "Agent Loop",
+      "sublabel": "loop.ts",
+      "pos": [720, 120],
+      "size": [140, 60],
+      "tag": "Max 10 iterations"
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "llama.cpp",
+      "sublabel": "localhost:3050",
+      "pos": [960, 120],
+      "size": [140, 60],
+      "tag": "OpenAI-compatible API"
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "Tool Registry",
+      "sublabel": "9 built-in tools",
+      "pos": [720, 280],
+      "size": [140, 60],
+      "tag": "bash, files, search, memory"
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "SQLite",
+      "sublabel": "sql.js WASM",
+      "pos": [960, 280],
+      "size": [140, 60],
+      "tag": "agent.db"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Frontend",
+      "wraps": ["frontend"],
+      "pad": 20
+    },
+    {
+      "kind": "region",
+      "label": "Backend",
+      "wraps": ["backend", "agent", "tools"],
+      "pad": 20
+    }
+  ],
+  "connections": [
+    {
+      "id": "user-frontend",
+      "from": "user",
+      "to": "frontend",
+      "label": "HTTP / WebSocket",
+      "variant": "emphasis",
+      "labelAt": [200, 274]
+    },
+    {
+      "id": "frontend-backend",
+      "from": "frontend",
+      "to": "backend",
+      "label": "REST API + WS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "backend-agent",
+      "from": "backend",
+      "to": "agent",
+      "label": "runAgent()",
+      "variant": "emphasis",
+      "labelDy": -20
+    },
+    {
+      "id": "agent-llm",
+      "from": "agent",
+      "to": "llm",
+      "label": "OpenAI API",
+      "variant": "emphasis"
+    },
+    {
+      "id": "agent-tools",
+      "from": "agent",
+      "to": "tools",
+      "label": "execute()",
+      "variant": "default",
+      "labelAt": [790, 194]
+    },
+    {
+      "id": "agent-db",
+      "from": "agent",
+      "to": "db",
+      "label": "load/save",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "top"
+    },
+    {
+      "id": "tools-db",
+      "from": "tools",
+      "to": "db",
+      "label": "SQL",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Frontend",
+      "items": [
+        "React 19 + Vite 6 SPA",
+        "WebSocket streaming with auto-reconnect",
+        "Markdown rendering with GFM + syntax highlighting"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Backend",
+      "items": [
+        "Express 4 + TypeScript strict mode",
+        "Agent loop with 9 built-in tools",
+        "SSE + WebSocket dual streaming"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Agent Core",
+      "items": [
+        "Iterative loop (max 10 iterations)",
+        "Tool calls: bash, file ops, search, memory",
+        "Persistent memory across sessions"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Storage",
+      "items": [
+        "SQLite via sql.js (WASM, no native deps)",
+        "4 tables: sessions, messages, memories, custom_tools",
+        "Auto-migration on startup"
+      ]
+    }
+  ]
+}

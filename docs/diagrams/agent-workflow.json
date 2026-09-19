@@ -1,0 +1,83 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "llama-engine-agent — Agent Tool Call Workflow",
+    "subtitle": "Iterative process of message processing and tool execution",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "happy-path",
+        "label": "Request to result",
+        "focus": ["user-msg", "frontend", "agent", "tool-router", "final"],
+        "note": "Follow the successful request from user intent to the final reply"
+      },
+      {
+        "id": "tool-execution",
+        "label": "Tool execution loop",
+        "focus": ["agent", "tool-router", "tool", "db"],
+        "note": "See how tools are executed and results are persisted"
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "ui", "label": "User Interface" },
+    { "id": "agent", "label": "Agent Runtime" },
+    { "id": "tools", "label": "Tool Execution" }
+  ],
+  "phases": [
+    { "id": "intake", "label": "Intake", "fromCol": 0, "toCol": 1 },
+    { "id": "reasoning", "label": "Plan + route", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "execution", "label": "Execute + report", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "agent-loop", "label": "Agent Loop", "lane": "agent", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "tool-work", "label": "Tool Work", "lane": "tools", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["user-msg", "frontend", "agent", "tool-router", "tool", "final"],
+  "nodes": [
+    { "id": "user-msg", "lane": "ui", "col": 0, "type": "external", "label": "User Message", "sublabel": "input text", "width": 132 },
+    { "id": "frontend", "lane": "ui", "col": 1, "type": "frontend", "label": "Chat UI", "sublabel": "React SPA", "width": 132 },
+    { "id": "final", "lane": "ui", "col": 5, "type": "frontend", "label": "Final Reply", "sublabel": "rendered response", "width": 132 },
+    { "id": "agent", "lane": "agent", "col": 2, "type": "backend", "label": "Agent Planner", "sublabel": "plan next step", "tag": "max 10 iterations", "width": 132 },
+    { "id": "tool-router", "lane": "agent", "col": 3, "type": "backend", "label": "Tool Router", "sublabel": "choose tool", "width": 132 },
+    { "id": "tool", "lane": "tools", "col": 4, "type": "backend", "label": "Tool Execution", "sublabel": "bash/files/search", "tag": "structured result", "width": 132 },
+    { "id": "db", "lane": "tools", "col": 5, "type": "database", "label": "SQLite DB", "sublabel": "persist result", "width": 132 }
+  ],
+  "edges": [
+    { "id": "input", "from": "user-msg", "to": "frontend", "variant": "default" },
+    { "id": "plan", "from": "frontend", "to": "agent", "label": "plan", "variant": "emphasis" },
+    { "id": "route", "from": "agent", "to": "tool-router", "variant": "default" },
+    { "id": "execute", "from": "tool-router", "to": "tool", "label": "execute tool", "variant": "emphasis" },
+    { "id": "persist", "from": "tool", "to": "db", "label": "save result", "variant": "dashed" },
+    { "id": "reply", "from": "tool", "to": "final", "variant": "emphasis", "fromSide": "right", "toSide": "right", "width": 1.2 }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Workflow",
+      "items": [
+        "User sends message via chat UI",
+        "Agent plans next step in the loop"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Execution",
+      "items": [
+        "Tool router selects appropriate tool",
+        "Results persisted to SQLite"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Loop Control",
+      "items": [
+        "Max 10 iterations per message",
+        "Loop exits when LLM returns text only"
+      ]
+    }
+  ]
+}
