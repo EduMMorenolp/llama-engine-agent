@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Changed**: Versioned migrations — SQL schemas moved from inline strings to `src/db/migrations/*.sql` files. Migration runner tracks applied files in `_migrations` table. [2026-09-19]
+  * **Files (Archivos)**: `src/db/index.ts`, `src/db/migrations/001-create-sessions.sql`, `002-create-messages.sql`, `003-create-memories.sql`, `004-create-custom-tools.sql`. [2026-09-19]
+
+- **Added**: Zod DTOs for MCP module — `addServerDto` validates `name` (required), `transport` (enum), optional `command`, `args`, `url`, `env`. Controller now uses `safeParse` with `BadRequestException` on validation failure. [2026-09-19]
+  * **Files (Archivos)**: `src/modules/mcp/dto.ts`, `src/modules/mcp/controller.ts`. [2026-09-19]
+
+- **Added**: Backend `README.md` — project description, stack, architecture, setup, scripts, endpoints, docs. [2026-09-19]
+  * **Files (Archivos)**: `README.md`. [2026-09-19]
+
 - **Changed**: Consolidated data access layer — `SessionStore` removed. `SessionService` is now the single canonical data access layer for sessions and messages. Added `addMessage`, `getSessionOrNull`, `createSessionRaw` methods. `AgentLoopConfig` now includes `memoryService: MemoryService` for memory operations. [2026-09-19]
   * **Files (Archivos)**: `src/modules/sessions/service.ts`, `src/agent/loop.ts`, `src/agent/prompt.ts`, `src/tools/types.ts`, `src/ws.ts`, `src/server.ts`, `src/routes/index.ts`, `src/index.ts`. [2026-09-19]
   * **Removed**: `src/sessions/store.ts`, `src/sessions/db.ts` (dead code duplicates). [2026-09-19]

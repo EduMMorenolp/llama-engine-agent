@@ -1,10 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import initSqlJs, { type Database } from "sql.js";
 import { getConfig } from "../config/index.js";
 import { logger } from "../utils/logger.js";
 
 let db: Database | null = null;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function getDb(): Promise<Database> {
 	if (db) return db;
@@ -65,48 +68,47 @@ export function closeDb(): void {
 
 function runMigrations(db: Database): void {
 	db.run(`
-		CREATE TABLE IF NOT EXISTS sessions (
-			id TEXT PRIMARY KEY,
-			name TEXT,
-			model TEXT,
-			created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-			updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+		CREATE TABLE IF NOT EXISTS _migrations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			applied_at INTEGER NOT NULL DEFAULT (unixepoch())
 		)
 	`);
-	db.run(`
-		CREATE TABLE IF NOT EXISTS messages (
-			id TEXT PRIMARY KEY,
-			session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-			role TEXT NOT NULL,
-			content TEXT,
-			tool_calls TEXT,
-			tool_call_id TEXT,
-			created_at INTEGER NOT NULL DEFAULT (unixepoch())
-		)
-	`);
-	db.run(`
-		CREATE TABLE IF NOT EXISTS memories (
-			id TEXT PRIMARY KEY,
-			key TEXT NOT NULL UNIQUE,
-			content TEXT NOT NULL,
-			tags TEXT DEFAULT '[]',
-			created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-			updated_at INTEGER NOT NULL DEFAULT (unixepoch())
-		)
-	`);
-	db.run(`
-		CREATE TABLE IF NOT EXISTS custom_tools (
-			name TEXT PRIMARY KEY,
-			description TEXT NOT NULL,
-			parameters TEXT NOT NULL,
-			handler_type TEXT NOT NULL,
-			handler_config TEXT NOT NULL,
-			enabled INTEGER NOT NULL DEFAULT 1,
-			created_at INTEGER NOT NULL DEFAULT (unixepoch())
-		)
-	`);
-	db.run("CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);");
-	db.run("CREATE INDEX IF NOT EXISTS idx_memories_key ON memories(key);");
 
-	logger.info("Migrations applied");
+	const applied = new Set<string>();
+	const rows = db.exec("SELECT name FROM _migrations");
+	if (rows.length > 0) {
+		for (const row of rows[0].values) {
+			applied.add(row[0] as string);
+		}
+	}
+
+	const migrationsDir = path.join(__dirname, "migrations");
+	if (!fs.existsSync(migrationsDir)) {
+		logger.info("No migrations directory found, skipping");
+		return;
+	}
+
+	const files = fs.readdirSync(migrationsDir)
+		.filter((f) => f.endsWith(".sql"))
+		.sort();
+
+	let count = 0;
+	for (const file of files) {
+		if (applied.has(file)) continue;
+
+		const sql = fs.readFileSync(path.join(migrationsDir, file), "utf8");
+		const statements = sql.split(";").map((s) => s.trim()).filter(Boolean);
+
+		for (const stmt of statements) {
+			db.run(stmt);
+		}
+
+		db.run("INSERT INTO _migrations (name) VALUES (?)", [file]);
+		count++;
+	}
+
+	if (count > 0) {
+		logger.info(`Applied ${count} migration(s)`);
+	}
 }

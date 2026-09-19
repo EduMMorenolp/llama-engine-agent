@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
+import { BadRequestException } from "../../common/exceptions/http-exception.js";
 import type { MCPManager } from "./manager.js";
+import { addServerDto } from "./dto.js";
 
 export class MCPController {
 	constructor(private mcpManager: MCPManager) {}
@@ -11,12 +13,12 @@ export class MCPController {
 
 	addServer = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 		try {
-			const { name, transport = "stdio", command, args, url, env } = req.body;
-			if (!name) {
-				res.status(400).json({ error: "El nombre del servidor MCP es requerido" });
-				return;
+			const result = addServerDto.safeParse(req.body);
+			if (!result.success) {
+				const messages = result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
+				throw new BadRequestException(messages.join(", "));
 			}
-			const server = this.mcpManager.addServer({ name, transport, command, args, url, env });
+			const server = this.mcpManager.addServer(result.data);
 			res.status(201).json(server);
 		} catch (err) {
 			next(err);

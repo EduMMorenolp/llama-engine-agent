@@ -10,7 +10,10 @@
     "test:watch": "vitest",
     "lint": "biome check src/",
     "format": "biome format --write src/",
-    "check": "biome check --write src/"
+    "check": "biome check --write src/",
+    "diagrams:validate": "node ../_Config/.opencode/skills/archify/bin/archify.mjs validate",
+    "diagrams:build": "node ../_Config/.opencode/skills/archify/bin/archify.mjs deliver",
+    "diagrams:check": "node ../_Config/.opencode/skills/archify/bin/archify.mjs visual-check"
   },
   "dependencies": {
     "cors": "^2.8.5",
