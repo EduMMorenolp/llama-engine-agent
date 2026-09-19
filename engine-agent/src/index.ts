@@ -2,8 +2,9 @@ import { createServer } from "node:http";
 import { LLMClient } from "./agent/llm-client.js";
 import { getConfig } from "./config/index.js";
 import { closeDb, getDb } from "./db/index.js";
+import { MemoryService } from "./modules/memories/service.js";
+import { SessionService } from "./modules/sessions/service.js";
 import { createApp } from "./server.js";
-import { SessionStore } from "./sessions/store.js";
 import { registerAllTools } from "./tools/index.js";
 import { toolRegistry } from "./tools/registry.js";
 import { logger } from "./utils/logger.js";
@@ -13,7 +14,8 @@ async function bootstrap() {
 	const config = getConfig();
 
 	const db = await getDb();
-	const store = new SessionStore(db);
+	const sessionService = new SessionService(db);
+	const memoryService = new MemoryService(db);
 
 	registerAllTools(toolRegistry);
 	logger.info(`${toolRegistry.list().length} tools registered`);
@@ -27,7 +29,8 @@ async function bootstrap() {
 	const agentConfig = {
 		llmClient,
 		toolRegistry,
-		store,
+		store: sessionService,
+		memoryService,
 		maxIterations: config.MAX_ITERATIONS,
 		workDir: process.cwd(),
 	};
@@ -35,13 +38,14 @@ async function bootstrap() {
 	const app = createApp(
 		{ port: config.AGENT_PORT, apiKey: config.ENGINE_API_KEY ?? "" },
 		db,
-		store,
+		sessionService,
+		memoryService,
 		toolRegistry,
 		agentConfig,
 	);
 
 	const server = createServer(app);
-	createWebSocketServer(server, store, agentConfig);
+	createWebSocketServer(server, sessionService, agentConfig);
 
 	server.listen(config.AGENT_PORT, config.HOST, () => {
 		const apiKeySanitized = config.ENGINE_API_KEY ? "***" : "not set";

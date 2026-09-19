@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { getConfig } from "../../config/index.js";
 
 function formatBytes(bytes: number): string {
@@ -15,8 +15,18 @@ function formatModelName(id: string): string {
 		.join(" ");
 }
 
+interface RawModel {
+	id: string;
+	sizeBytes?: number;
+	vision?: boolean;
+}
+
+interface RawHealth {
+	loadedModel?: string;
+}
+
 export class ModelsController {
-	listModels = async (_req: Request, res: Response): Promise<void> => {
+	listModels = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
 		try {
 			const config = getConfig();
 			const apiKey = config.ENGINE_API_KEY || "llama-engine-dev";
@@ -24,24 +34,22 @@ export class ModelsController {
 
 			const headers = { "x-api-key": apiKey };
 
-			// Fetch models list and runtime health in parallel
 			const [modelsRes, healthRes] = await Promise.allSettled([
 				fetch(`${baseUrl}/api/models`, { headers }).then((r) => r.json()),
 				fetch(`${baseUrl}/api/runtime/health`, { headers }).then((r) => r.json()),
 			]);
 
-			const rawModels: any[] =
-				modelsRes.status === "fulfilled" && (modelsRes.value as any)?.models
-					? (modelsRes.value as any).models
+			const rawModels: RawModel[] =
+				modelsRes.status === "fulfilled" && (modelsRes.value as { models?: RawModel[] })?.models
+					? (modelsRes.value as { models: RawModel[] }).models
 					: [];
 
 			const loadedModelId: string | null =
-				healthRes.status === "fulfilled" && (healthRes.value as any)?.loadedModel
-					? (healthRes.value as any).loadedModel
+				healthRes.status === "fulfilled" && (healthRes.value as RawHealth)?.loadedModel
+					? (healthRes.value as RawHealth).loadedModel!
 					: null;
 
 			if (rawModels.length === 0) {
-				// Fallback if engine-api is offline
 				res.json({
 					models: [
 						{
@@ -83,12 +91,11 @@ export class ModelsController {
 				};
 			});
 
-			// Sort so loaded model is first
 			formatted.sort((a, b) => (b.loaded ? 1 : 0) - (a.loaded ? 1 : 0));
 
 			res.json({ models: formatted, activeModel: loadedModelId });
-		} catch (err: any) {
-			res.status(500).json({ error: err.message });
+		} catch (err) {
+			next(err);
 		}
 	};
 }

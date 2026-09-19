@@ -1,6 +1,6 @@
 import type { Database } from "sql.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { closeDb, getDb } from "../../sessions/db.js";
+import { closeDb, getDb } from "../../db/index.js";
 import { MemoryController } from "./controller.js";
 import { MemoryService } from "./service.js";
 
@@ -9,7 +9,9 @@ let service: MemoryService;
 let controller: MemoryController;
 
 beforeAll(async () => {
-	db = await getDb(":memory:");
+	process.env.ENGINE_API_KEY = "test-key";
+	process.env.DB_PATH = ":memory:";
+	db = await getDb();
 	service = new MemoryService(db);
 	controller = new MemoryController(service);
 });

@@ -1,13 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SessionStore } from "../sessions/store.js";
+import type { MemoryService } from "../modules/memories/service.js";
+import type { SessionService } from "../modules/sessions/service.js";
 import { buildPrompt, getMemoriesForContext } from "./prompt.js";
 
-vi.mock("../sessions/store.js");
+vi.mock("../modules/sessions/service.js");
+vi.mock("../modules/memories/service.js");
 
-function createMockStore(messages: any[] = [], memories: any[] = []): SessionStore {
+function createMockStore(messages: any[] = []): SessionService {
 	return {
 		getMessages: vi.fn().mockReturnValue(messages),
-		searchMemories: vi.fn().mockReturnValue(memories),
+	} as any;
+}
+
+function createMockMemoryService(memories: any[] = []): MemoryService {
+	return {
+		search: vi.fn().mockReturnValue(memories),
 	} as any;
 }
 
@@ -191,21 +198,18 @@ describe("prompt", () => {
 
 	describe("getMemoriesForContext", () => {
 		it("returns memories as key-content pairs", () => {
-			const store = createMockStore(
-				[],
-				[
-					{ key: "name", content: "Eduardo" },
-					{ key: "lang", content: "Español" },
-				],
-			);
-			const memories = getMemoriesForContext(store);
+			const memoryService = createMockMemoryService([
+				{ key: "name", content: "Eduardo" },
+				{ key: "lang", content: "Español" },
+			]);
+			const memories = getMemoriesForContext(memoryService);
 			expect(memories).toHaveLength(2);
 			expect(memories[0]).toEqual({ key: "name", content: "Eduardo" });
 		});
 
 		it("returns empty array when no memories", () => {
-			const store = createMockStore([], []);
-			const memories = getMemoriesForContext(store);
+			const memoryService = createMockMemoryService([]);
+			const memories = getMemoriesForContext(memoryService);
 			expect(memories).toEqual([]);
 		});
 	});

@@ -25,8 +25,9 @@ const bashHandler: ToolHandler = async (args) => {
 	try {
 		const stdout = execSync(command, { encoding: "utf8", timeout: 30000, maxBuffer: 5 * 1024 * 1024 });
 		return truncate(stdout);
-	} catch (err: any) {
-		return truncate(err.stderr || err.stdout || err.message);
+	} catch (err: unknown) {
+		const error = err as { stderr?: string; stdout?: string; message?: string };
+		return truncate(error.stderr || error.stdout || error.message || "Unknown error");
 	}
 };
 
@@ -42,8 +43,9 @@ const readFileHandler: ToolHandler = async (args) => {
 		}
 		const content = fs.readFileSync(filePath, "utf8");
 		return truncate(content);
-	} catch (err: any) {
-		return `Error leyendo archivo: ${err.message}`;
+	} catch (err: unknown) {
+		const error = err as { message?: string };
+		return `Error leyendo archivo: ${error.message || String(err)}`;
 	}
 };
 
@@ -55,8 +57,9 @@ const writeFileHandler: ToolHandler = async (args) => {
 		if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 		fs.writeFileSync(filePath, content, "utf8");
 		return `Archivo escrito correctamente (${content.length} caracteres)`;
-	} catch (err: any) {
-		return `Error escribiendo archivo: ${err.message}`;
+	} catch (err: unknown) {
+		const error = err as { message?: string };
+		return `Error escribiendo archivo: ${error.message || String(err)}`;
 	}
 };
 
@@ -73,8 +76,9 @@ const editFileHandler: ToolHandler = async (args) => {
 		content = content.replace(oldText, newText);
 		fs.writeFileSync(filePath, content, "utf8");
 		return "Archivo editado correctamente";
-	} catch (err: any) {
-		return `Error editando archivo: ${err.message}`;
+	} catch (err: unknown) {
+		const error = err as { message?: string };
+		return `Error editando archivo: ${error.message || String(err)}`;
 	}
 };
 
@@ -93,8 +97,9 @@ const globSearchHandler: ToolHandler = async (args) => {
 			}
 		}
 		return files.length ? files.join("\n") : "No se encontraron archivos";
-	} catch (err: any) {
-		return `Error en búsqueda: ${err.message}`;
+	} catch (err: unknown) {
+		const error = err as { message?: string };
+		return `Error en búsqueda: ${error.message || String(err)}`;
 	}
 };
 
@@ -154,8 +159,9 @@ const grepSearchHandler: ToolHandler = async (args) => {
 		}
 
 		return results.length ? results.join("\n") : "No se encontraron coincidencias";
-	} catch (err: any) {
-		return `Error en búsqueda: ${err.message}`;
+	} catch (err: unknown) {
+		const error = err as { message?: string };
+		return `Error en búsqueda: ${error.message || String(err)}`;
 	}
 };
 

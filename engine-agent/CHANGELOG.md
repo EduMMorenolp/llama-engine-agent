@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- **Changed**: Consolidated data access layer — `SessionStore` removed. `SessionService` is now the single canonical data access layer for sessions and messages. Added `addMessage`, `getSessionOrNull`, `createSessionRaw` methods. `AgentLoopConfig` now includes `memoryService: MemoryService` for memory operations. [2026-09-19]
+  * **Files (Archivos)**: `src/modules/sessions/service.ts`, `src/agent/loop.ts`, `src/agent/prompt.ts`, `src/tools/types.ts`, `src/ws.ts`, `src/server.ts`, `src/routes/index.ts`, `src/index.ts`. [2026-09-19]
+  * **Removed**: `src/sessions/store.ts`, `src/sessions/db.ts` (dead code duplicates). [2026-09-19]
+
+- **Changed**: Error propagation in MCP and Models controllers — all async handlers now use `next(err)` instead of inline try/catch with `res.status(500)`, delegating to the central error handler. [2026-09-19]
+  * **Files (Archivos)**: `src/modules/mcp/controller.ts`, `src/modules/models/controller.ts`. [2026-09-19]
+
+- **Changed**: Replaced `console.log` with centralized `logger` in WebSocket server. Fixed `any` types in `loop.ts`, `ws.ts`, `tools/index.ts`, `chat/handler.ts`. [2026-09-19]
+  * **Files (Archivos)**: `src/ws.ts`, `src/agent/loop.ts`, `src/tools/index.ts`, `src/modules/chat/handler.ts`. [2026-09-19]
+
+- **Added**: Morgan HTTP request logger (`morgan("short")`) integrated in Express middleware stack. [2026-09-19]
+  * **Files (Archivos)**: `src/server.ts`. [2026-09-19]
+  * **Dependencies**: `morgan`, `@types/morgan`. [2026-09-19]
+
+- **Added**: `.env.example` with all environment variables documented. [2026-09-19]
+  * **Files (Archivos)**: `.env.example`. [2026-09-19]
+
+- **Removed**: Dead code — `src/env.ts` (duplicate of `src/config/index.ts`), `src/sessions/db.ts` (duplicate of `src/db/index.ts`), `src/sessions/store.test.ts` (test for deleted store). [2026-09-19]
+
+- **Fixed**: Memory ID uniqueness — `MemoryService.upsert` now uses `crypto.randomUUID()` instead of `Date.now()` to prevent UNIQUE constraint collisions in rapid test execution. [2026-09-19]
+  * **Files (Archivos)**: `src/modules/memories/service.ts`. [2026-09-19]
+
 - **Added**: MCP (Model Context Protocol) subsystem and management (`src/modules/mcp/`). Implements JSON-RPC client communication over `stdio` subprocesses, tool discovery (`tools/list`), dynamic registration in `ToolRegistry`, tool execution (`tools/call`), and REST management endpoints (`/api/mcp/servers`, `/api/mcp/servers/:id/connect`, `/api/mcp/servers/:id/disconnect`). Includes built-in presets: Memory Graph, Filesystem MCP, Fetch & Web Search. [2026-09-16]
   * **Files (Archivos)**: `src/modules/mcp/types.ts`, `src/modules/mcp/manager.ts`, `src/modules/mcp/controller.ts`, `src/modules/mcp/routes.ts`, `src/modules/mcp/manager.test.ts`. [2026-09-16]
 

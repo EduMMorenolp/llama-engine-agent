@@ -2,36 +2,34 @@ import { Router } from "express";
 import type { Database } from "sql.js";
 import type { AgentLoopConfig } from "../agent/loop.js";
 import { createChatRoutes } from "../modules/chat/routes.js";
+import type { MemoryService } from "../modules/memories/service.js";
+import { MemoryController } from "../modules/memories/controller.js";
+import { createMemoryRoutes } from "../modules/memories/routes.js";
 import { MCPController } from "../modules/mcp/controller.js";
 import { MCPManager } from "../modules/mcp/manager.js";
 import { createMCPRoutes } from "../modules/mcp/routes.js";
 import { ModelsController } from "../modules/models/controller.js";
 import { createModelsRoutes } from "../modules/models/routes.js";
-import { MemoryController } from "../modules/memories/controller.js";
-import { createMemoryRoutes } from "../modules/memories/routes.js";
-import { MemoryService } from "../modules/memories/service.js";
+import type { SessionService } from "../modules/sessions/service.js";
 import { SessionController } from "../modules/sessions/controller.js";
 import { createSessionRoutes } from "../modules/sessions/routes.js";
-import { SessionService } from "../modules/sessions/service.js";
 import { ToolController } from "../modules/tools/controller.js";
 import { createToolRoutes } from "../modules/tools/routes.js";
 import { ToolService } from "../modules/tools/service.js";
-import type { SessionStore } from "../sessions/store.js";
 import type { ToolRegistry } from "../tools/registry.js";
 
 export function createApiRoutes(
-	db: Database,
-	store: SessionStore,
+	_db: Database,
+	sessionService: SessionService,
+	memoryService: MemoryService,
 	toolRegistry: ToolRegistry,
 	agentConfig: AgentLoopConfig,
 ) {
 	const router = Router();
 
-	const sessionService = new SessionService(db);
 	const sessionController = new SessionController(sessionService);
 	router.use("/sessions", createSessionRoutes(sessionController));
 
-	const memoryService = new MemoryService(db);
 	const memoryController = new MemoryController(memoryService);
 	router.use("/memories", createMemoryRoutes(memoryController));
 
@@ -46,7 +44,7 @@ export function createApiRoutes(
 	const modelsController = new ModelsController();
 	router.use("/models", createModelsRoutes(modelsController));
 
-	router.use("/chat", createChatRoutes(agentConfig, store));
+	router.use("/chat", createChatRoutes(agentConfig, sessionService));
 
 	return router;
 }

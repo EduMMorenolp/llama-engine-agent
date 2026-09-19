@@ -1,4 +1,5 @@
 import type { Database } from "sql.js";
+import { randomUUID } from "node:crypto";
 import { saveDb } from "../../db/index.js";
 import type { Memory } from "../../sessions/types.js";
 
@@ -33,7 +34,7 @@ export class MemoryService {
 			);
 		} else {
 			this.db.run("INSERT INTO memories (id, key, content, tags) VALUES (?, ?, ?, ?)", [
-				`mem_${Date.now()}`,
+				`mem_${randomUUID()}`,
 				key,
 				content,
 				JSON.stringify(tags),

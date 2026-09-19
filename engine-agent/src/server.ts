@@ -1,12 +1,14 @@
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import morgan from "morgan";
 import type { Database } from "sql.js";
 import type { AgentLoopConfig } from "./agent/loop.js";
+import type { MemoryService } from "./modules/memories/service.js";
+import type { SessionService } from "./modules/sessions/service.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { createApiRoutes } from "./routes/index.js";
-import type { SessionStore } from "./sessions/store.js";
 import type { ToolRegistry } from "./tools/registry.js";
 
 export interface ServerConfig {
@@ -17,7 +19,8 @@ export interface ServerConfig {
 export function createApp(
 	serverConfig: ServerConfig,
 	db: Database,
-	store: SessionStore,
+	sessionService: SessionService,
+	memoryService: MemoryService,
 	toolRegistry: ToolRegistry,
 	agentConfig: AgentLoopConfig,
 ) {
@@ -26,13 +29,18 @@ export function createApp(
 	app.use(helmet());
 	app.use(cors({ origin: true }));
 	app.use(express.json());
+	app.use(morgan("short"));
 
 	app.get("/api/health", (_req, res) => {
 		res.json({ status: "ok", agentRunning: true });
 	});
 
 	const authMiddleware = createAuthMiddleware(serverConfig.apiKey);
-	app.use("/api", authMiddleware, createApiRoutes(db, store, toolRegistry, agentConfig));
+	app.use(
+		"/api",
+		authMiddleware,
+		createApiRoutes(db, sessionService, memoryService, toolRegistry, agentConfig),
+	);
 
 	app.use(errorHandler);
 

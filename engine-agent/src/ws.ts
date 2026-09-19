@@ -3,17 +3,18 @@ import type { Server } from "node:http";
 import { type WebSocket, WebSocketServer } from "ws";
 import type { AgentLoopConfig } from "./agent/loop.js";
 import { runAgent } from "./agent/loop.js";
-import type { SessionStore } from "./sessions/store.js";
+import type { SessionService } from "./modules/sessions/service.js";
+import { logger } from "./utils/logger.js";
 
 export function createWebSocketServer(
 	httpServer: Server,
-	store: SessionStore,
+	store: SessionService,
 	agentConfig: AgentLoopConfig,
 ) {
 	const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
 
 	wss.on("connection", (ws: WebSocket) => {
-		console.log("[ws] client connected");
+		logger.info("[ws] client connected");
 
 		ws.on("message", async (data) => {
 			try {
@@ -29,7 +30,7 @@ export function createWebSocketServer(
 					} = msg.payload ?? {};
 					const sessionId = inputSessionId ?? randomUUID();
 
-					let existingSession = store.getSession(sessionId);
+					let existingSession = store.getSessionOrNull(sessionId);
 					if (!existingSession) {
 						const cleanMsg = typeof message === "string" ? message.trim() : "";
 						const autoName = cleanMsg
@@ -41,8 +42,7 @@ export function createWebSocketServer(
 					} else if (!existingSession.name || existingSession.name === "Nuevo Chat") {
 						const cleanMsg = typeof message === "string" ? message.trim() : "";
 						if (cleanMsg) {
-							const autoName =
-								cleanMsg.length > 35 ? `${cleanMsg.slice(0, 35)}...` : cleanMsg;
+							const autoName = cleanMsg.length > 35 ? `${cleanMsg.slice(0, 35)}...` : cleanMsg;
 							store.updateSession(sessionId, { name: autoName });
 						}
 					}
@@ -55,12 +55,12 @@ export function createWebSocketServer(
 						},
 					);
 				}
-			} catch (err: any) {
-				const errMsg = err.message || "Error al procesar mensaje";
+			} catch (err: unknown) {
+				const errMsg = err instanceof Error ? err.message : "Error al procesar mensaje";
 				try {
 					const parsed = JSON.parse(data.toString());
 					const sessId = parsed?.payload?.sessionId;
-					if (sessId && store.getSession(sessId)) {
+					if (sessId && store.getSessionOrNull(sessId)) {
 						store.addMessage(randomUUID(), sessId, "assistant", `⚠️ **Aviso**: ${errMsg}`);
 					}
 				} catch {}
@@ -69,7 +69,7 @@ export function createWebSocketServer(
 		});
 
 		ws.on("close", () => {
-			console.log("[ws] client disconnected");
+			logger.info("[ws] client disconnected");
 		});
 	});
 

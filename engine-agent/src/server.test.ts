@@ -2,12 +2,14 @@ import type { Database } from "sql.js";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { closeDb, getDb } from "./db/index.js";
+import { MemoryService } from "./modules/memories/service.js";
+import { SessionService } from "./modules/sessions/service.js";
 import { createApp, type ServerConfig } from "./server.js";
-import { SessionStore } from "./sessions/store.js";
 import { ToolRegistry } from "./tools/registry.js";
 
 let db: Database;
-let store: SessionStore;
+let sessionService: SessionService;
+let memoryService: MemoryService;
 let registry: ToolRegistry;
 let app: ReturnType<typeof createApp>;
 
@@ -21,12 +23,14 @@ beforeAll(async () => {
 	process.env.DB_PATH = ":memory:";
 
 	db = await getDb();
-	store = new SessionStore(db);
+	sessionService = new SessionService(db);
+	memoryService = new MemoryService(db);
 	registry = new ToolRegistry();
-	app = createApp(config, db, store, registry, {
+	app = createApp(config, db, sessionService, memoryService, registry, {
 		llmClient: {} as any,
 		toolRegistry: registry,
-		store,
+		store: sessionService,
+		memoryService,
 		maxIterations: 10,
 		workDir: "/tmp",
 	});

@@ -1,8 +1,9 @@
-import type { SessionStore } from "../sessions/store.js";
+import type { MemoryService } from "../modules/memories/service.js";
+import type { SessionService } from "../modules/sessions/service.js";
 import type { LLMMessage } from "./types.js";
 
 export interface PromptContext {
-	store: SessionStore;
+	store: SessionService;
 	sessionId: string;
 	systemPrompt?: string;
 	memories?: Array<{ key: string; content: string }>;
@@ -150,7 +151,7 @@ Reglas:
 }
 
 export function getMemoriesForContext(
-	store: SessionStore,
+	memoryService: MemoryService,
 ): Array<{ key: string; content: string }> {
-	return store.searchMemories("").map((m) => ({ key: m.key, content: m.content }));
+	return memoryService.search("").map((m) => ({ key: m.key, content: m.content }));
 }

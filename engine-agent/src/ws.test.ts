@@ -3,14 +3,16 @@ import type { Database } from "sql.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import { closeDb, getDb } from "./db/index.js";
+import { MemoryService } from "./modules/memories/service.js";
+import { SessionService } from "./modules/sessions/service.js";
 import { createApp } from "./server.js";
-import { SessionStore } from "./sessions/store.js";
 import { ToolRegistry } from "./tools/registry.js";
 import { createWebSocketServer } from "./ws.js";
 
 describe("WebSocket /ws", () => {
 	let db: Database;
-	let store: SessionStore;
+	let sessionService: SessionService;
+	let memoryService: MemoryService;
 	let registry: ToolRegistry;
 	let server: ReturnType<typeof createServer>;
 	let port: number;
@@ -30,13 +32,15 @@ describe("WebSocket /ws", () => {
 		process.env.DB_PATH = ":memory:";
 
 		db = await getDb();
-		store = new SessionStore(db);
+		sessionService = new SessionService(db);
+		memoryService = new MemoryService(db);
 		registry = new ToolRegistry();
 
 		const agentConfig = {
 			llmClient: mockLlmClient as any,
 			toolRegistry: registry,
-			store,
+			store: sessionService,
+			memoryService,
 			maxIterations: 5,
 			workDir: process.cwd(),
 		};
@@ -44,13 +48,14 @@ describe("WebSocket /ws", () => {
 		const app = createApp(
 			{ port: 0, apiKey: "test-key" },
 			db,
-			store,
+			sessionService,
+			memoryService,
 			registry,
 			agentConfig,
 		);
 
 		server = createServer(app);
-		createWebSocketServer(server, store, agentConfig);
+		createWebSocketServer(server, sessionService, agentConfig);
 
 		await new Promise<void>((resolve) => {
 			server.listen(0, () => {

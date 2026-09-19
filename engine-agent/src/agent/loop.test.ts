@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SessionStore } from "../sessions/store.js";
+import type { MemoryService } from "../modules/memories/service.js";
+import type { SessionService } from "../modules/sessions/service.js";
 import { ToolRegistry } from "../tools/registry.js";
 import type { ToolSpec } from "../tools/types.js";
 import type { LLMClient } from "./llm-client.js";
@@ -28,8 +29,13 @@ function createMockStore() {
 				return { id, role, content };
 			}),
 		getMessages: vi.fn().mockReturnValue([]),
-		searchMemories: vi.fn().mockReturnValue([]),
-	} as unknown as SessionStore;
+	} as unknown as SessionService;
+}
+
+function createMockMemoryService() {
+	return {
+		search: vi.fn().mockReturnValue([]),
+	} as unknown as MemoryService;
 }
 
 function createTestTool(name: string): ToolSpec {
@@ -51,12 +57,14 @@ describe("agent loop", () => {
 	it("returns content when no tool calls", async () => {
 		const llm = createMockLLM([], "Hello world");
 		const store = createMockStore();
+		const memoryService = createMockMemoryService();
 		const registry = new ToolRegistry();
 
 		const config: AgentLoopConfig = {
 			llmClient: llm,
 			toolRegistry: registry,
 			store,
+			memoryService,
 			maxIterations: 10,
 			workDir: "/tmp",
 		};
@@ -102,6 +110,7 @@ describe("agent loop", () => {
 			});
 
 		const store = createMockStore();
+		const memoryService = createMockMemoryService();
 		const registry = new ToolRegistry();
 		registry.register(createTestTool("bash"), async () => "test output");
 
@@ -109,6 +118,7 @@ describe("agent loop", () => {
 			llmClient: llm,
 			toolRegistry: registry,
 			store,
+			memoryService,
 			maxIterations: 10,
 			workDir: "/tmp",
 		};
@@ -143,6 +153,7 @@ describe("agent loop", () => {
 		});
 
 		const store = createMockStore();
+		const memoryService = createMockMemoryService();
 		const registry = new ToolRegistry();
 		registry.register(createTestTool("bash"), async () => "output");
 
@@ -150,6 +161,7 @@ describe("agent loop", () => {
 			llmClient: llm,
 			toolRegistry: registry,
 			store,
+			memoryService,
 			maxIterations: 2,
 			workDir: "/tmp",
 		};
@@ -181,6 +193,7 @@ describe("agent loop", () => {
 			});
 
 		const store = createMockStore();
+		const memoryService = createMockMemoryService();
 		const registry = new ToolRegistry();
 		registry.register(createTestTool("failing_tool"), async () => {
 			throw new Error("Tool failed!");
@@ -190,6 +203,7 @@ describe("agent loop", () => {
 			llmClient: llm,
 			toolRegistry: registry,
 			store,
+			memoryService,
 			maxIterations: 10,
 			workDir: "/tmp",
 		};
@@ -202,6 +216,7 @@ describe("agent loop", () => {
 	it("filters tools when enabledTools is provided", async () => {
 		const llm = createMockLLM([], "Done");
 		const store = createMockStore();
+		const memoryService = createMockMemoryService();
 		const registry = new ToolRegistry();
 		registry.register(createTestTool("tool_a"), async () => "a");
 		registry.register(createTestTool("tool_b"), async () => "b");
@@ -210,6 +225,7 @@ describe("agent loop", () => {
 			llmClient: llm,
 			toolRegistry: registry,
 			store,
+			memoryService,
 			maxIterations: 10,
 			workDir: "/tmp",
 		};
@@ -242,6 +258,7 @@ describe("agent loop", () => {
 		});
 
 		const store = createMockStore();
+		const memoryService = createMockMemoryService();
 		const registry = new ToolRegistry();
 		registry.register(createTestTool("bash"), async () => "ok");
 
@@ -249,6 +266,7 @@ describe("agent loop", () => {
 			llmClient: llm,
 			toolRegistry: registry,
 			store,
+			memoryService,
 			maxIterations: 1,
 			workDir: "/tmp",
 		};
@@ -279,6 +297,7 @@ describe("agent loop", () => {
 			});
 
 		const store = createMockStore();
+		const memoryService = createMockMemoryService();
 		const registry = new ToolRegistry();
 		registry.register(createTestTool("bash"), async () => "ok");
 
@@ -286,6 +305,7 @@ describe("agent loop", () => {
 			llmClient: llm,
 			toolRegistry: registry,
 			store,
+			memoryService,
 			maxIterations: 10,
 			workDir: "/tmp",
 		};
@@ -297,12 +317,14 @@ describe("agent loop", () => {
 	it("emits message event on final content", async () => {
 		const llm = createMockLLM([], "Final answer");
 		const store = createMockStore();
+		const memoryService = createMockMemoryService();
 		const registry = new ToolRegistry();
 
 		const config: AgentLoopConfig = {
 			llmClient: llm,
 			toolRegistry: registry,
 			store,
+			memoryService,
 			maxIterations: 10,
 			workDir: "/tmp",
 		};

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { SessionStore } from "../sessions/store.js";
+import type { MemoryService } from "../modules/memories/service.js";
+import type { SessionService } from "../modules/sessions/service.js";
 import type { ToolRegistry } from "../tools/registry.js";
 import type { ToolContext } from "../tools/types.js";
 import type { LLMClient } from "./llm-client.js";
@@ -15,7 +16,8 @@ import type {
 export interface AgentLoopConfig {
 	llmClient: LLMClient;
 	toolRegistry: ToolRegistry;
-	store: SessionStore;
+	store: SessionService;
+	memoryService: MemoryService;
 	maxIterations: number;
 	workDir: string;
 }
@@ -25,13 +27,13 @@ export async function runAgent(
 	options: AgentOptions,
 	onEvent?: (event: StreamEvent) => void,
 ): Promise<AgentResult> {
-	const { llmClient, toolRegistry, store, maxIterations, workDir } = config;
+	const { llmClient, toolRegistry, store, memoryService, maxIterations, workDir } = config;
 	const { sessionId, message, model, systemPrompt, enabledTools, modelSettings } = options;
 
 	const userMsgId = randomUUID();
 	store.addMessage(userMsgId, sessionId, "user", message);
 
-	const memories = getMemoriesForContext(store);
+	const memories = getMemoriesForContext(memoryService);
 	let tools = toolRegistry.getSpecs();
 	if (enabledTools !== undefined) {
 		tools = tools.filter((t) => enabledTools.includes(t.function.name));
@@ -149,8 +151,8 @@ export async function runAgent(
 				let result: string;
 				try {
 					result = await toolRegistry.execute(tc.function.name, args, toolContext);
-				} catch (err: any) {
-					result = `Error: ${err.message}`;
+				} catch (err: unknown) {
+					result = `Error: ${err instanceof Error ? err.message : String(err)}`;
 				}
 
 				allToolCalls.push({ name: tc.function.name, args, result });

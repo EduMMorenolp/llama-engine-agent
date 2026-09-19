@@ -137,7 +137,7 @@ export function MessageBubble({
 	const isUser = message.role === "user";
 	const isTool = message.role === "tool";
 	const [copiedMsg, setCopiedMsg] = useState(false);
-	const [thinkingOpen, setThinkingOpen] = useState(true);
+	const [thinkingOpen, setThinkingOpen] = useState(false);
 
 	if (isTool) return null;
 	const content = message.content ?? "";

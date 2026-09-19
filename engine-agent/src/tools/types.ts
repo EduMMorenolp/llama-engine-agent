@@ -1,4 +1,4 @@
-import type { SessionStore } from "../sessions/store.js";
+import type { SessionService } from "../modules/sessions/service.js";
 
 export interface ToolParameters {
 	type: "object";
@@ -18,7 +18,7 @@ export interface ToolSpec {
 export interface ToolContext {
 	sessionId: string;
 	workDir: string;
-	store: SessionStore;
+	store: SessionService;
 }
 
 export type ToolHandler = (args: Record<string, unknown>, context: ToolContext) => Promise<string>;
