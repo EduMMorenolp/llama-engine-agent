@@ -151,6 +151,25 @@ Cobertura: agent loop, tools, sessions, memories, MCP manager, middleware, chat 
 - **TypeScript**: ES2022, strict mode, ESM (`"type": "module"`)
 - **Backend**: NodeNext module resolution
 - **Frontend**: ESNext + bundler resolution, react-jsx transform
+- **No `any`** sin justificación explícita
+- **Un componente por archivo** (frontend), naming PascalCase
+- **Functional components** solamente (frontend)
+
+## Convenciones de módulos
+
+Cada módulo backend sigue:
+
+```
+modules/<nombre>/
+  dto.ts        # Tipos + schemas Zod
+  service.ts    # Lógica de negocio
+  store.ts      # Acceso a datos
+```
+
+- Los DTOs viven en `modules/*/dto.ts`.
+- Siempre validar con Zod antes de procesar.
+- Errores via excepciones HTTP de `common/`.
+- Nunca hacer fetch de datos sin try/catch.
 
 ## Env vars
 
@@ -194,6 +213,22 @@ VITE_AGENT_KEY=llama-engine-dev
 - Usar `any` sin justificación.
 - Saltar la validación de Zod en endpoints.
 
+**Testing**
+- Tests en archivos `*.test.ts` o `*.test.tsx` junto al código.
+- Cobertura mínima: agent loop, tools, sessions, memories, middleware.
+- No mocking excesivo — testear comportamiento real cuando sea posible.
+
 ## Git
 
 No hay sincronización automática. Commitear manualmente con mensajes descriptivos en inglés.
+
+## Documentación
+
+| Archivo | Contenido |
+|---------|-----------|
+| `docs/PRD.md` | Requisitos del producto, user stories, criterios de aceptación |
+| `docs/ARCHITECTURE.md` | Diagramas Mermaid de componentes, secuencia, BD |
+| `docs/RULES.md` | Convenciones de código completas |
+| `docs/DESIGN.md` | Paleta de colores, componentes UI, layout |
+| `docs/TASKS.md` | Roadmap, backlog, tareas completadas |
+| `docs/MEMORY.md` | Estado del proyecto, decisiones, conocimiento acumulado |
