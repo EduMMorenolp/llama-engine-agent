@@ -29,7 +29,7 @@ export function createApp(
 	app.use(helmet());
 	app.use(cors({ origin: true }));
 	app.use(express.json());
-	app.use(morgan("short"));
+	app.use(morgan("dev"));
 
 	app.get("/api/health", (_req, res) => {
 		res.json({ status: "ok", agentRunning: true });
