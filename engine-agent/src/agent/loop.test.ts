@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { MemoryService } from "../modules/memories/service.js";
 import type { SessionService } from "../modules/sessions/service.js";
 import { ToolRegistry } from "../tools/registry.js";
@@ -272,7 +272,9 @@ describe("agent loop", () => {
 		};
 
 		const result = await runAgent(config, { sessionId: "s1", message: "go" });
-		expect(result.content).toContain("completado");
+		expect(result.content).toContain("máximo de 1 iteraciones");
+		expect(result.content).toContain("Herramientas ejecutadas (1)");
+		expect(result.content).toContain("resume los resultados");
 	});
 
 	it("handles invalid tool_calls JSON gracefully", async () => {

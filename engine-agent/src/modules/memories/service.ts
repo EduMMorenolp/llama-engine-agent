@@ -1,6 +1,6 @@
-import type { Database } from "sql.js";
 import { randomUUID } from "node:crypto";
-import { saveDb } from "../../db/index.js";
+import type { Database } from "sql.js";
+import { scheduleSave } from "../../db/index.js";
 import type { Memory } from "../../sessions/types.js";
 
 export class MemoryService {
@@ -40,7 +40,7 @@ export class MemoryService {
 				JSON.stringify(tags),
 			]);
 		}
-		saveDb();
+		scheduleSave();
 		return this.get(key)!;
 	}
 
@@ -67,7 +67,7 @@ export class MemoryService {
 		this.db.run("DELETE FROM memories WHERE key = ?", [key]);
 		const modified = this.db.getRowsModified() > 0;
 		if (modified) {
-			saveDb();
+			scheduleSave();
 		}
 		return modified;
 	}

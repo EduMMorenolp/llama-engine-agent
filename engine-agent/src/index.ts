@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { LLMClient } from "./agent/llm-client.js";
 import { getConfig } from "./config/index.js";
-import { closeDb, getDb } from "./db/index.js";
+import { closeDb, forceSaveIfPending, getDb } from "./db/index.js";
 import { MemoryService } from "./modules/memories/service.js";
 import { SessionService } from "./modules/sessions/service.js";
 import { createApp } from "./server.js";
@@ -69,6 +69,7 @@ async function bootstrap() {
 	process.on("SIGTERM", () => {
 		logger.info("Shutting down...");
 		server.close();
+		forceSaveIfPending();
 		closeDb();
 		process.exit(0);
 	});
@@ -76,6 +77,7 @@ async function bootstrap() {
 	process.on("SIGINT", () => {
 		logger.info("Shutting down (SIGINT)...");
 		server.close();
+		forceSaveIfPending();
 		closeDb();
 		process.exit(0);
 	});

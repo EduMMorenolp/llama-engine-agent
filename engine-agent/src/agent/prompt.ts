@@ -113,41 +113,58 @@ Reglas:
 	}
 
 	// Calculate total characters (ignoring image base64 length for budget calculation)
-	let totalChars = convertedMessages.reduce((sum, m) => {
-		if (typeof m.content === "string") return sum + m.content.length;
-		if (Array.isArray(m.content)) {
-			return (
-				sum +
-				m.content.reduce((innerSum, part) => {
-					if (part.type === "text" && part.text) return innerSum + part.text.length;
-					return innerSum + 1000; // Count image as equivalent ~250 tokens
-				}, 0)
-			);
-		}
-		return sum;
-	}, 0);
+	const totalChars = convertedMessages.reduce((sum, m) => sum + countMessageChars(m), 0);
 
 	if (totalChars > maxHistoryChars && convertedMessages.length > 2) {
-		// Keep the first message (initial intent) and latest messages
-		const initialUserMsg = convertedMessages[0];
-		const recentMessages: LLMMessage[] = [];
-
-		for (let i = convertedMessages.length - 1; i >= 1; i--) {
-			const m = convertedMessages[i];
-			const len = typeof m.content === "string" ? m.content.length : 0;
-			if (totalChars > maxHistoryChars && recentMessages.length >= 2) {
-				totalChars -= len;
-				continue;
-			}
-			recentMessages.unshift(m);
-		}
-
-		messages.push(initialUserMsg, ...recentMessages);
+		const trimmed = trimHistoryPreservingPairs(convertedMessages, maxHistoryChars);
+		messages.push(...trimmed);
 	} else {
 		messages.push(...convertedMessages);
 	}
 
 	return messages;
+}
+
+function countMessageChars(msg: LLMMessage): number {
+	if (typeof msg.content === "string") return msg.content.length;
+	if (Array.isArray(msg.content)) {
+		return msg.content.reduce((sum, part) => {
+			if (part.type === "text" && part.text) return sum + part.text.length;
+			return sum + 1000; // Count image as equivalent ~250 tokens
+		}, 0);
+	}
+	return 0;
+}
+
+function trimHistoryPreservingPairs(messages: LLMMessage[], maxChars: number): LLMMessage[] {
+	if (messages.length <= 2) return messages;
+
+	const result: LLMMessage[] = [messages[0]]; // Always keep first user message
+	let currentChars = countMessageChars(messages[0]);
+
+	// Walk backwards from the end, preserving assistant→tool pairs
+	for (let i = messages.length - 1; i >= 1; i--) {
+		const msg = messages[i];
+
+		// If this is a tool response, check if the previous message is its assistant
+		if (msg.role === "tool" && i > 1 && messages[i - 1].role === "assistant") {
+			const assistantMsg = messages[i - 1];
+			const pairChars = countMessageChars(assistantMsg) + countMessageChars(msg);
+			if (currentChars + pairChars <= maxChars) {
+				result.unshift(msg, assistantMsg);
+				currentChars += pairChars;
+				i--; // Skip assistant already processed
+			}
+		} else if (msg.role !== "tool") {
+			const msgChars = countMessageChars(msg);
+			if (currentChars + msgChars <= maxChars) {
+				result.unshift(msg);
+				currentChars += msgChars;
+			}
+		}
+	}
+
+	return result;
 }
 
 export function getMemoriesForContext(

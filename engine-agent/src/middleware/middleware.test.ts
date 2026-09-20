@@ -2,14 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
 	BadRequestException,
-	UnauthorizedException,
+	ConflictException,
 	ForbiddenException,
 	NotFoundException,
-	ConflictException,
+	UnauthorizedException,
 } from "../common/exceptions/http-exception.js";
 import { createAuthMiddleware } from "./auth.js";
-import { ValidationPipe } from "./validation.js";
 import { errorHandler } from "./errorHandler.js";
+import { ValidationPipe } from "./validation.js";
 
 const mockGetConfig = vi.fn().mockReturnValue({ NODE_ENV: "test" });
 vi.mock("../config/index.js", () => ({ getConfig: (...args: any[]) => mockGetConfig(...args) }));

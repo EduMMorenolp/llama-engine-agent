@@ -2,6 +2,32 @@ import OpenAI from "openai";
 import type { ToolSpec } from "../tools/types.js";
 import type { LLMMessage, LLMResponse, ModelSettings } from "./types.js";
 
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		try {
+			return await fn();
+		} catch (err: unknown) {
+			if (attempt === maxRetries - 1) throw err;
+			if (!isRetryableError(err)) throw err;
+			const delay = Math.min(1000 * 2 ** attempt, 10_000);
+			await new Promise((resolve) => setTimeout(resolve, delay));
+		}
+	}
+	throw new Error("Max retries exceeded");
+}
+
+function isRetryableError(err: unknown): boolean {
+	if (!(err && typeof err === "object")) return false;
+	const status =
+		(err as Record<string, unknown>).status ?? (err as Record<string, unknown>).statusCode;
+	if (typeof status === "number" && [429, 500, 502, 503, 504].includes(status)) return true;
+	const code = (err as Record<string, unknown>).code;
+	if (code === "ECONNRESET" || code === "ETIMEDOUT") return true;
+	const msg = (err as Record<string, unknown>).message;
+	if (typeof msg === "string" && msg.includes("timeout")) return true;
+	return false;
+}
+
 export interface LLMClientConfig {
 	apiUrl: string;
 	apiKey: string;
@@ -26,6 +52,15 @@ export class LLMClient {
 	}
 
 	async sendMessage(
+		messages: LLMMessage[],
+		tools: ToolSpec[],
+		model?: string,
+		modelSettings?: ModelSettings,
+	): Promise<LLMResponse> {
+		return withRetry(() => this._sendMessageInternal(messages, tools, model, modelSettings));
+	}
+
+	private async _sendMessageInternal(
 		messages: LLMMessage[],
 		tools: ToolSpec[],
 		model?: string,
@@ -84,7 +119,9 @@ export class LLMClient {
 			} else if (status === 503 || rawErrorMsg.includes("Loading model")) {
 				friendlyMsg = `El modelo se está cargando en memoria en el motor llama.cpp. Por favor aguarda unos segundos y reintenta tu mensaje.`;
 			}
-			throw new Error(friendlyMsg);
+			const retryErr = new Error(friendlyMsg);
+			(retryErr as any).status = status;
+			throw retryErr;
 		}
 	}
 
@@ -94,6 +131,20 @@ export class LLMClient {
 		model?: string,
 		modelSettings?: ModelSettings,
 	): AsyncGenerator<{ type: string; data: any }> {
+		const chunks = await withRetry(() =>
+			this._collectStreamChunks(messages, tools, model, modelSettings),
+		);
+		for (const chunk of chunks) {
+			yield chunk;
+		}
+	}
+
+	private async _collectStreamChunks(
+		messages: LLMMessage[],
+		tools: ToolSpec[],
+		model?: string,
+		modelSettings?: ModelSettings,
+	): Promise<Array<{ type: string; data: any }>> {
 		const useModel = model ?? this.model;
 		const openaiTools =
 			tools.length > 0
@@ -106,6 +157,8 @@ export class LLMClient {
 						},
 					}))
 				: undefined;
+
+		const result: Array<{ type: string; data: any }> = [];
 
 		try {
 			const stream = await this.client.chat.completions.create({
@@ -131,35 +184,35 @@ export class LLMClient {
 				if (reasoningChunk && modelSettings?.enableReasoning !== false) {
 					if (!reasoningStarted) {
 						reasoningStarted = true;
-						yield { type: "content", data: "<think>\n" };
+						result.push({ type: "content", data: "<think>\n" });
 					}
-					yield { type: "content", data: reasoningChunk };
+					result.push({ type: "content", data: reasoningChunk });
 				}
 
 				if (delta?.tool_calls) {
 					if (reasoningStarted && !reasoningEnded) {
 						reasoningEnded = true;
-						yield { type: "content", data: "\n</think>\n\n" };
+						result.push({ type: "content", data: "\n</think>\n\n" });
 					}
 					for (const tc of delta.tool_calls) {
-						yield { type: "tool_call", data: tc };
+						result.push({ type: "tool_call", data: tc });
 					}
 				}
 
 				if (delta?.content) {
 					if (reasoningStarted && !reasoningEnded) {
 						reasoningEnded = true;
-						yield { type: "content", data: "\n</think>\n\n" };
+						result.push({ type: "content", data: "\n</think>\n\n" });
 					}
-					yield { type: "content", data: delta.content };
+					result.push({ type: "content", data: delta.content });
 				}
 
 				if (chunk.choices[0]?.finish_reason) {
 					if (reasoningStarted && !reasoningEnded) {
 						reasoningEnded = true;
-						yield { type: "content", data: "\n</think>\n\n" };
+						result.push({ type: "content", data: "\n</think>\n\n" });
 					}
-					yield { type: "finish", data: chunk.choices[0].finish_reason };
+					result.push({ type: "finish", data: chunk.choices[0].finish_reason });
 				}
 			}
 		} catch (err: any) {
@@ -171,8 +224,12 @@ export class LLMClient {
 			} else if (status === 503 || rawErrorMsg.includes("Loading model")) {
 				friendlyMsg = `El modelo se está cargando en memoria en el motor llama.cpp. Por favor aguarda unos segundos y reintenta tu mensaje.`;
 			}
-			throw new Error(friendlyMsg);
+			const retryErr = new Error(friendlyMsg);
+			(retryErr as any).status = status;
+			throw retryErr;
 		}
+
+		return result;
 	}
 
 	getModel(): string {

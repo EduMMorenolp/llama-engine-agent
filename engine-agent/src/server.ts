@@ -4,10 +4,10 @@ import helmet from "helmet";
 import morgan from "morgan";
 import type { Database } from "sql.js";
 import type { AgentLoopConfig } from "./agent/loop.js";
-import type { MemoryService } from "./modules/memories/service.js";
-import type { SessionService } from "./modules/sessions/service.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import type { MemoryService } from "./modules/memories/service.js";
+import type { SessionService } from "./modules/sessions/service.js";
 import { createApiRoutes } from "./routes/index.js";
 import type { ToolRegistry } from "./tools/registry.js";
 

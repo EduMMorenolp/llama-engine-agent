@@ -94,7 +94,12 @@ describe("prompt", () => {
 		});
 
 		it("truncates history when exceeding maxHistoryChars", () => {
-			const longMessage = { role: "user", content: "x".repeat(20000), toolCalls: null, toolCallId: null };
+			const longMessage = {
+				role: "user",
+				content: "x".repeat(20000),
+				toolCalls: null,
+				toolCallId: null,
+			};
 			const store = createMockStore([
 				longMessage,
 				longMessage,
@@ -107,6 +112,28 @@ describe("prompt", () => {
 			// Should keep first + some recent, skip middle
 			const userMsgs = messages.filter((m) => m.role === "user");
 			expect(userMsgs.length).toBeLessThanOrEqual(3);
+		});
+
+		it("preserves assistant-tool pairs during truncation", () => {
+			const store = createMockStore([
+				{ role: "user", content: "initial", toolCalls: null, toolCallId: null },
+				{ role: "user", content: "x".repeat(20000), toolCalls: null, toolCallId: null },
+				{
+					role: "assistant",
+					content: null,
+					toolCalls: '[{"id":"tc1","type":"function","function":{"name":"bash","arguments":"{}"}}]',
+					toolCallId: null,
+				},
+				{ role: "tool", content: "tool result here", toolCalls: null, toolCallId: "tc1" },
+				{ role: "user", content: "final question", toolCalls: null, toolCallId: null },
+			]);
+			const messages = buildPrompt({ store, sessionId: "s1", maxHistoryChars: 30000 });
+			// Assistant+tool pair should be kept together
+			const assistantIdx = messages.findIndex((m) => m.role === "assistant");
+			const toolIdx = messages.findIndex((m) => m.role === "tool");
+			if (assistantIdx >= 0 && toolIdx >= 0) {
+				expect(toolIdx).toBe(assistantIdx + 1);
+			}
 		});
 
 		it("does not truncate when under maxHistoryChars", () => {

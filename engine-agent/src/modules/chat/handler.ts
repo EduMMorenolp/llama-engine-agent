@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Request, Response } from "express";
 import type { AgentLoopConfig } from "../../agent/loop.js";
 import { runAgent } from "../../agent/loop.js";
-import type { SessionService } from "../sessions/service.js";
 import { logger } from "../../utils/logger.js";
+import type { SessionService } from "../sessions/service.js";
 
 export function createChatHandler(agentConfig: AgentLoopConfig, store: SessionService) {
 	return async (req: Request, res: Response) => {

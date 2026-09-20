@@ -57,6 +57,31 @@ export function saveDb(): void {
 	}
 }
 
+let pendingWrites = 0;
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+export function scheduleSave(): void {
+	pendingWrites++;
+	if (!saveTimeout) {
+		saveTimeout = setTimeout(() => {
+			saveDb();
+			saveTimeout = null;
+			pendingWrites = 0;
+		}, 100);
+	}
+}
+
+export function forceSaveIfPending(): void {
+	if (saveTimeout) {
+		clearTimeout(saveTimeout);
+		saveTimeout = null;
+	}
+	if (pendingWrites > 0) {
+		saveDb();
+		pendingWrites = 0;
+	}
+}
+
 export function closeDb(): void {
 	if (db) {
 		saveDb();
@@ -89,7 +114,8 @@ function runMigrations(db: Database): void {
 		return;
 	}
 
-	const files = fs.readdirSync(migrationsDir)
+	const files = fs
+		.readdirSync(migrationsDir)
 		.filter((f) => f.endsWith(".sql"))
 		.sort();
 
@@ -98,7 +124,10 @@ function runMigrations(db: Database): void {
 		if (applied.has(file)) continue;
 
 		const sql = fs.readFileSync(path.join(migrationsDir, file), "utf8");
-		const statements = sql.split(";").map((s) => s.trim()).filter(Boolean);
+		const statements = sql
+			.split(";")
+			.map((s) => s.trim())
+			.filter(Boolean);
 
 		for (const stmt of statements) {
 			db.run(stmt);

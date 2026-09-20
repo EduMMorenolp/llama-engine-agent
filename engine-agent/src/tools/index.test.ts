@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerAllTools } from "./index.js";
@@ -134,7 +134,11 @@ describe("write_file", () => {
 	it("writes file and creates parent directories", async () => {
 		const { registry, ctx } = makeRegistry();
 		const tmpFile = join(TMP_DIR, "sub", "write.txt");
-		const result = await registry.execute("write_file", { path: tmpFile, content: "new content" }, ctx);
+		const result = await registry.execute(
+			"write_file",
+			{ path: tmpFile, content: "new content" },
+			ctx,
+		);
 		expect(result).toContain("correctamente");
 		expect(readFileSync(tmpFile, "utf8")).toBe("new content");
 	});
@@ -214,7 +218,11 @@ describe("grep_search", () => {
 		const { registry, ctx } = makeRegistry();
 		mkdirSync(TMP_DIR, { recursive: true });
 		writeFileSync(join(TMP_DIR, "code.ts"), "const x = 1;\nconst y = 2;\nconst z = 3;");
-		const result = await registry.execute("grep_search", { pattern: "const y", path: TMP_DIR }, ctx);
+		const result = await registry.execute(
+			"grep_search",
+			{ pattern: "const y", path: TMP_DIR },
+			ctx,
+		);
 		expect(result).toContain("code.ts:2:");
 		expect(result).toContain("const y = 2");
 	});

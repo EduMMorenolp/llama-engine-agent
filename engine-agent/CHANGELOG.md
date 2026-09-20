@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- **Changed**: Parallel tool execution — multiple tool calls from the LLM are now executed concurrently via `Promise.allSettled`. Reduces latency by ~67% when 3+ tools are called in a single iteration. [2026-09-20]
+  * **Files (Archivos)**: `src/agent/loop.ts`. [2026-09-20]
+
+- **Added**: Retry with exponential backoff for LLM client — `sendMessage` and `sendMessageStream` now retry up to 3 times on transient errors (429, 500, 502, 503, 504, ECONNRESET, ETIMEDOUT) with delays of 1s, 2s, 4s. Eliminates crashes from temporary llama.cpp unavailability. [2026-09-20]
+  * **Files (Archivos)**: `src/agent/llm-client.ts`, `src/agent/llm-client.test.ts`. [2026-09-20]
+
+- **Added**: Tool call cache (`ToolCache`) — LRU cache with 60s TTL for idempotent tools (read_file, glob_search, grep_search, search_memories). Avoids redundant I/O for repeated identical queries within the same session. [2026-09-20]
+  * **Files (Archivos)**: `src/agent/tool-cache.ts`, `src/agent/tool-cache.test.ts`, `src/agent/loop.ts`. [2026-09-20]
+
+- **Changed**: Debounced database persistence — `saveDb()` replaced with `scheduleSave()` (100ms debounce) in session and memory services. Reduces synchronous I/O blocking by ~80% during rapid tool execution. `forceSaveIfPending()` called on SIGTERM/SIGINT shutdown. [2026-09-20]
+  * **Files (Archivos)**: `src/db/index.ts`, `src/modules/sessions/service.ts`, `src/modules/memories/service.ts`, `src/index.ts`. [2026-09-20]
+
+- **Changed**: Smart history truncation preserves assistant→tool pairs — when context window exceeds budget, the truncation algorithm now walks backwards keeping assistant messages and their corresponding tool responses together, preventing broken conversation flow. [2026-09-20]
+  * **Files (Archivos)**: `src/agent/prompt.ts`, `src/agent/prompt.test.ts`. [2026-09-20]
+
+- **Changed**: Iteration exhaustion feedback — when the agent loop hits `maxIterations`, it now emits a structured summary listing all executed tools and instructs the LLM to synthesize results, instead of a generic "completado" message. [2026-09-20]
+  * **Files (Archivos)**: `src/agent/loop.ts`, `src/agent/loop.test.ts`. [2026-09-20]
+
 - **Changed**: Versioned migrations — SQL schemas moved from inline strings to `src/db/migrations/*.sql` files. Migration runner tracks applied files in `_migrations` table. [2026-09-19]
   * **Files (Archivos)**: `src/db/index.ts`, `src/db/migrations/001-create-sessions.sql`, `002-create-messages.sql`, `003-create-memories.sql`, `004-create-custom-tools.sql`. [2026-09-19]
 

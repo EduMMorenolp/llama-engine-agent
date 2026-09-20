@@ -10,7 +10,15 @@ import { globSearchTool, grepSearchTool } from "./search.js";
 import type { ToolHandler } from "./types.js";
 
 const MAX_OUTPUT_CHARS = 12000; // ~3000 tokens max per tool execution
-const IGNORED_DIRS = new Set(["node_modules", ".git", "dist", "data", ".gemini", ".vscode", "coverage"]);
+const IGNORED_DIRS = new Set([
+	"node_modules",
+	".git",
+	"dist",
+	"data",
+	".gemini",
+	".vscode",
+	"coverage",
+]);
 
 function truncate(text: string, limit = MAX_OUTPUT_CHARS): string {
 	if (!text || text.length <= limit) return text;
@@ -23,7 +31,11 @@ function truncate(text: string, limit = MAX_OUTPUT_CHARS): string {
 const bashHandler: ToolHandler = async (args) => {
 	const command = String(args.command);
 	try {
-		const stdout = execSync(command, { encoding: "utf8", timeout: 30000, maxBuffer: 5 * 1024 * 1024 });
+		const stdout = execSync(command, {
+			encoding: "utf8",
+			timeout: 30000,
+			maxBuffer: 5 * 1024 * 1024,
+		});
 		return truncate(stdout);
 	} catch (err: unknown) {
 		const error = err as { stderr?: string; stdout?: string; message?: string };

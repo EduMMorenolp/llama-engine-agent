@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { BadRequestException } from "../../common/exceptions/http-exception.js";
-import type { MCPManager } from "./manager.js";
 import { addServerDto } from "./dto.js";
+import type { MCPManager } from "./manager.js";
 
 export class MCPController {
 	constructor(private mcpManager: MCPManager) {}

@@ -1,6 +1,6 @@
 import type { Database } from "sql.js";
 import { NotFoundException } from "../../common/exceptions/http-exception.js";
-import { saveDb } from "../../db/index.js";
+import { scheduleSave } from "../../db/index.js";
 import type { Message, Session } from "../../sessions/types.js";
 import type { CreateSessionDto } from "./dto.js";
 
@@ -14,7 +14,7 @@ export class SessionService {
 			dto.name ?? null,
 			dto.model ?? null,
 		]);
-		saveDb();
+		scheduleSave();
 		return this.getSession(id);
 	}
 
@@ -24,7 +24,7 @@ export class SessionService {
 			name ?? null,
 			model ?? null,
 		]);
-		saveDb();
+		scheduleSave();
 		return this.getSession(id)!;
 	}
 
@@ -86,7 +86,7 @@ export class SessionService {
 		this.db.run("DELETE FROM sessions WHERE id = ?", [id]);
 		const modified = this.db.getRowsModified() > 0;
 		if (modified) {
-			saveDb();
+			scheduleSave();
 		}
 		return modified;
 	}
@@ -107,7 +107,7 @@ export class SessionService {
 			fields.push("updated_at = unixepoch()");
 			values.push(id);
 			this.db.run(`UPDATE sessions SET ${fields.join(", ")} WHERE id = ?`, values as string[]);
-			saveDb();
+			scheduleSave();
 		}
 		return this.getSession(id);
 	}
@@ -125,7 +125,7 @@ export class SessionService {
 			[id, sessionId, role, content, toolCalls ?? null, toolCallId ?? null],
 		);
 		this.db.run("UPDATE sessions SET updated_at = unixepoch() WHERE id = ?", [sessionId]);
-		saveDb();
+		scheduleSave();
 		const stmt = this.db.prepare("SELECT * FROM messages WHERE id = ?");
 		stmt.bind([id]);
 		stmt.step();

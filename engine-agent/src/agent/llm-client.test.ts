@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LLMClient } from "./llm-client.js";
 
 vi.mock("openai", () => {
@@ -72,10 +72,7 @@ describe("LLMClient", () => {
 			});
 			(client as any).client.chat.completions.create = mockCreate;
 
-			const result = await client.sendMessage(
-				[{ role: "user", content: "Hi" }],
-				[],
-			);
+			const result = await client.sendMessage([{ role: "user", content: "Hi" }], []);
 			expect(result.content).toBe("Hello!");
 			expect(result.tool_calls).toBeNull();
 			expect(result.finish_reason).toBe("stop");
@@ -104,7 +101,16 @@ describe("LLMClient", () => {
 
 			const result = await client.sendMessage(
 				[{ role: "user", content: "run" }],
-				[{ type: "function", function: { name: "bash", description: "bash", parameters: { type: "object", properties: {} } } }],
+				[
+					{
+						type: "function",
+						function: {
+							name: "bash",
+							description: "bash",
+							parameters: { type: "object", properties: {} },
+						},
+					},
+				],
 			);
 			expect(result.tool_calls).toHaveLength(1);
 			expect(result.tool_calls![0].function.name).toBe("bash");
@@ -115,9 +121,9 @@ describe("LLMClient", () => {
 			const mockCreate = vi.fn().mockResolvedValue({ choices: [] });
 			(client as any).client.chat.completions.create = mockCreate;
 
-			await expect(
-				client.sendMessage([{ role: "user", content: "Hi" }], []),
-			).rejects.toThrow("respuesta vacía");
+			await expect(client.sendMessage([{ role: "user", content: "Hi" }], [])).rejects.toThrow(
+				"respuesta vacía",
+			);
 		});
 
 		it("rewrites image error to friendly message", async () => {
@@ -128,9 +134,9 @@ describe("LLMClient", () => {
 			});
 			(client as any).client.chat.completions.create = mockCreate;
 
-			await expect(
-				client.sendMessage([{ role: "user", content: "Hi" }], []),
-			).rejects.toThrow("mmproj no cargado");
+			await expect(client.sendMessage([{ role: "user", content: "Hi" }], [])).rejects.toThrow(
+				"mmproj no cargado",
+			);
 		});
 
 		it("includes error message in exception", async () => {
@@ -141,9 +147,9 @@ describe("LLMClient", () => {
 			});
 			(client as any).client.chat.completions.create = mockCreate;
 
-			await expect(
-				client.sendMessage([{ role: "user", content: "Hi" }], []),
-			).rejects.toThrow("Internal error");
+			await expect(client.sendMessage([{ role: "user", content: "Hi" }], [])).rejects.toThrow(
+				"Internal error",
+			);
 		});
 
 		it("uses provided model over default", async () => {
@@ -154,9 +160,7 @@ describe("LLMClient", () => {
 			(client as any).client.chat.completions.create = mockCreate;
 
 			await client.sendMessage([{ role: "user", content: "Hi" }], [], "custom-model");
-			expect(mockCreate).toHaveBeenCalledWith(
-				expect.objectContaining({ model: "custom-model" }),
-			);
+			expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ model: "custom-model" }));
 		});
 	});
 
@@ -172,10 +176,7 @@ describe("LLMClient", () => {
 			(client as any).client.chat.completions.create = mockCreate;
 
 			const chunks: any[] = [];
-			for await (const chunk of client.sendMessageStream(
-				[{ role: "user", content: "Hi" }],
-				[],
-			)) {
+			for await (const chunk of client.sendMessageStream([{ role: "user", content: "Hi" }], [])) {
 				chunks.push(chunk);
 			}
 
@@ -206,7 +207,16 @@ describe("LLMClient", () => {
 			const chunks: any[] = [];
 			for await (const chunk of client.sendMessageStream(
 				[{ role: "user", content: "run" }],
-				[{ type: "function", function: { name: "bash", description: "bash", parameters: { type: "object", properties: {} } } }],
+				[
+					{
+						type: "function",
+						function: {
+							name: "bash",
+							description: "bash",
+							parameters: { type: "object", properties: {} },
+						},
+					},
+				],
 			)) {
 				chunks.push(chunk);
 			}
@@ -224,6 +234,66 @@ describe("LLMClient", () => {
 
 			const gen = client.sendMessageStream([{ role: "user", content: "Hi" }], []);
 			await expect(gen.next()).rejects.toThrow("Stream failed");
+		});
+	});
+
+	describe("retry logic", () => {
+		it("retries on 503 and succeeds", async () => {
+			const client = createClient();
+			const mockCreate = vi
+				.fn()
+				.mockRejectedValueOnce({ status: 503, error: { message: "Loading model" } })
+				.mockResolvedValueOnce({
+					choices: [{ message: { content: "ok" }, finish_reason: "stop" }],
+				});
+			(client as any).client.chat.completions.create = mockCreate;
+
+			const result = await client.sendMessage([{ role: "user", content: "Hi" }], []);
+			expect(result.content).toBe("ok");
+			expect(mockCreate).toHaveBeenCalledTimes(2);
+		});
+
+		it("does not retry on 400 error", async () => {
+			const client = createClient();
+			const mockCreate = vi.fn().mockRejectedValue({
+				status: 400,
+				error: { message: "Bad request" },
+			});
+			(client as any).client.chat.completions.create = mockCreate;
+
+			await expect(client.sendMessage([{ role: "user", content: "Hi" }], [])).rejects.toThrow(
+				"Bad request",
+			);
+			expect(mockCreate).toHaveBeenCalledTimes(1);
+		});
+
+		it("exhausts retries and throws", async () => {
+			const client = createClient();
+			const mockCreate = vi.fn().mockRejectedValue({
+				status: 503,
+				error: { message: "Unavailable" },
+			});
+			(client as any).client.chat.completions.create = mockCreate;
+
+			await expect(client.sendMessage([{ role: "user", content: "Hi" }], [])).rejects.toThrow(
+				"cargando en memoria",
+			);
+			expect(mockCreate).toHaveBeenCalledTimes(3);
+		});
+
+		it("retries on 429 and succeeds", async () => {
+			const client = createClient();
+			const mockCreate = vi
+				.fn()
+				.mockRejectedValueOnce({ status: 429, error: { message: "Rate limited" } })
+				.mockResolvedValueOnce({
+					choices: [{ message: { content: "recovered" }, finish_reason: "stop" }],
+				});
+			(client as any).client.chat.completions.create = mockCreate;
+
+			const result = await client.sendMessage([{ role: "user", content: "Hi" }], []);
+			expect(result.content).toBe("recovered");
+			expect(mockCreate).toHaveBeenCalledTimes(2);
 		});
 	});
 });

@@ -5,7 +5,7 @@ function formatBytes(bytes: number): string {
 	if (!bytes || bytes <= 0) return "0 B";
 	const units = ["B", "KB", "MB", "GB", "TB"];
 	const i = Math.floor(Math.log(bytes) / Math.log(1024));
-	return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+	return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
 }
 
 function formatModelName(id: string): string {
@@ -78,7 +78,7 @@ export class ModelsController {
 			const formatted = rawModels.map((m) => {
 				const isLoaded = loadedModelId ? m.id === loadedModelId : false;
 				const sizeStr = m.sizeBytes ? formatBytes(m.sizeBytes) : "";
-				let badge = isLoaded ? "Activo" : m.vision ? "Visión" : "GGUF";
+				const badge = isLoaded ? "Activo" : m.vision ? "Visión" : "GGUF";
 
 				return {
 					id: m.id,

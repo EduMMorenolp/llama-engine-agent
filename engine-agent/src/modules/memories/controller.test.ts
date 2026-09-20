@@ -41,9 +41,7 @@ describe("MemoryController", () => {
 			controller.list(req, res, vi.fn());
 			expect(res.json).toHaveBeenCalledWith(
 				expect.objectContaining({
-					memories: expect.arrayContaining([
-						expect.objectContaining({ key: "ctrl_list_1" }),
-					]),
+					memories: expect.arrayContaining([expect.objectContaining({ key: "ctrl_list_1" })]),
 				}),
 			);
 		});

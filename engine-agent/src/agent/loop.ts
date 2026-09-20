@@ -5,6 +5,7 @@ import type { ToolRegistry } from "../tools/registry.js";
 import type { ToolContext } from "../tools/types.js";
 import type { LLMClient } from "./llm-client.js";
 import { buildPrompt, getMemoriesForContext } from "./prompt.js";
+import { toolCache } from "./tool-cache.js";
 import type {
 	AgentOptions,
 	AgentResult,
@@ -134,41 +135,56 @@ export async function runAgent(
 				tool_calls: responseToolCalls,
 			});
 
-			for (const tc of responseToolCalls) {
-				const callId = tc.id || randomUUID();
-				let args: Record<string, unknown> = {};
-				try {
-					args = JSON.parse(tc.function.arguments);
-				} catch {
-					args = { raw: tc.function.arguments };
+			const settledResults = await Promise.allSettled(
+				responseToolCalls.map(async (tc) => {
+					const callId = tc.id || randomUUID();
+					let args: Record<string, unknown> = {};
+					try {
+						args = JSON.parse(tc.function.arguments);
+					} catch {
+						args = { raw: tc.function.arguments };
+					}
+
+					onEvent?.({
+						type: "tool_start",
+						payload: { id: callId, name: tc.function.name, args },
+					});
+
+					let result: string;
+					const cached = toolCache.get(tc.function.name, args);
+					if (cached !== null) {
+						result = cached;
+					} else {
+						try {
+							result = await toolRegistry.execute(tc.function.name, args, toolContext);
+						} catch (err: unknown) {
+							result = `Error: ${err instanceof Error ? err.message : String(err)}`;
+						}
+						toolCache.set(tc.function.name, args, result);
+					}
+
+					onEvent?.({
+						type: "tool_end",
+						payload: { id: callId, name: tc.function.name, result },
+					});
+
+					const toolMsgId = randomUUID();
+					store.addMessage(toolMsgId, sessionId, "tool", result, null, callId);
+
+					return { id: callId, name: tc.function.name, args, result };
+				}),
+			);
+
+			for (const settled of settledResults) {
+				if (settled.status === "fulfilled") {
+					const { id, name, args, result } = settled.value;
+					allToolCalls.push({ name, args, result });
+					messages.push({
+						role: "tool",
+						content: result,
+						tool_call_id: id,
+					});
 				}
-
-				onEvent?.({
-					type: "tool_start",
-					payload: { id: callId, name: tc.function.name, args },
-				});
-
-				let result: string;
-				try {
-					result = await toolRegistry.execute(tc.function.name, args, toolContext);
-				} catch (err: unknown) {
-					result = `Error: ${err instanceof Error ? err.message : String(err)}`;
-				}
-
-				allToolCalls.push({ name: tc.function.name, args, result });
-				onEvent?.({
-					type: "tool_end",
-					payload: { id: callId, name: tc.function.name, result },
-				});
-
-				const toolMsgId = randomUUID();
-				store.addMessage(toolMsgId, sessionId, "tool", result, null, callId);
-
-				messages.push({
-					role: "tool",
-					content: result,
-					tool_call_id: callId,
-				});
 			}
 		} else {
 			finalContent = accumulatedContent;
@@ -180,9 +196,15 @@ export async function runAgent(
 		}
 	}
 
-	// If loop terminated without text message after tool executions, provide closure
 	if (!finalContent && allToolCalls.length > 0) {
-		finalContent = "He completado la ejecución de las herramientas.";
+		const toolSummary = allToolCalls.map((tc) => `- ${tc.name}: completado`).join("\n");
+		finalContent = [
+			`He alcanzado el máximo de ${maxIterations} iteraciones.`,
+			`Herramientas ejecutadas (${allToolCalls.length}):`,
+			toolSummary,
+			"",
+			"Por favor, resume los resultados obtenidos y responde al usuario.",
+		].join("\n");
 		onEvent?.({ type: "message", payload: { role: "assistant", content: finalContent } });
 		const assistantMsgId = randomUUID();
 		store.addMessage(assistantMsgId, sessionId, "assistant", finalContent);
