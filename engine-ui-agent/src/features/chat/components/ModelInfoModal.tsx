@@ -52,7 +52,8 @@ export function ModelInfoModal({ model, onClose }: ModelInfoModalProps) {
 					? "4096"
 					: "3072";
 
-	const vocabSize = isQwen9b || isQwen4b ? "248.320 tokens" : isGemma ? "256.000 tokens" : "32.000 tokens";
+	const vocabSize =
+		isQwen9b || isQwen4b ? "248.320 tokens" : isGemma ? "256.000 tokens" : "32.000 tokens";
 
 	const filePath = `/models/${model.id}.gguf`;
 
@@ -71,7 +72,8 @@ export function ModelInfoModal({ model, onClose }: ModelInfoModalProps) {
 		{ label: "Build Info", value: "llama-server b1-790cf51 (CUDA / Flash-Attention)" },
 		{
 			label: "Chat Template",
-			value: "{% for message in messages %}{{'<|im_start|>' + message['role'] + '\\n' + message['content'] + '<|im_end|>\\n'}}{% endfor %}{% if add_generation_prompt %}{{'<|im_start|>assistant\\n'}}{% endif %}",
+			value:
+				"{% for message in messages %}{{'<|im_start|>' + message['role'] + '\\n' + message['content'] + '<|im_end|>\\n'}}{% endfor %}{% if add_generation_prompt %}{{'<|im_start|>assistant\\n'}}{% endif %}",
 			isCode: true,
 		},
 	];

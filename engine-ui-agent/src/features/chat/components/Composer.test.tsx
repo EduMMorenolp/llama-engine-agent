@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Composer } from "./Composer.tsx";
 
@@ -9,7 +9,9 @@ vi.mock("../../../api.ts", () => ({
 describe("Composer", () => {
 	it("renders textarea with placeholder", () => {
 		render(<Composer onSend={vi.fn()} onStop={vi.fn()} disabled={false} />);
-		expect(screen.getByPlaceholderText("Escribe un mensaje o usa las herramientas del agente...")).toBeDefined();
+		expect(
+			screen.getByPlaceholderText("Escribe un mensaje o usa las herramientas del agente..."),
+		).toBeDefined();
 	});
 
 	it("calls onSend with text on Enter", () => {
@@ -18,7 +20,11 @@ describe("Composer", () => {
 		const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
 		fireEvent.change(textarea, { target: { value: "Hello" } });
 		fireEvent.keyDown(textarea, { key: "Enter" });
-		expect(onSend).toHaveBeenCalledWith("Hello", [], expect.objectContaining({ systemPrompt: expect.any(String) }));
+		expect(onSend).toHaveBeenCalledWith(
+			"Hello",
+			[],
+			expect.objectContaining({ systemPrompt: expect.any(String) }),
+		);
 	});
 
 	it("does not send on Shift+Enter", () => {

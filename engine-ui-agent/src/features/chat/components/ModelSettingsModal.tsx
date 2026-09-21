@@ -204,12 +204,8 @@ export function ModelSettingsModal({
 					{/* Temperature Slider */}
 					<div className="settings-slider-block">
 						<div className="slider-header">
-							<label className="slider-header-label">
-								Temperatura (Creatividad)
-							</label>
-							<span className="slider-header-val">
-								{settings.temperature.toFixed(2)}
-							</span>
+							<label className="slider-header-label">Temperatura (Creatividad)</label>
+							<span className="slider-header-val">{settings.temperature.toFixed(2)}</span>
 						</div>
 						<input
 							type="range"
@@ -235,12 +231,8 @@ export function ModelSettingsModal({
 					{/* Top P Slider */}
 					<div className="settings-slider-block">
 						<div className="slider-header">
-							<label className="slider-header-label">
-								Top P (Nucleus Sampling)
-							</label>
-							<span className="slider-header-val">
-								{settings.topP.toFixed(2)}
-							</span>
+							<label className="slider-header-label">Top P (Nucleus Sampling)</label>
+							<span className="slider-header-val">{settings.topP.toFixed(2)}</span>
 						</div>
 						<input
 							type="range"
@@ -263,12 +255,8 @@ export function ModelSettingsModal({
 					{/* Max Tokens Slider */}
 					<div className="settings-slider-block">
 						<div className="slider-header">
-							<label className="slider-header-label">
-								Tokens Máximos de Respuesta
-							</label>
-							<span className="slider-header-val">
-								{settings.maxTokens}
-							</span>
+							<label className="slider-header-label">Tokens Máximos de Respuesta</label>
+							<span className="slider-header-val">{settings.maxTokens}</span>
 						</div>
 						<input
 							type="range"
@@ -342,11 +330,7 @@ export function ModelSettingsModal({
 						marginTop: "16px",
 					}}
 				>
-					<button
-						type="button"
-						className="btn-secondary"
-						onClick={handleReset}
-					>
+					<button type="button" className="btn-secondary" onClick={handleReset}>
 						<RotateCcwIcon size={14} />
 						<span>Por defecto</span>
 					</button>
@@ -355,11 +339,7 @@ export function ModelSettingsModal({
 						<button type="button" className="btn-secondary" onClick={onClose}>
 							Cancelar
 						</button>
-						<button
-							type="button"
-							className="btn-primary"
-							onClick={handleSave}
-						>
+						<button type="button" className="btn-primary" onClick={handleSave}>
 							<CheckIcon size={14} />
 							<span>Guardar cambios</span>
 						</button>

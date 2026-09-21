@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTools } from "../../../api.ts";
-import { PlusIcon, SendIcon, SlidersIcon, StopIcon, WrenchIcon } from "../../../components/ui/Icons.tsx";
+import {
+	PlusIcon,
+	SendIcon,
+	SlidersIcon,
+	StopIcon,
+	WrenchIcon,
+} from "../../../components/ui/Icons.tsx";
 import { AttachMenu } from "./AttachMenu.tsx";
 import { type FileAttachment, FileUpload, useFileUpload } from "./FileUpload.tsx";
 import { MCPServersModal } from "./MCPServersModal.tsx";

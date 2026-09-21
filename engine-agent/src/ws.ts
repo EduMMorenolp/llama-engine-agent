@@ -38,7 +38,7 @@ export function createWebSocketServer(
 								? `${cleanMsg.slice(0, 35)}...`
 								: cleanMsg
 							: "Nuevo Chat";
-						existingSession = store.createSession(sessionId, autoName, model);
+						existingSession = store.createSession({ id: sessionId, name: autoName, model });
 					} else if (!existingSession.name || existingSession.name === "Nuevo Chat") {
 						const cleanMsg = typeof message === "string" ? message.trim() : "";
 						if (cleanMsg) {

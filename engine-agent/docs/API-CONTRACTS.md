@@ -123,7 +123,13 @@ Crear una nueva sesión.
 
 ### GET /api/sessions/:id
 
-Obtener sesión con mensajes.
+Obtener sesión con mensajes (paginado).
+
+**Query Params:**
+| Param | Tipo | Default | Descripción |
+|-------|------|---------|-------------|
+| `limit` | number | 100 | Máximo de mensajes a retornar (max 500) |
+| `offset` | number | 0 | Saltar los primeros N mensajes |
 
 **Response 200:**
 ```json
@@ -139,16 +145,10 @@ Obtener sesión con mensajes.
       "toolCalls": null,
       "toolCallId": null,
       "createdAt": 1694800000000
-    },
-    {
-      "id": "msg_002",
-      "role": "assistant",
-      "content": "Hola, ¿en qué puedo ayudarte?",
-      "toolCalls": null,
-      "toolCallId": null,
-      "createdAt": 1694800001000
     }
   ],
+  "hasMore": true,
+  "totalMessages": 47,
   "createdAt": 1694800000000,
   "updatedAt": 1694800001000
 }

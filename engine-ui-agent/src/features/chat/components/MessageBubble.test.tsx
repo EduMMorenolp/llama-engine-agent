@@ -1,5 +1,5 @@
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { MessageBubble } from "./MessageBubble.tsx";
 
 const mockWriteText = vi.fn().mockResolvedValue(undefined);
@@ -10,19 +10,43 @@ afterEach(() => {
 
 describe("MessageBubble", () => {
 	it("renders user message with user icon", () => {
-		const message = { id: "m1", sessionId: "s1", role: "user" as const, content: "Hello", toolCalls: null, toolCallId: null, createdAt: 1 };
+		const message = {
+			id: "m1",
+			sessionId: "s1",
+			role: "user" as const,
+			content: "Hello",
+			toolCalls: null,
+			toolCallId: null,
+			createdAt: 1,
+		};
 		render(<MessageBubble message={message} />);
 		expect(screen.getByText("Hello")).toBeDefined();
 	});
 
 	it("renders assistant message", () => {
-		const message = { id: "m1", sessionId: "s1", role: "assistant" as const, content: "Hi there", toolCalls: null, toolCallId: null, createdAt: 1 };
+		const message = {
+			id: "m1",
+			sessionId: "s1",
+			role: "assistant" as const,
+			content: "Hi there",
+			toolCalls: null,
+			toolCallId: null,
+			createdAt: 1,
+		};
 		render(<MessageBubble message={message} />);
 		expect(screen.getByText("Hi there")).toBeDefined();
 	});
 
 	it("renders markdown content", () => {
-		const message = { id: "m1", sessionId: "s1", role: "assistant" as const, content: "**bold** and `code`", toolCalls: null, toolCallId: null, createdAt: 1 };
+		const message = {
+			id: "m1",
+			sessionId: "s1",
+			role: "assistant" as const,
+			content: "**bold** and `code`",
+			toolCalls: null,
+			toolCallId: null,
+			createdAt: 1,
+		};
 		render(<MessageBubble message={message} />);
 		expect(screen.getByText("bold")).toBeDefined();
 	});
@@ -54,6 +78,9 @@ describe("MessageBubble", () => {
 			createdAt: 1,
 		};
 		const { container } = render(<MessageBubble message={message} />);
+		const thinkingHeader = container.querySelector(".thinking-header");
+		expect(thinkingHeader).not.toBeNull();
+		fireEvent.click(thinkingHeader!);
 		const thinkingBody = container.querySelector(".thinking-body");
 		expect(thinkingBody).not.toBeNull();
 		expect(thinkingBody?.textContent).toContain("Let me think...");
@@ -71,14 +98,28 @@ describe("MessageBubble", () => {
 			createdAt: 1,
 		};
 		const toolCalls = [
-			{ id: "tc1", name: "bash", args: { command: "echo hi" }, result: "hi", status: "done" as const },
+			{
+				id: "tc1",
+				name: "bash",
+				args: { command: "echo hi" },
+				result: "hi",
+				status: "done" as const,
+			},
 		];
 		render(<MessageBubble message={message} toolCalls={toolCalls} />);
 		expect(screen.getByText("bash")).toBeDefined();
 	});
 
 	it("shows copy button for assistant messages", () => {
-		const message = { id: "m1", sessionId: "s1", role: "assistant" as const, content: "Copy me", toolCalls: null, toolCallId: null, createdAt: 1 };
+		const message = {
+			id: "m1",
+			sessionId: "s1",
+			role: "assistant" as const,
+			content: "Copy me",
+			toolCalls: null,
+			toolCallId: null,
+			createdAt: 1,
+		};
 		render(<MessageBubble message={message} />);
 		expect(screen.getByTitle("Copiar mensaje")).toBeDefined();
 	});
@@ -86,20 +127,44 @@ describe("MessageBubble", () => {
 	it("calls onCopy when copy button is clicked", async () => {
 		vi.stubGlobal("navigator", { clipboard: { writeText: mockWriteText } });
 		const onCopy = vi.fn();
-		const message = { id: "m1", sessionId: "s1", role: "assistant" as const, content: "text", toolCalls: null, toolCallId: null, createdAt: 1 };
+		const message = {
+			id: "m1",
+			sessionId: "s1",
+			role: "assistant" as const,
+			content: "text",
+			toolCalls: null,
+			toolCallId: null,
+			createdAt: 1,
+		};
 		render(<MessageBubble message={message} onCopy={onCopy} />);
 		await screen.getByTitle("Copiar mensaje").click();
 		expect(onCopy).toHaveBeenCalledWith("text");
 	});
 
 	it("shows edit button for user messages when onEdit provided", () => {
-		const message = { id: "m1", sessionId: "s1", role: "user" as const, content: "editable", toolCalls: null, toolCallId: null, createdAt: 1 };
+		const message = {
+			id: "m1",
+			sessionId: "s1",
+			role: "user" as const,
+			content: "editable",
+			toolCalls: null,
+			toolCallId: null,
+			createdAt: 1,
+		};
 		render(<MessageBubble message={message} onEdit={vi.fn()} />);
 		expect(screen.getByTitle("Editar mensaje")).toBeDefined();
 	});
 
 	it("shows delete button when onDelete provided", () => {
-		const message = { id: "m1", sessionId: "s1", role: "user" as const, content: "delete me", toolCalls: null, toolCallId: null, createdAt: 1 };
+		const message = {
+			id: "m1",
+			sessionId: "s1",
+			role: "user" as const,
+			content: "delete me",
+			toolCalls: null,
+			toolCallId: null,
+			createdAt: 1,
+		};
 		render(<MessageBubble message={message} onDelete={vi.fn()} />);
 		expect(screen.getByTitle("Eliminar mensaje")).toBeDefined();
 	});
@@ -122,7 +187,15 @@ describe("MessageBubble", () => {
 	});
 
 	it("renders empty content gracefully", () => {
-		const message = { id: "m1", sessionId: "s1", role: "assistant" as const, content: "", toolCalls: null, toolCallId: null, createdAt: 1 };
+		const message = {
+			id: "m1",
+			sessionId: "s1",
+			role: "assistant" as const,
+			content: "",
+			toolCalls: null,
+			toolCallId: null,
+			createdAt: 1,
+		};
 		render(<MessageBubble message={message} />);
 	});
 });

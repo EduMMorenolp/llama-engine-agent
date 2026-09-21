@@ -47,8 +47,22 @@ export async function updateSession(
 	return apiPatch<Session>(`/api/sessions/${id}`, data);
 }
 
-export async function fetchSession(id: string): Promise<Session & { messages: Message[] }> {
-	return apiGet(`/api/sessions/${id}`);
+export interface SessionWithMessages extends Session {
+	messages: Message[];
+	hasMore: boolean;
+	totalMessages: number;
+}
+
+export async function fetchSession(
+	id: string,
+	limit?: number,
+	offset?: number,
+): Promise<SessionWithMessages> {
+	const params = new URLSearchParams();
+	if (limit !== undefined) params.set("limit", String(limit));
+	if (offset !== undefined) params.set("offset", String(offset));
+	const qs = params.toString();
+	return apiGet(`/api/sessions/${id}${qs ? `?${qs}` : ""}`);
 }
 
 export async function deleteSession(id: string): Promise<void> {
@@ -114,6 +128,9 @@ export interface ModelInfo {
 	desc?: string;
 }
 
-export async function fetchAvailableModels(): Promise<{ models: ModelInfo[]; activeModel?: string }> {
+export async function fetchAvailableModels(): Promise<{
+	models: ModelInfo[];
+	activeModel?: string;
+}> {
 	return apiGet<{ models: ModelInfo[]; activeModel?: string }>("/api/models");
 }

@@ -14,8 +14,15 @@ export class SessionController {
 	getById = (req: Request, res: Response, _next: NextFunction) => {
 		const id = String(req.params.id);
 		const session = this.service.getSession(id);
-		const messages = this.service.getMessages(id);
-		res.json({ ...session, messages });
+		const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
+		const offset = Math.max(Number(req.query.offset) || 0, 0);
+		const { messages, total } = this.service.getMessagesPaginated(id, limit, offset);
+		res.json({
+			...session,
+			messages,
+			hasMore: offset + messages.length < total,
+			totalMessages: total,
+		});
 	};
 
 	list = (_req: Request, res: Response, _next: NextFunction) => {

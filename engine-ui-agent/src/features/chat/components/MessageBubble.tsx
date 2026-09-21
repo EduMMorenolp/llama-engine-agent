@@ -145,20 +145,26 @@ export function MessageBubble({
 	const displayContent = rest;
 
 	// Estimate token metrics (excluding base64 payload to reflect true token count)
-	const cleanContentForMetrics = displayContent.replace(/!\[.*?\]\(data:image\/[^;]+;base64,[^)]+\)/g, "");
+	const cleanContentForMetrics = displayContent.replace(
+		/!\[.*?\]\(data:image\/[^;]+;base64,[^)]+\)/g,
+		"",
+	);
 	const hasImageAttachment = displayContent.includes("data:image/");
 	const tokenCount = Math.max(
 		1,
 		Math.round(cleanContentForMetrics.length / 3.8) + (hasImageAttachment ? 320 : 0),
 	);
 	const durationSeconds = (tokenCount / (isUser ? 600 : 45)).toFixed(1);
-	const tokensPerSecond = isUser ? "662.66" : (tokenCount / Math.max(0.2, parseFloat(durationSeconds))).toFixed(2);
+	const tokensPerSecond = isUser
+		? "662.66"
+		: (tokenCount / Math.max(0.2, parseFloat(durationSeconds))).toFixed(2);
 
 	// Parse tool calls safely from message if present as JSON string or array
 	let parsedToolCalls: any[] = Array.isArray(toolCalls) ? toolCalls : [];
 	if (parsedToolCalls.length === 0 && message.toolCalls) {
 		try {
-			const parsed = typeof message.toolCalls === "string" ? JSON.parse(message.toolCalls) : message.toolCalls;
+			const parsed =
+				typeof message.toolCalls === "string" ? JSON.parse(message.toolCalls) : message.toolCalls;
 			if (Array.isArray(parsed)) {
 				parsedToolCalls = parsed;
 			}
@@ -168,7 +174,10 @@ export function MessageBubble({
 	}
 
 	const handleCopyMessage = async () => {
-		const cleanForClipboard = displayContent.replace(/!\[(.*?)\]\(data:image\/[^;]+;base64,[^)]+\)/g, "[Imagen: $1]");
+		const cleanForClipboard = displayContent.replace(
+			/!\[(.*?)\]\(data:image\/[^;]+;base64,[^)]+\)/g,
+			"[Imagen: $1]",
+		);
 		await navigator.clipboard.writeText(cleanForClipboard);
 		setCopiedMsg(true);
 		onCopy?.(cleanForClipboard);
@@ -198,7 +207,9 @@ export function MessageBubble({
 					</span>
 					<span className="stat-pill">
 						<ZapIcon size={11} />
-						<span>{tokensPerSecond} {isUser ? "tokens/s" : "t/s"}</span>
+						<span>
+							{tokensPerSecond} {isUser ? "tokens/s" : "t/s"}
+						</span>
 					</span>
 				</div>
 
@@ -347,9 +358,7 @@ export function MessageBubble({
 								>
 									{displayContent}
 								</ReactMarkdown>
-								{isStreaming && (
-									<span className="streaming-cursor" style={{ marginLeft: "4px" }} />
-								)}
+								{isStreaming && <span className="streaming-cursor" style={{ marginLeft: "4px" }} />}
 							</div>
 						</div>
 					) : isStreaming && !thinking && parsedToolCalls.length === 0 ? (

@@ -2,11 +2,11 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useS
 import {
 	createSession as apiCreateSession,
 	deleteSession as apiDeleteSession,
+	updateSession as apiUpdateSession,
 	fetchSession,
 	fetchSessions,
 	type Message,
 	type Session,
-	updateSession as apiUpdateSession,
 } from "../api.ts";
 
 interface SessionsContextType {
@@ -14,8 +14,11 @@ interface SessionsContextType {
 	activeSessionId: string | null;
 	messages: Message[];
 	loading: boolean;
+	hasMore: boolean;
+	loadingMore: boolean;
 	loadSessions: () => Promise<void>;
 	selectSession: (id: string) => Promise<void>;
+	loadMoreMessages: () => Promise<void>;
 	createNewSession: (name?: string, model?: string) => Promise<Session>;
 	removeSession: (id: string) => Promise<void>;
 	renameSession: (id: string, newName: string) => Promise<void>;
@@ -39,6 +42,8 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 	});
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [loading, setLoading] = useState(false);
+	const [hasMore, setHasMore] = useState(false);
+	const [loadingMore, setLoadingMore] = useState(false);
 
 	const selectSession = useCallback(async (id: string) => {
 		setActiveSessionId(id);
@@ -46,11 +51,13 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 			localStorage.setItem("active_session_id", id);
 		} catch {}
 		try {
-			const session = await fetchSession(id);
-			setMessages(session?.messages ?? []);
+			const session = await fetchSession(id, 50, 0);
+			setMessages(session.messages ?? []);
+			setHasMore(session.hasMore);
 		} catch (err) {
 			console.error("[sessions] Error al cargar la sesión:", err);
 			setMessages([]);
+			setHasMore(false);
 		}
 	}, []);
 
@@ -77,11 +84,15 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 				(validList.length > 0 ? validList[0].id : null);
 
 			if (targetId) {
+				const isSwitching = activeSessionId !== targetId;
 				setActiveSessionId(targetId);
 				try {
 					localStorage.setItem("active_session_id", targetId);
-					const session = await fetchSession(targetId);
-					setMessages(session?.messages ?? []);
+					if (isSwitching || messages.length === 0) {
+						const session = await fetchSession(targetId, 50, 0);
+						setMessages(session?.messages ?? []);
+						setHasMore(session?.hasMore ?? false);
+					}
 				} catch (err) {
 					console.error("[sessions] Error al cargar mensajes:", err);
 				}
@@ -92,7 +103,21 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 		} finally {
 			setLoading(false);
 		}
-	}, [activeSessionId]);
+	}, [activeSessionId, messages.length]);
+
+	const loadMoreMessages = useCallback(async () => {
+		if (!hasMore || loadingMore || !activeSessionId) return;
+		setLoadingMore(true);
+		try {
+			const session = await fetchSession(activeSessionId, 50, messages.length);
+			setMessages((prev) => [...(session.messages ?? []), ...prev]);
+			setHasMore(session.hasMore);
+		} catch (err) {
+			console.warn("[sessions] Error al cargar más mensajes:", err);
+		} finally {
+			setLoadingMore(false);
+		}
+	}, [activeSessionId, hasMore, loadingMore, messages.length]);
 
 	useEffect(() => {
 		loadSessions();
@@ -143,7 +168,10 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 					try {
 						localStorage.setItem("active_session_id", nextActive);
 					} catch {}
-					fetchSession(nextActive).then((sess) => setMessages(sess?.messages ?? []));
+					fetchSession(nextActive, 50, 0).then((sess) => {
+						setMessages(sess?.messages ?? []);
+						setHasMore(sess?.hasMore ?? false);
+					});
 				} else {
 					try {
 						localStorage.removeItem("active_session_id");
@@ -207,8 +235,11 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 				activeSessionId,
 				messages,
 				loading,
+				hasMore,
+				loadingMore,
 				loadSessions,
 				selectSession,
+				loadMoreMessages,
 				createNewSession,
 				removeSession,
 				renameSession,

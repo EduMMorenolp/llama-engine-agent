@@ -131,20 +131,6 @@ export class LLMClient {
 		model?: string,
 		modelSettings?: ModelSettings,
 	): AsyncGenerator<{ type: string; data: any }> {
-		const chunks = await withRetry(() =>
-			this._collectStreamChunks(messages, tools, model, modelSettings),
-		);
-		for (const chunk of chunks) {
-			yield chunk;
-		}
-	}
-
-	private async _collectStreamChunks(
-		messages: LLMMessage[],
-		tools: ToolSpec[],
-		model?: string,
-		modelSettings?: ModelSettings,
-	): Promise<Array<{ type: string; data: any }>> {
 		const useModel = model ?? this.model;
 		const openaiTools =
 			tools.length > 0
@@ -158,78 +144,81 @@ export class LLMClient {
 					}))
 				: undefined;
 
-		const result: Array<{ type: string; data: any }> = [];
-
-		try {
-			const stream = await this.client.chat.completions.create({
-				model: useModel,
-				messages: messages as any,
-				tools: openaiTools as any,
-				tool_choice: tools.length > 0 ? "auto" : undefined,
-				temperature: modelSettings?.temperature,
-				top_p: modelSettings?.topP,
-				max_tokens: modelSettings?.maxTokens,
-				presence_penalty: modelSettings?.presencePenalty,
-				frequency_penalty: modelSettings?.frequencyPenalty,
-				stream: true,
-			});
-
-			let reasoningStarted = false;
-			let reasoningEnded = false;
-
-			for await (const chunk of stream) {
-				const delta = chunk.choices[0]?.delta as any;
-				const reasoningChunk = delta?.reasoning_content ?? delta?.reasoning;
-
-				if (reasoningChunk && modelSettings?.enableReasoning !== false) {
-					if (!reasoningStarted) {
-						reasoningStarted = true;
-						result.push({ type: "content", data: "<think>\n" });
-					}
-					result.push({ type: "content", data: reasoningChunk });
+		const createStream = async () => {
+			try {
+				return await this.client.chat.completions.create({
+					model: useModel,
+					messages: messages as any,
+					tools: openaiTools as any,
+					tool_choice: tools.length > 0 ? "auto" : undefined,
+					temperature: modelSettings?.temperature,
+					top_p: modelSettings?.topP,
+					max_tokens: modelSettings?.maxTokens,
+					presence_penalty: modelSettings?.presencePenalty,
+					frequency_penalty: modelSettings?.frequencyPenalty,
+					stream: true,
+				});
+			} catch (err: any) {
+				const status = err.status ?? err.statusCode ?? "";
+				const rawErrorMsg = err.error?.message ?? err.message ?? "Error desconocido";
+				let friendlyMsg = rawErrorMsg;
+				if (
+					rawErrorMsg.includes("image input is not supported") ||
+					rawErrorMsg.includes("mmproj")
+				) {
+					friendlyMsg = `El modelo activo no soporta imágenes (mmproj no cargado). Para analizar imágenes, selecciona un modelo multimodal como "qwen3.5-4b" o "gemma-4-e4b" en la barra de modelos.`;
+				} else if (status === 503 || rawErrorMsg.includes("Loading model")) {
+					friendlyMsg = `El modelo se está cargando en memoria en el motor llama.cpp. Por favor aguarda unos segundos y reintenta tu mensaje.`;
 				}
+				const retryErr = new Error(friendlyMsg);
+				(retryErr as any).status = status;
+				throw retryErr;
+			}
+		};
 
-				if (delta?.tool_calls) {
-					if (reasoningStarted && !reasoningEnded) {
-						reasoningEnded = true;
-						result.push({ type: "content", data: "\n</think>\n\n" });
-					}
-					for (const tc of delta.tool_calls) {
-						result.push({ type: "tool_call", data: tc });
-					}
+		const stream = await withRetry(createStream);
+
+		let reasoningStarted = false;
+		let reasoningEnded = false;
+
+		for await (const chunk of stream) {
+			const delta = chunk.choices[0]?.delta as any;
+			const reasoningChunk = delta?.reasoning_content ?? delta?.reasoning;
+
+			if (reasoningChunk && modelSettings?.enableReasoning !== false) {
+				if (!reasoningStarted) {
+					reasoningStarted = true;
+					yield { type: "content", data: "<think>\n" };
 				}
+				yield { type: "content", data: reasoningChunk };
+			}
 
-				if (delta?.content) {
-					if (reasoningStarted && !reasoningEnded) {
-						reasoningEnded = true;
-						result.push({ type: "content", data: "\n</think>\n\n" });
-					}
-					result.push({ type: "content", data: delta.content });
+			if (delta?.tool_calls) {
+				if (reasoningStarted && !reasoningEnded) {
+					reasoningEnded = true;
+					yield { type: "content", data: "\n</think>\n\n" };
 				}
-
-				if (chunk.choices[0]?.finish_reason) {
-					if (reasoningStarted && !reasoningEnded) {
-						reasoningEnded = true;
-						result.push({ type: "content", data: "\n</think>\n\n" });
-					}
-					result.push({ type: "finish", data: chunk.choices[0].finish_reason });
+				for (const tc of delta.tool_calls) {
+					yield { type: "tool_call", data: tc };
 				}
 			}
-		} catch (err: any) {
-			const status = err.status ?? err.statusCode ?? "";
-			const rawErrorMsg = err.error?.message ?? err.message ?? "Error desconocido";
-			let friendlyMsg = rawErrorMsg;
-			if (rawErrorMsg.includes("image input is not supported") || rawErrorMsg.includes("mmproj")) {
-				friendlyMsg = `El modelo activo no soporta imágenes (mmproj no cargado). Para analizar imágenes, selecciona un modelo multimodal como "qwen3.5-4b" o "gemma-4-e4b" en la barra de modelos.`;
-			} else if (status === 503 || rawErrorMsg.includes("Loading model")) {
-				friendlyMsg = `El modelo se está cargando en memoria en el motor llama.cpp. Por favor aguarda unos segundos y reintenta tu mensaje.`;
+
+			if (delta?.content) {
+				if (reasoningStarted && !reasoningEnded) {
+					reasoningEnded = true;
+					yield { type: "content", data: "\n</think>\n\n" };
+				}
+				yield { type: "content", data: delta.content };
 			}
-			const retryErr = new Error(friendlyMsg);
-			(retryErr as any).status = status;
-			throw retryErr;
+
+			if (chunk.choices[0]?.finish_reason) {
+				if (reasoningStarted && !reasoningEnded) {
+					reasoningEnded = true;
+					yield { type: "content", data: "\n</think>\n\n" };
+				}
+				yield { type: "finish", data: chunk.choices[0].finish_reason };
+			}
 		}
-
-		return result;
 	}
 
 	getModel(): string {

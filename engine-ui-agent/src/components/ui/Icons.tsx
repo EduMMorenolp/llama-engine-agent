@@ -408,6 +408,27 @@ export function ChevronRightIcon({ size = 18, className = "", ...props }: IconPr
 	);
 }
 
+export function ArrowDownIcon({ size = 18, className = "", ...props }: IconProps) {
+	return (
+		<svg
+			aria-hidden="true"
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			className={className}
+			{...props}
+		>
+			<path d="M12 5v14" />
+			<path d="m19 12-7 7-7-7" />
+		</svg>
+	);
+}
+
 export function WrenchIcon({ size = 18, className = "", ...props }: IconProps) {
 	return (
 		<svg
@@ -583,7 +604,6 @@ export function InfoIcon({ size = 18, className = "", ...props }: IconProps) {
 		</svg>
 	);
 }
-
 
 export function LightbulbIcon({ size = 18, className = "", ...props }: IconProps) {
 	return (
@@ -762,6 +782,3 @@ export function RotateCcwIcon({ size = 18, className = "", ...props }: IconProps
 		</svg>
 	);
 }
-
-
-

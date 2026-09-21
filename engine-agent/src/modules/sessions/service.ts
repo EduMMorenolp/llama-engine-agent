@@ -144,7 +144,7 @@ export class SessionService {
 
 	getMessages(sessionId: string): Message[] {
 		const stmt = this.db.prepare(
-			"SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC",
+			"SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC, rowid ASC",
 		);
 		stmt.bind([sessionId]);
 		const messages: Message[] = [];
@@ -162,5 +162,37 @@ export class SessionService {
 		}
 		stmt.free();
 		return messages;
+	}
+
+	getMessagesPaginated(
+		sessionId: string,
+		limit: number,
+		offset: number,
+	): { messages: Message[]; total: number } {
+		const countStmt = this.db.prepare("SELECT COUNT(*) as cnt FROM messages WHERE session_id = ?");
+		countStmt.bind([sessionId]);
+		countStmt.step();
+		const total = (countStmt.getAsObject().cnt as number) || 0;
+		countStmt.free();
+
+		const stmt = this.db.prepare(
+			"SELECT * FROM messages WHERE session_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?",
+		);
+		stmt.bind([sessionId, limit, offset]);
+		const messages: Message[] = [];
+		while (stmt.step()) {
+			const row = stmt.getAsObject();
+			messages.push({
+				id: row.id as string,
+				sessionId: row.session_id as string,
+				role: row.role as "system" | "user" | "assistant" | "tool",
+				content: row.content as string | null,
+				toolCalls: row.tool_calls as string | null,
+				toolCallId: row.tool_call_id as string | null,
+				createdAt: (row.created_at as number) * 1000,
+			});
+		}
+		stmt.free();
+		return { messages: messages.reverse(), total };
 	}
 }

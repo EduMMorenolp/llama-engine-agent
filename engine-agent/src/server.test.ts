@@ -91,6 +91,63 @@ describe("server", () => {
 			const res = await request(app).get("/api/sessions/nonexistent").set("x-api-key", "test-key");
 			expect(res.status).toBe(404);
 		});
+
+		it("returns session with messages and pagination metadata", async () => {
+			const create = await request(app)
+				.post("/api/sessions")
+				.set("x-api-key", "test-key")
+				.send({ name: "Paginated" });
+			const sessionId = create.body.id;
+
+			// Add messages
+			for (let i = 0; i < 5; i++) {
+				await sessionService.addMessage(`msg_${i}`, sessionId, "user", `message ${i}`);
+			}
+
+			const res = await request(app)
+				.get(`/api/sessions/${sessionId}?limit=2`)
+				.set("x-api-key", "test-key");
+			expect(res.status).toBe(200);
+			expect(res.body.messages).toHaveLength(2);
+			expect(res.body.hasMore).toBe(true);
+			expect(res.body.totalMessages).toBe(5);
+		});
+
+		it("returns hasMore false when all messages fit", async () => {
+			const create = await request(app)
+				.post("/api/sessions")
+				.set("x-api-key", "test-key")
+				.send({ name: "Small" });
+			const sessionId = create.body.id;
+			await sessionService.addMessage("m1", sessionId, "user", "hi");
+
+			const res = await request(app)
+				.get(`/api/sessions/${sessionId}?limit=100`)
+				.set("x-api-key", "test-key");
+			expect(res.status).toBe(200);
+			expect(res.body.messages).toHaveLength(1);
+			expect(res.body.hasMore).toBe(false);
+			expect(res.body.totalMessages).toBe(1);
+		});
+
+		it("supports offset for pagination", async () => {
+			const create = await request(app)
+				.post("/api/sessions")
+				.set("x-api-key", "test-key")
+				.send({ name: "Offset" });
+			const sessionId = create.body.id;
+			for (let i = 0; i < 5; i++) {
+				await sessionService.addMessage(`m_${i}`, sessionId, "user", `msg ${i}`);
+			}
+
+			const res = await request(app)
+				.get(`/api/sessions/${sessionId}?limit=2&offset=2`)
+				.set("x-api-key", "test-key");
+			expect(res.status).toBe(200);
+			expect(res.body.messages).toHaveLength(2);
+			expect(res.body.messages[0].content).toBe("msg 1");
+			expect(res.body.messages[1].content).toBe("msg 2");
+		});
 	});
 
 	describe("DELETE /api/sessions/:id", () => {

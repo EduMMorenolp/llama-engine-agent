@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { fetchAvailableModels, type Message, type ModelInfo } from "../../../api.ts";
 import logoImg from "../../../assets/logo.jpg";
 import {
+	ArrowDownIcon,
 	CheckIcon,
 	ChevronDownIcon,
 	FileCodeIcon,
@@ -116,10 +117,13 @@ export function ChatView() {
 		deleteMessage,
 		loadSessions,
 		loading: sessionsLoading,
+		hasMore,
+		loadingMore,
+		loadMoreMessages,
 	} = useSessions();
-	const { streaming, currentContent, toolCalls, sendMessage, stopStreaming } =
-		useChat();
+	const { streaming, currentContent, toolCalls, sendMessage, stopStreaming } = useChat();
 	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const messagesContainerRef = useRef<HTMLDivElement>(null);
 	const modelMenuRef = useRef<HTMLDivElement>(null);
 	const { sidebarOpen, toggleSidebar } = useOutletContext<LayoutContextType>() ?? {
 		sidebarOpen: true,
@@ -133,6 +137,10 @@ export function ChatView() {
 	const [showSettings, setShowSettings] = useState(false);
 	const [tabEditingSessionId, setTabEditingSessionId] = useState<string | null>(null);
 	const [tabEditingName, setTabEditingName] = useState("");
+	const [showScrollBottom, setShowScrollBottom] = useState(false);
+
+	const prevSessionIdRef = useRef<string | null>(null);
+	const prevMessagesCountRef = useRef<number>(0);
 
 	// Load models from llama.cpp / engine-api
 	useEffect(() => {
@@ -164,23 +172,62 @@ export function ChatView() {
 		}
 	}, [showModelMenu]);
 
-	// Auto scroll desactivado (2026-09-17) — el usuario scrollea manualmente
-	// const scrollToBottom = useCallback(() => {
-	// 	messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-	// }, []);
+	const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+		if (messagesContainerRef.current) {
+			messagesContainerRef.current.scrollTo({
+				top: messagesContainerRef.current.scrollHeight,
+				behavior,
+			});
+		}
+	}, []);
 
-	// Auto-scroll desactivado (2026-09-17) — el usuario scrollea manualmente
-	// useEffect(() => {
-	// 	const timer = setTimeout(scrollToBottom, 50);
-	// 	return () => clearTimeout(timer);
-	// }, [scrollToBottom, messages, currentContent]);
+	// Position at the bottom when changing chat sessions
+	useEffect(() => {
+		if (activeSessionId !== prevSessionIdRef.current) {
+			prevSessionIdRef.current = activeSessionId;
+			prevMessagesCountRef.current = 0;
+			requestAnimationFrame(() => {
+				scrollToBottom("auto");
+			});
+		}
+	}, [activeSessionId, scrollToBottom]);
 
-	// Auto-scroll when new tool calls are received — desactivado
-	// useEffect(() => {
-	// 	if (toolCalls.length > 0) {
-	// 		scrollToBottom();
-	// 	}
-	// }, [scrollToBottom, messages, currentContent, toolCalls]);
+	// Position at the bottom when messages initially load for a chat
+	useEffect(() => {
+		if (prevMessagesCountRef.current === 0 && messages.length > 0) {
+			requestAnimationFrame(() => {
+				scrollToBottom("auto");
+			});
+		}
+		prevMessagesCountRef.current = messages.length;
+	}, [messages, scrollToBottom]);
+
+	// Auto-scroll when streaming if the user hasn't scrolled up
+	useEffect(() => {
+		if (streaming && !showScrollBottom) {
+			scrollToBottom("smooth");
+		}
+	}, [streaming, currentContent, toolCalls, showScrollBottom, scrollToBottom]);
+
+	const handleScroll = useCallback(() => {
+		const container = messagesContainerRef.current;
+		if (!container) return;
+
+		// Show scroll button if user is scrolled up away from bottom (> 120px)
+		const distanceFromBottom =
+			container.scrollHeight - container.scrollTop - container.clientHeight;
+		setShowScrollBottom(distanceFromBottom > 120);
+
+		if (container.scrollTop < 100 && hasMore && !loadingMore) {
+			const prevScrollHeight = container.scrollHeight;
+			loadMoreMessages().then(() => {
+				requestAnimationFrame(() => {
+					const newScrollHeight = container.scrollHeight;
+					container.scrollTop = newScrollHeight - prevScrollHeight;
+				});
+			});
+		}
+	}, [hasMore, loadingMore, loadMoreMessages]);
 
 	const handleSend = async (
 		text: string,
@@ -220,6 +267,10 @@ export function ChatView() {
 			toolCalls: null,
 			toolCallId: null,
 			createdAt: Date.now(),
+		});
+
+		requestAnimationFrame(() => {
+			scrollToBottom("smooth");
 		});
 
 		sendMessage(
@@ -463,8 +514,14 @@ export function ChatView() {
 			</header>
 
 			{/* Message Stream */}
-			<div className="messages-container">
+			<div className="messages-container" ref={messagesContainerRef} onScroll={handleScroll}>
 				<div className="messages-inner">
+					{loadingMore && (
+						<div className="load-more-indicator">
+							<div className="spinner" style={{ width: 16, height: 16 }} />
+							<span>Cargando más mensajes...</span>
+						</div>
+					)}
 					{messages.length === 0 && !streaming ? (
 						<div className="empty-hero">
 							<div className="hero-avatar-glow">
@@ -536,12 +593,22 @@ export function ChatView() {
 				model={selectedModel}
 			/>
 
+			{/* Floating Scroll to Bottom Button */}
+			{showScrollBottom && (
+				<button
+					type="button"
+					className="scroll-to-bottom-btn"
+					onClick={() => scrollToBottom("smooth")}
+					title="Desplazarse al final del chat"
+					aria-label="Desplazarse al final del chat"
+				>
+					<ArrowDownIcon size={18} />
+				</button>
+			)}
+
 			{/* Model Information Modal */}
 			{selectedModelInfo && (
-				<ModelInfoModal
-					model={selectedModelInfo}
-					onClose={() => setSelectedModelInfo(null)}
-				/>
+				<ModelInfoModal model={selectedModelInfo} onClose={() => setSelectedModelInfo(null)} />
 			)}
 
 			{/* Settings Modal */}

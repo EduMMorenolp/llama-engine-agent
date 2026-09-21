@@ -1,12 +1,10 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SystemPromptModal } from "./SystemPromptModal.tsx";
 
 describe("SystemPromptModal", () => {
 	it("renders with the current prompt", () => {
-		render(
-			<SystemPromptModal prompt="Current prompt text" onSave={vi.fn()} onClose={vi.fn()} />,
-		);
+		render(<SystemPromptModal prompt="Current prompt text" onSave={vi.fn()} onClose={vi.fn()} />);
 		expect(screen.getByDisplayValue("Current prompt text")).toBeDefined();
 	});
 

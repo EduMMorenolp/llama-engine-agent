@@ -265,16 +265,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 												Delete All
 											</div>
 											<div className="settings-item-desc">
-												Permanently delete all conversations and their messages. This action cannot be
-												undone. Consider exporting your conversations first if you want to keep a
+												Permanently delete all conversations and their messages. This action cannot
+												be undone. Consider exporting your conversations first if you want to keep a
 												backup.
 											</div>
 										</div>
-										<button
-											type="button"
-											className="settings-danger-btn"
-											onClick={handleDeleteAll}
-										>
+										<button type="button" className="settings-danger-btn" onClick={handleDeleteAll}>
 											<TrashIcon size={15} />
 											<span>Delete all conversations</span>
 										</button>
@@ -470,4 +466,3 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 		document.body,
 	);
 }
-

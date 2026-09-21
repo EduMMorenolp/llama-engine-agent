@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Added**: Paginated message loading — `GET /api/sessions/:id` now accepts `limit` (default 100, max 500) and `offset` query params, returns `hasMore` and `totalMessages` in response. `SessionService.getMessagesPaginated()` replaces `getMessages()` for paginated queries. [2026-09-20]
+  * **Files (Archivos)**: `src/modules/sessions/service.ts`, `src/modules/sessions/controller.ts`, `src/server.test.ts`. [2026-09-20]
+
 - **Changed**: Parallel tool execution — multiple tool calls from the LLM are now executed concurrently via `Promise.allSettled`. Reduces latency by ~67% when 3+ tools are called in a single iteration. [2026-09-20]
   * **Files (Archivos)**: `src/agent/loop.ts`. [2026-09-20]
 

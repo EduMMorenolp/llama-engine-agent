@@ -139,8 +139,9 @@ function countMessageChars(msg: LLMMessage): number {
 function trimHistoryPreservingPairs(messages: LLMMessage[], maxChars: number): LLMMessage[] {
 	if (messages.length <= 2) return messages;
 
-	const result: LLMMessage[] = [messages[0]]; // Always keep first user message
-	let currentChars = countMessageChars(messages[0]);
+	const firstMsg = messages[0];
+	let currentChars = countMessageChars(firstMsg);
+	const recentKept: LLMMessage[] = [];
 
 	// Walk backwards from the end, preserving assistant→tool pairs
 	for (let i = messages.length - 1; i >= 1; i--) {
@@ -151,20 +152,26 @@ function trimHistoryPreservingPairs(messages: LLMMessage[], maxChars: number): L
 			const assistantMsg = messages[i - 1];
 			const pairChars = countMessageChars(assistantMsg) + countMessageChars(msg);
 			if (currentChars + pairChars <= maxChars) {
-				result.unshift(msg, assistantMsg);
+				recentKept.push(msg);
+				recentKept.push(assistantMsg);
 				currentChars += pairChars;
 				i--; // Skip assistant already processed
+			} else {
+				break;
 			}
 		} else if (msg.role !== "tool") {
 			const msgChars = countMessageChars(msg);
 			if (currentChars + msgChars <= maxChars) {
-				result.unshift(msg);
+				recentKept.push(msg);
 				currentChars += msgChars;
+			} else {
+				break;
 			}
 		}
 	}
 
-	return result;
+	recentKept.reverse();
+	return [firstMsg, ...recentKept];
 }
 
 export function getMemoriesForContext(

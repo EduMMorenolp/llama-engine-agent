@@ -1,18 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-	fetchSessions,
-	createSession,
-	updateSession,
-	fetchSession,
-	deleteSession,
-	fetchTools,
-	fetchHealth,
-	fetchMCPServers,
 	addMCPServer,
-	deleteMCPServer,
 	connectMCPServer,
+	createSession,
+	deleteMCPServer,
+	deleteSession,
 	disconnectMCPServer,
 	fetchAvailableModels,
+	fetchHealth,
+	fetchMCPServers,
+	fetchSession,
+	fetchSessions,
+	fetchTools,
+	updateSession,
 } from "./api.ts";
 import { AGENT_URL } from "./lib/api-client.ts";
 
@@ -84,10 +84,30 @@ describe("api", () => {
 
 	describe("fetchSession", () => {
 		it("returns session with messages", async () => {
-			const data = { id: "s1", name: "T", model: null, createdAt: 1, updatedAt: 1, messages: [] };
+			const data = {
+				id: "s1",
+				name: "T",
+				model: null,
+				createdAt: 1,
+				updatedAt: 1,
+				messages: [],
+				hasMore: false,
+				totalMessages: 0,
+			};
 			mockFetch.mockResolvedValue(mockResponse(data));
 			const result = await fetchSession("s1");
 			expect(result.messages).toEqual([]);
+			expect(result.hasMore).toBe(false);
+		});
+
+		it("passes limit and offset as query params", async () => {
+			const data = { id: "s1", messages: [], hasMore: true, totalMessages: 10 };
+			mockFetch.mockResolvedValue(mockResponse(data));
+			await fetchSession("s1", 5, 3);
+			expect(mockFetch).toHaveBeenCalledWith(
+				expect.stringContaining("limit=5&offset=3"),
+				expect.anything(),
+			);
 		});
 	});
 

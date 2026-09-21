@@ -264,4 +264,3 @@ export function MCPServersModal({ onClose }: MCPServersModalProps) {
 		document.body,
 	);
 }
-

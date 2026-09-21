@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Changed**: Message pagination with lazy loading — chat initially loads last 3 messages. Scrolling up triggers incremental loading of 20 more messages at a time via `offset`/`limit` params. `SessionsProvider` exposes `hasMore`, `loadingMore`, `loadMoreMessages()`. `fetchSession()` accepts optional `limit` and `offset`. [2026-09-20]
+  * **Files (Archivos)**: `src/api.ts`, `src/api.test.ts`, `src/providers/SessionsProvider.tsx`, `src/features/chat/components/ChatView.tsx`, `src/index.css`. [2026-09-20]
+
 - **Added**: MCP (Model Context Protocol) integration and modal (`MCPServersModal.tsx`). Supports viewing configured servers, connect/disconnect toggles, tool count indicators, adding custom command-based servers, and default preset integrations (Memory Graph, Fetch, Filesystem). [2026-09-16]
   * **Files (Archivos)**: `src/features/chat/components/MCPServersModal.tsx`, `src/features/chat/components/AttachMenu.tsx`, `src/api.ts`, `src/index.css`. [2026-09-16]
 
