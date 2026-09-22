@@ -1230,6 +1230,11 @@ body,
 	color: var(--text-muted);
 }
 
+.composer-textarea.listening::placeholder {
+	color: var(--danger);
+	opacity: 0.8;
+}
+
 .composer-bottom-row {
 	display: flex;
 	align-items: center;
@@ -1261,6 +1266,23 @@ body,
 	background: var(--bg-surface-hover);
 	color: var(--text-primary);
 	border-color: var(--border-subtle);
+}
+
+.composer-btn-icon.recording {
+	color: var(--danger);
+	background: var(--danger-subtle);
+	border-color: rgba(239, 68, 68, 0.3);
+	animation: pulse 1.2s infinite;
+}
+
+.composer-btn-icon.recording:hover {
+	background: rgba(239, 68, 68, 0.2);
+	border-color: rgba(239, 68, 68, 0.5);
+}
+
+.composer-btn-icon:disabled {
+	opacity: 0.35;
+	cursor: not-allowed;
 }
 
 .composer-bottom-right {

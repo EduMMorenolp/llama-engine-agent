@@ -1,49 +1,51 @@
 # Changelog
 
-## Unreleased
+## Sin liberar
 
-- **Changed**: Message pagination with lazy loading — chat initially loads last 3 messages. Scrolling up triggers incremental loading of 20 more messages at a time via `offset`/`limit` params. `SessionsProvider` exposes `hasMore`, `loadingMore`, `loadMoreMessages()`. `fetchSession()` accepts optional `limit` and `offset`. [2026-09-20]
-  * **Files (Archivos)**: `src/api.ts`, `src/api.test.ts`, `src/providers/SessionsProvider.tsx`, `src/features/chat/components/ChatView.tsx`, `src/index.css`. [2026-09-20]
+- **Agregado**: Entrada de micrófono vía Web Speech API — hook `useSpeechRecognition` permite voz-a-texto directo en el navegador. Botón de micrófono en el composer con animación de pulso de grabación y visualización de transcript interim. [2026-09-22]
+  * **Archivos**: `src/features/chat/hooks/useSpeechRecognition.ts`, `src/features/chat/components/Composer.tsx`, `src/components/ui/Icons.tsx`, `src/index.css`, `src/vite-env.d.ts`. [2026-09-22]
 
-- **Added**: MCP (Model Context Protocol) integration and modal (`MCPServersModal.tsx`). Supports viewing configured servers, connect/disconnect toggles, tool count indicators, adding custom command-based servers, and default preset integrations (Memory Graph, Fetch, Filesystem). [2026-09-16]
-  * **Files (Archivos)**: `src/features/chat/components/MCPServersModal.tsx`, `src/features/chat/components/AttachMenu.tsx`, `src/api.ts`, `src/index.css`. [2026-09-16]
+- **Cambiado**: Paginación de mensajes con lazy loading — chat carga inicialmente los últimos 3 mensajes. Scrolling hacia arriba carga incrementalmente 20 mensajes más a la vez via params `offset`/`limit`. `SessionsProvider` expone `hasMore`, `loadingMore`, `loadMoreMessages()`. `fetchSession()` acepta `limit` y `offset` opcionales. [2026-09-20]
+  * **Archivos**: `src/api.ts`, `src/api.test.ts`, `src/providers/SessionsProvider.tsx`, `src/features/chat/components/ChatView.tsx`, `src/index.css`. [2026-09-20]
 
-- **Added**: Expandable AI Model dropdown selector with provider badges (Default, Meta, Reasoning, Anthropic, OpenAI), descriptions, and outside click auto-close. [2026-09-16]
-  * **Files (Archivos)**: `src/features/chat/components/ChatView.tsx`, `src/index.css`. [2026-09-16]
+- **Agregado**: Integración MCP (Model Context Protocol) y modal (`MCPServersModal.tsx`). Soporta visualización de servidores configurados, toggles de conectar/desconectar, indicadores de cantidad de tools, agregado de servidores custom por comando, e integraciones preset (Memory Graph, Fetch, Filesystem). [2026-09-16]
+  * **Archivos**: `src/features/chat/components/MCPServersModal.tsx`, `src/features/chat/components/AttachMenu.tsx`, `src/api.ts`, `src/index.css`. [2026-09-16]
 
-- **Added**: File attachment content extraction and prompt injection for text and code files (`.md`, `.txt`, `.json`, `.ts`, `.py`, `.js`, etc.) using `FileReader.readAsText`. [2026-09-16]
-  * **Files (Archivos)**: `src/features/chat/components/FileUpload.tsx`, `src/features/chat/components/ChatView.tsx`. [2026-09-16]
+- **Agregado**: Selector dropdown expandible de modelos de IA con badges de proveedor (Default, Meta, Reasoning, Anthropic, OpenAI), descripciones, y auto-cierre al hacer click afuera. [2026-09-16]
+  * **Archivos**: `src/features/chat/components/ChatView.tsx`, `src/index.css`. [2026-09-16]
 
-- **Added**: Dynamic tool enabling/disabling sync over WebSocket with `enabledTools` option passed from composer to agent backend. [2026-09-16]
-  * **Files (Archivos)**: `src/features/chat/components/Composer.tsx`, `src/features/chat/hooks/useChat.ts`. [2026-09-16]
+- **Agregado**: Extracción de contenido de archivos adjuntos e inyección en prompt para archivos de texto y código (`.md`, `.txt`, `.json`, `.ts`, `.py`, `.js`, etc.) usando `FileReader.readAsText`. [2026-09-16]
+  * **Archivos**: `src/features/chat/components/FileUpload.tsx`, `src/features/chat/components/ChatView.tsx`. [2026-09-16]
 
-- **Added**: Centralized `SessionsProvider` React context ensuring seamless shared session switching, message loading, and active session synchronization across sidebar and chat views. [2026-09-16]
-  * **Files (Archivos)**: `src/providers/SessionsProvider.tsx`, `src/App.tsx`, `src/features/sessions/hooks/useSessions.ts`. [2026-09-16]
+- **Agregado**: Habilitación/deshabilitación dinámica de tools sincronizada vía WebSocket con opción `enabledTools` pasada desde el composer al backend del agente. [2026-09-16]
+  * **Archivos**: `src/features/chat/components/Composer.tsx`, `src/features/chat/hooks/useChat.ts`. [2026-09-16]
 
-- **Fixed**: Sidebar collapse layout overflow preventing branding and navigation overlap with header model selector. [2026-09-16]
-  * **Files (Archivos)**: `src/index.css`. [2026-09-16]
+- **Agregado**: `SessionsProvider` centralizado de React context asegurando cambio compartido de sesiones, carga de mensajes y sincronización de sesión activa entre sidebar y vistas de chat. [2026-09-16]
+  * **Archivos**: `src/providers/SessionsProvider.tsx`, `src/App.tsx`, `src/features/sessions/hooks/useSessions.ts`. [2026-09-16]
 
-- **Fixed**: Centered system prompt dialog and backdrop overlay with glassmorphism styling and smooth entrance animations. [2026-09-16]
-  * **Files (Archivos)**: `src/features/chat/components/SystemPromptModal.tsx`, `src/index.css`. [2026-09-16]
+- **Corregido**: Overflow de layout del sidebar colapsado impidiendo superposición de branding y navegación con el selector de modelos del header. [2026-09-16]
+  * **Archivos**: `src/index.css`. [2026-09-16]
 
-- **Fixed**: Removed duplicate agent tools item from composer attach menu (`+`). [2026-09-16]
-  * **Files (Archivos)**: `src/features/chat/components/AttachMenu.tsx`. [2026-09-16]
+- **Corregido**: Diálogo de system prompt centrado y overlay con glassmorphism y animaciones de entrada suaves. [2026-09-16]
+  * **Archivos**: `src/features/chat/components/SystemPromptModal.tsx`, `src/index.css`. [2026-09-16]
 
-- **Added**: Markdown rendering with GFM support (tables, lists, task lists). Code blocks with syntax highlighting and copy button. Thinking/reasoning sections collapsible. Streaming with progressive markdown rendering. [2026-09-16]
-  * **Files (Archivos)**: `src/features/chat/components/MessageBubble.tsx`, `src/index.css`. [2026-09-16]
+- **Corregido**: Eliminado item duplicado de herramientas del agente en el menú de adjuntos del composer (`+`). [2026-09-16]
+  * **Archivos**: `src/features/chat/components/AttachMenu.tsx`. [2026-09-16]
 
-- **Added**: Tool calls display as collapsible cards with status indicators (pending/done/error). Auto-reconnect WebSocket with exponential backoff. Connection state indicator. [2026-09-16]
-  * **Files (Archivos)**: `src/features/chat/hooks/useChat.ts`, `src/features/chat/components/ChatView.tsx`. [2026-09-16]
+- **Agregado**: Renderizado Markdown con soporte GFM (tablas, listas, task lists). Bloques de código con syntax highlighting y botón de copiar. Secciones de thinking/reasoning colapsables. Streaming con renderizado progresivo de markdown. [2026-09-16]
+  * **Archivos**: `src/features/chat/components/MessageBubble.tsx`, `src/index.css`. [2026-09-16]
 
-- **Added**: Floating composer with attach button (+), model selector, and token counter. Modern dark obsidian UI design inspired by Claude, Gemini, ChatGPT, and DeepSeek. [2026-09-16]
-  * **Files (Archivos)**: `src/features/chat/components/Composer.tsx`, `src/index.css`. [2026-09-16]
+- **Agregado**: Visualización de tool calls como cards colapsables con indicadores de estado (pending/done/error). Reconexión automática WebSocket con backoff exponencial. Indicador de estado de conexión. [2026-09-16]
+  * **Archivos**: `src/features/chat/hooks/useChat.ts`, `src/features/chat/components/ChatView.tsx`. [2026-09-16]
 
-- **Added**: Toast notification system (success, error, info, warning) with auto-dismiss and slide-in animation. [2026-09-16]
-  * **Files (Archivos)**: `src/providers/ToastProvider.tsx`. [2026-09-16]
+- **Agregado**: Composer flotante con botón de adjuntos (+), selector de modelo y contador de tokens. Diseño UI dark moderno inspirado en Claude, Gemini, ChatGPT y DeepSeek. [2026-09-16]
+  * **Archivos**: `src/features/chat/components/Composer.tsx`, `src/index.css`. [2026-09-16]
 
-- **Added**: View states (loading skeleton, empty state, error with retry). Centered hero starter cards. [2026-09-16]
-  * **Files (Archivos)**: `src/features/chat/components/ChatView.tsx`. [2026-09-16]
+- **Agregado**: Sistema de notificaciones toast (success, error, info, warning) con auto-dismiss y animación slide-in. [2026-09-16]
+  * **Archivos**: `src/providers/ToastProvider.tsx`. [2026-09-16]
 
-- **Changed**: Feature-based project structure. Single HTTP client in `lib/api-client.ts`. Components organized by domain (chat, sessions). [2026-09-16]
-  * **Files (Archivos)**: `src/lib/api-client.ts`, `src/api.ts`, `src/features/`, `src/components/`. [2026-09-16]
+- **Agregado**: Estados de vista (loading skeleton, estado vacío, error con retry). Cards de inicio hero centradas. [2026-09-16]
+  * **Archivos**: `src/features/chat/components/ChatView.tsx`. [2026-09-16]
 
+- **Cambiado**: Estructura de proyecto basada en features. Cliente HTTP único en `lib/api-client.ts`. Componentes organizados por dominio (chat, sessions). [2026-09-16]
+  * **Archivos**: `src/lib/api-client.ts`, `src/api.ts`, `src/features/`, `src/components/`. [2026-09-16]

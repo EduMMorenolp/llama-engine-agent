@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTools } from "../../../api.ts";
 import {
+	MicIcon,
 	PlusIcon,
 	SendIcon,
 	SlidersIcon,
 	StopIcon,
 	WrenchIcon,
 } from "../../../components/ui/Icons.tsx";
+import { useSpeechRecognition } from "../hooks/useSpeechRecognition.ts";
 import { AttachMenu } from "./AttachMenu.tsx";
 import { type FileAttachment, FileUpload, useFileUpload } from "./FileUpload.tsx";
 import { MCPServersModal } from "./MCPServersModal.tsx";
@@ -79,6 +81,14 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 	const [attachments, setAttachments] = useState<FileAttachment[]>([]);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const { processFiles } = useFileUpload();
+	const {
+		listening,
+		transcript,
+		isSupported,
+		start: startListening,
+		stop: stopListening,
+		reset: resetTranscript,
+	} = useSpeechRecognition();
 
 	// Fetch dynamic tools from agent backend API
 	useEffect(() => {
@@ -99,6 +109,13 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 			});
 	}, []);
 
+	// Sync speech transcript into textarea
+	useEffect(() => {
+		if (listening && transcript) {
+			setText(transcript);
+		}
+	}, [listening, transcript]);
+
 	// Auto-resize textarea according to scrollHeight and text content
 	useEffect(() => {
 		const textarea = textareaRef.current;
@@ -116,6 +133,10 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 		const trimmed = text.trim();
 		if (!trimmed && attachments.length === 0) return;
 		if (disabled) return;
+		if (listening) {
+			stopListening();
+			resetTranscript();
+		}
 		const enabledTools = tools.filter((t) => t.enabled).map((t) => t.name);
 		onSend(trimmed, attachments, { systemPrompt, enabledTools, modelSettings });
 		setText("");
@@ -123,7 +144,18 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 		if (textareaRef.current) {
 			textareaRef.current.style.height = "auto";
 		}
-	}, [text, attachments, disabled, onSend, systemPrompt, tools, modelSettings]);
+	}, [
+		text,
+		attachments,
+		disabled,
+		onSend,
+		systemPrompt,
+		tools,
+		modelSettings,
+		listening,
+		stopListening,
+		resetTranscript,
+	]);
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
@@ -152,6 +184,14 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 		const input = document.querySelector('input[type="file"]') as HTMLInputElement | null;
 		input?.click();
 	}, []);
+
+	const handleMicToggle = useCallback(() => {
+		if (listening) {
+			stopListening();
+		} else {
+			startListening();
+		}
+	}, [listening, startListening, stopListening]);
 
 	const handleSystemMessage = useCallback(() => {
 		setShowAttachMenu(false);
@@ -213,8 +253,12 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 				<div className="composer-input-row">
 					<textarea
 						ref={textareaRef}
-						className="composer-textarea"
-						placeholder="Escribe un mensaje o usa las herramientas del agente..."
+						className={`composer-textarea ${listening ? "listening" : ""}`}
+						placeholder={
+							listening
+								? "Escuchando... hablá ahora"
+								: "Escribe un mensaje o usa las herramientas del agente..."
+						}
 						value={text}
 						onChange={(e) => setText(e.target.value)}
 						onKeyDown={handleKeyDown}
@@ -236,6 +280,18 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 						>
 							<PlusIcon size={18} />
 						</button>
+
+						{isSupported && (
+							<button
+								type="button"
+								className={`composer-btn-icon ${listening ? "recording" : ""}`}
+								onClick={handleMicToggle}
+								disabled={disabled}
+								title={listening ? "Detener grabación" : "Grabar audio"}
+							>
+								<MicIcon size={16} />
+							</button>
+						)}
 
 						<button
 							type="button"

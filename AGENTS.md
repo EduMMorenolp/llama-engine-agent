@@ -200,6 +200,7 @@ VITE_AGENT_KEY=llama-engine-dev
 - Correr `npm test` para verificar que no se rompió nada.
 - Usar Zod para validar inputs en el backend (DTOs en `modules/*/dto.ts`).
 - Mantener los módulos separados: controller → service → store/db.
+- Actualizar el `CHANGELOG.md` del paquete correspondiente después de cada cambio. Formato: `**Agregado/Cambiado/Corregido/Eliminado**: Descripción [AAAA-MM-DD]` + `* **Archivos**: rutas [AAAA-MM-DD]`. Si el cambio afecta ambos paquetes, actualizar ambos changelogs.
 
 **Preguntar primero**
 - Agregar nuevas dependencias runtime.
