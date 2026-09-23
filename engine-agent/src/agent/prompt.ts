@@ -1,6 +1,8 @@
 import type { MemoryService } from "../modules/memories/service.js";
 import type { SessionService } from "../modules/sessions/service.js";
 import type { LLMMessage } from "./types.js";
+import { getSkillLevel0Metadata } from "./skill-loader.js";
+import type { Skill } from "./types.js";
 
 export interface PromptContext {
 	store: SessionService;
@@ -9,6 +11,7 @@ export interface PromptContext {
 	memories?: Array<{ key: string; content: string }>;
 	maxHistoryChars?: number;
 	model?: string;
+	skills?: Skill[];
 }
 
 const DEFAULT_MAX_HISTORY_CHARS = 60000; // ~15,000 tokens safe budget
@@ -21,6 +24,7 @@ export function buildPrompt(context: PromptContext): LLMMessage[] {
 		memories,
 		maxHistoryChars = DEFAULT_MAX_HISTORY_CHARS,
 		model: _model,
+		skills = [],
 	} = context;
 	const messages: LLMMessage[] = [];
 
@@ -46,6 +50,11 @@ Reglas:
 		for (const mem of memories) {
 			systemParts.push(`- ${mem.key}: ${mem.content}`);
 		}
+	}
+
+	const skillCatalog = getSkillLevel0Metadata(skills);
+	if (skillCatalog) {
+		systemParts.push(skillCatalog);
 	}
 
 	messages.push({ role: "system", content: systemParts.join("\n") });

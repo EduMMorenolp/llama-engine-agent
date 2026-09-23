@@ -16,6 +16,7 @@ export interface SendMessageOptions {
 	systemPrompt?: string;
 	enabledTools?: string[];
 	modelSettings?: ModelSettings;
+	agent?: string;
 }
 
 interface UseChatReturn {
@@ -110,6 +111,7 @@ export function useChat(): UseChatReturn {
 							systemPrompt: options?.systemPrompt,
 							enabledTools: options?.enabledTools,
 							modelSettings: options?.modelSettings,
+							agent: options?.agent,
 						},
 					}),
 				);
@@ -122,8 +124,21 @@ export function useChat(): UseChatReturn {
 					switch (data.type) {
 						case "message": {
 							const content = (data.payload.content as string) ?? "";
+							const subAgent = data.payload._subAgent as string | undefined;
 							assistantContent += content;
 							setCurrentContent(assistantContent);
+							if (subAgent) {
+								onMessage({
+									id: randomUUID(),
+									sessionId,
+									role: "assistant",
+									content,
+									toolCalls: null,
+									toolCallId: null,
+									createdAt: Date.now(),
+									_subAgent: subAgent,
+								});
+							}
 							break;
 						}
 						case "tool_start": {

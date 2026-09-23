@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
+import { SparklesIcon } from "../../../components/ui/Icons.tsx";
 import type { Message } from "../../../api.ts";
 import logoImg from "../../../assets/logo.jpg";
 import {
@@ -374,6 +375,12 @@ export function MessageBubble({
 						<div className="message-model-pill">
 							<span className="model-pill-icon">⬡</span>
 							<span className="model-pill-name">{modelName}</span>
+							{message._subAgent && (
+								<span className="sub-agent-badge">
+									<SparklesIcon size={10} />
+									{message._subAgent}
+								</span>
+							)}
 						</div>
 					)}
 

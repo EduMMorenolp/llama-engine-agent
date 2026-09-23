@@ -10,6 +10,12 @@ import { createMemoryRoutes } from "../modules/memories/routes.js";
 import type { MemoryService } from "../modules/memories/service.js";
 import { ModelsController } from "../modules/models/controller.js";
 import { createModelsRoutes } from "../modules/models/routes.js";
+import { AgentController } from "../modules/agents/controller.js";
+import { createAgentRoutes } from "../modules/agents/routes.js";
+import { SkillController } from "../modules/skills/controller.js";
+import { createSkillRoutes } from "../modules/skills/routes.js";
+import { AgentService } from "../modules/agents/service.js";
+import type { SkillService } from "../modules/skills/service.js";
 import { SessionController } from "../modules/sessions/controller.js";
 import { createSessionRoutes } from "../modules/sessions/routes.js";
 import type { SessionService } from "../modules/sessions/service.js";
@@ -22,6 +28,7 @@ export function createApiRoutes(
 	_db: Database,
 	sessionService: SessionService,
 	memoryService: MemoryService,
+	skillService: SkillService,
 	toolRegistry: ToolRegistry,
 	agentConfig: AgentLoopConfig,
 ) {
@@ -32,6 +39,13 @@ export function createApiRoutes(
 
 	const memoryController = new MemoryController(memoryService);
 	router.use("/memories", createMemoryRoutes(memoryController));
+
+	const agentService = new AgentService(_db);
+	const agentController = new AgentController(agentService);
+	router.use("/agents", createAgentRoutes(agentController));
+
+	const skillController = new SkillController(skillService);
+	router.use("/skills", createSkillRoutes(skillController));
 
 	const toolService = new ToolService(toolRegistry);
 	const toolController = new ToolController(toolService);
@@ -44,7 +58,7 @@ export function createApiRoutes(
 	const modelsController = new ModelsController();
 	router.use("/models", createModelsRoutes(modelsController));
 
-	router.use("/chat", createChatRoutes(agentConfig, sessionService));
+	router.use("/chat", createChatRoutes(agentConfig, sessionService, agentService));
 
 	return router;
 }

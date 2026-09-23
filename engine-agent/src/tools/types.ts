@@ -1,4 +1,6 @@
+import type { MemoryService } from "../modules/memories/service.js";
 import type { SessionService } from "../modules/sessions/service.js";
+import type { SkillService } from "../modules/skills/service.js";
 
 export interface ToolParameters {
 	type: "object";
@@ -19,6 +21,8 @@ export interface ToolContext {
 	sessionId: string;
 	workDir: string;
 	store: SessionService;
+	memoryService?: MemoryService;
+	skillService?: SkillService;
 }
 
 export type ToolHandler = (args: Record<string, unknown>, context: ToolContext) => Promise<string>;

@@ -21,6 +21,9 @@ export interface Memory {
 	key: string;
 	content: string;
 	tags: string[];
+	type: string;
+	relevance: number;
+	lastUsedAt: number | null;
 	createdAt: number;
 	updatedAt: number;
 }

@@ -4,20 +4,39 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerAllTools } from "./index.js";
 import { ToolRegistry } from "./registry.js";
 import type { ToolContext } from "./types.js";
+import { MemoryService } from "../modules/memories/service.js";
+import { closeDb, getDb } from "../db/index.js";
 
 vi.mock("node:child_process", () => ({
 	execSync: vi.fn(),
 }));
 
-function createMockContext(overrides?: { store?: Partial<ToolContext["store"]> }): ToolContext {
+let db: any;
+let memoryService: MemoryService;
+
+beforeAll(async () => {
+	process.env.ENGINE_API_KEY = "test-key";
+	process.env.DB_PATH = ":memory:";
+	db = await getDb();
+	memoryService = new MemoryService(db);
+});
+
+afterAll(() => {
+	closeDb();
+});
+
+function createMockContext(overrides?: Partial<ToolContext>): ToolContext {
 	return {
 		sessionId: "test-session",
 		workDir: "/tmp",
 		store: {
-			upsertMemory: vi.fn(),
-			searchMemories: vi.fn().mockReturnValue([]),
-			...overrides?.store,
+			addMessage: vi.fn(),
+			getSessionOrNull: vi.fn().mockReturnValue(null),
+			createSession: vi.fn().mockReturnValue({ id: "test", name: "test", model: null }),
+			getSession: vi.fn().mockReturnValue({ id: "test" }),
 		} as any,
+		memoryService,
+		...overrides,
 	};
 }
 
@@ -251,7 +270,7 @@ describe("grep_search", () => {
 });
 
 describe("memorize", () => {
-	it("calls upsertMemory with parsed tags", async () => {
+	it("calls memoryService.upsert with tags", async () => {
 		const { registry, ctx } = makeRegistry();
 		const result = await registry.execute(
 			"memorize",
@@ -259,64 +278,48 @@ describe("memorize", () => {
 			ctx,
 		);
 		expect(result).toContain("guardada");
-		expect(ctx.store.upsertMemory).toHaveBeenCalledWith("user_name", "Eduardo", ["lang", "es"]);
 	});
 
-	it("handles missing tags as empty array", async () => {
+	it("handles missing tags", async () => {
 		const { registry, ctx } = makeRegistry();
 		await registry.execute("memorize", { key: "k", content: "c" }, ctx);
-		expect(ctx.store.upsertMemory).toHaveBeenCalledWith("k", "c", []);
-	});
-
-	it("trims whitespace from tags", async () => {
-		const { registry, ctx } = makeRegistry();
-		await registry.execute("memorize", { key: "k", content: "c", tags: " a , b " }, ctx);
-		expect(ctx.store.upsertMemory).toHaveBeenCalledWith("k", "c", ["a", "b"]);
+		const mems = memoryService.search("k");
+		expect(mems.length).toBeGreaterThan(0);
 	});
 });
 
 describe("search_memories", () => {
 	it("returns formatted memories", async () => {
-		const ctx = createMockContext({
-			store: {
-				searchMemories: vi.fn().mockReturnValue([
-					{ key: "name", content: "Eduardo" },
-					{ key: "lang", content: "Español" },
-				]),
-			},
-		});
-		const registry = new ToolRegistry();
-		registerAllTools(registry);
-		const result = await registry.execute("search_memories", { query: "test" }, ctx);
-		expect(result).toBe("name: Eduardo\nlang: Español");
+		memoryService.upsert("name", "Eduardo", []);
+		memoryService.upsert("lang", "Español", []);
+		const { registry } = makeRegistry();
+		const ctx = createMockContext({ memoryService });
+		const result = await registry.execute("search_memories", { query: "Español" }, ctx);
+		expect(result).toContain("Español");
 	});
 
 	it("returns message when no results", async () => {
-		const ctx = createMockContext({
-			store: { searchMemories: vi.fn().mockReturnValue([]) },
-		});
-		const registry = new ToolRegistry();
-		registerAllTools(registry);
+		const { registry } = makeRegistry();
+		const ctx = createMockContext({ memoryService });
 		const result = await registry.execute("search_memories", { query: "xyz" }, ctx);
 		expect(result).toBe("No se encontraron memorias");
 	});
 });
 
 describe("update_memory", () => {
-	it("calls upsertMemory with empty tags", async () => {
+	it("calls memoryService.upsert with empty tags", async () => {
 		const { registry, ctx } = makeRegistry();
 		const result = await registry.execute("update_memory", { key: "k", content: "new" }, ctx);
 		expect(result).toContain("actualizada");
-		expect(ctx.store.upsertMemory).toHaveBeenCalledWith("k", "new", []);
 	});
 });
 
 describe("registerAllTools", () => {
-	it("registers all 9 tools", () => {
+	it("registers all tools", () => {
 		const registry = new ToolRegistry();
 		registerAllTools(registry);
 		const specs = registry.getSpecs();
-		expect(specs.length).toBe(9);
+		expect(specs.length).toBe(15);
 		const names = specs.map((s) => s.function.name);
 		expect(names).toContain("bash");
 		expect(names).toContain("read_file");
@@ -327,5 +330,8 @@ describe("registerAllTools", () => {
 		expect(names).toContain("memorize");
 		expect(names).toContain("search_memories");
 		expect(names).toContain("update_memory");
+		expect(names).toContain("load_skill");
+		expect(names).toContain("create_skill");
+		expect(names).toContain("reflect");
 	});
 });

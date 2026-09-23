@@ -8,6 +8,7 @@ import { createAuthMiddleware } from "./middleware/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import type { MemoryService } from "./modules/memories/service.js";
 import type { SessionService } from "./modules/sessions/service.js";
+import { SkillService } from "./modules/skills/service.js";
 import { createApiRoutes } from "./routes/index.js";
 import type { ToolRegistry } from "./tools/registry.js";
 
@@ -21,6 +22,7 @@ export function createApp(
 	db: Database,
 	sessionService: SessionService,
 	memoryService: MemoryService,
+	skillService: SkillService,
 	toolRegistry: ToolRegistry,
 	agentConfig: AgentLoopConfig,
 ) {
@@ -39,7 +41,7 @@ export function createApp(
 	app.use(
 		"/api",
 		authMiddleware,
-		createApiRoutes(db, sessionService, memoryService, toolRegistry, agentConfig),
+		createApiRoutes(db, sessionService, memoryService, skillService, toolRegistry, agentConfig),
 	);
 
 	app.use(errorHandler);

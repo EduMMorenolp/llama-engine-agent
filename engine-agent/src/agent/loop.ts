@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { MemoryService } from "../modules/memories/service.js";
+import type { SkillService } from "../modules/skills/service.js";
 import type { SessionService } from "../modules/sessions/service.js";
 import type { ToolRegistry } from "../tools/registry.js";
 import type { ToolContext } from "../tools/types.js";
@@ -19,6 +20,7 @@ export interface AgentLoopConfig {
 	toolRegistry: ToolRegistry;
 	store: SessionService;
 	memoryService: MemoryService;
+	skillService: SkillService;
 	maxIterations: number;
 	workDir: string;
 }
@@ -39,7 +41,7 @@ export async function runAgent(
 	if (enabledTools !== undefined) {
 		tools = tools.filter((t) => enabledTools.includes(t.function.name));
 	}
-	const toolContext: ToolContext = { sessionId, workDir, store };
+	const toolContext: ToolContext = { sessionId, workDir, store, memoryService, skillService: config.skillService };
 
 	const reasoningInstruction =
 		modelSettings?.enableReasoning === false

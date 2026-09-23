@@ -18,6 +18,7 @@ export interface Message {
 	toolCalls: string | null;
 	toolCallId: string | null;
 	createdAt: number;
+	_subAgent?: string;
 }
 
 export interface Tool {
@@ -29,6 +30,44 @@ export interface Tool {
 export interface StreamEvent {
 	type: "message" | "tool_start" | "tool_end" | "done" | "error";
 	payload: Record<string, unknown>;
+}
+
+export interface AgentDefinition {
+	name: string;
+	corePrompt: string;
+	description: string;
+	tools: string[];
+	model: string;
+	maxIterations: number;
+	enabled: boolean;
+}
+
+export interface SkillMetadata {
+	name: string;
+	description: string;
+	version?: string;
+	tags: string[];
+}
+
+export interface SkillFile {
+	path: string;
+	content: string;
+	language: string;
+}
+
+export interface Skill {
+	name: string;
+	agent: string;
+	description: string;
+	directory: string;
+	metadata: SkillMetadata;
+	allowedTools: string[];
+	triggers: string[];
+	tags: string[];
+	usageCount: number;
+	successCount: number;
+	createdAt: number;
+	updatedAt: number;
 }
 
 export async function fetchSessions(): Promise<Session[]> {
@@ -133,4 +172,48 @@ export async function fetchAvailableModels(): Promise<{
 	activeModel?: string;
 }> {
 	return apiGet<{ models: ModelInfo[]; activeModel?: string }>("/api/models");
+}
+
+// Agent API
+export async function fetchAgents(): Promise<AgentDefinition[]> {
+	const res = await apiGet<{ agents: AgentDefinition[] }>("/api/agents");
+	return res.agents;
+}
+
+export async function createAgent(dto: Partial<AgentDefinition>): Promise<AgentDefinition> {
+	return apiPost<AgentDefinition>("/api/agents", dto);
+}
+
+export async function updateAgent(name: string, dto: Partial<AgentDefinition>): Promise<AgentDefinition> {
+	return apiPatch<AgentDefinition>(`/api/agents/${name}`, dto);
+}
+
+export async function deleteAgent(name: string): Promise<void> {
+	await apiDelete(`/api/agents/${name}`);
+}
+
+export async function getAgent(name: string): Promise<AgentDefinition> {
+	return apiGet<AgentDefinition>(`/api/agents/${name}`);
+}
+
+// Skill API
+export async function fetchSkills(): Promise<Skill[]> {
+	const res = await apiGet<{ skills: Skill[] }>("/api/skills");
+	return res.skills;
+}
+
+export async function createSkill(dto: Partial<Skill>): Promise<Skill> {
+	return apiPost<Skill>("/api/skills", dto);
+}
+
+export async function updateSkill(name: string, dto: Partial<Skill>): Promise<Skill> {
+	return apiPatch<Skill>(`/api/skills/${name}`, dto);
+}
+
+export async function deleteSkill(name: string): Promise<void> {
+	await apiDelete(`/api/skills/${name}`);
+}
+
+export async function getSkill(name: string): Promise<Skill> {
+	return apiGet<Skill>(`/api/skills/${name}`);
 }

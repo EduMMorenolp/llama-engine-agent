@@ -13,6 +13,10 @@ const envSchema = z
 		DB_PATH: z.string().default("./data/agent.db"),
 		MAX_ITERATIONS: z.coerce.number().default(10),
 		SYSTEM_PROMPT: z.string().default("Sos un asistente de IA inteligente, empático y servicial."),
+		MEMORY_BUDGET: z.coerce.number().default(500),
+		SKILL_BUDGET: z.coerce.number().default(3000),
+		MAX_AGENT_DEPTH: z.coerce.number().default(2),
+		SKILL_DIR: z.string().default("./skills"),
 	})
 	.refine((data) => data.ENGINE_API_KEY && data.ENGINE_API_KEY.length > 0, {
 		message: "ENGINE_API_KEY es requerida",

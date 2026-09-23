@@ -5,6 +5,8 @@ import WebSocket from "ws";
 import { closeDb, getDb } from "./db/index.js";
 import { MemoryService } from "./modules/memories/service.js";
 import { SessionService } from "./modules/sessions/service.js";
+import { SkillService } from "./modules/skills/service.js";
+import { AgentService } from "./modules/agents/service.js";
 import { createApp } from "./server.js";
 import { ToolRegistry } from "./tools/registry.js";
 import { createWebSocketServer } from "./ws.js";
@@ -13,6 +15,8 @@ describe("WebSocket /ws", () => {
 	let db: Database;
 	let sessionService: SessionService;
 	let memoryService: MemoryService;
+	let skillService: SkillService;
+	let agentService: AgentService;
 	let registry: ToolRegistry;
 	let server: ReturnType<typeof createServer>;
 	let port: number;
@@ -34,6 +38,8 @@ describe("WebSocket /ws", () => {
 		db = await getDb();
 		sessionService = new SessionService(db);
 		memoryService = new MemoryService(db);
+		skillService = new SkillService(db);
+		agentService = new AgentService(db);
 		registry = new ToolRegistry();
 
 		const agentConfig = {
@@ -41,6 +47,7 @@ describe("WebSocket /ws", () => {
 			toolRegistry: registry,
 			store: sessionService,
 			memoryService,
+			skillService,
 			maxIterations: 5,
 			workDir: process.cwd(),
 		};
@@ -50,12 +57,13 @@ describe("WebSocket /ws", () => {
 			db,
 			sessionService,
 			memoryService,
+			skillService,
 			registry,
 			agentConfig,
 		);
 
 		server = createServer(app);
-		createWebSocketServer(server, sessionService, agentConfig);
+		createWebSocketServer(server, sessionService, agentService, agentConfig);
 
 		await new Promise<void>((resolve) => {
 			server.listen(0, () => {

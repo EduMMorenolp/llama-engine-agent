@@ -4,12 +4,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { closeDb, getDb } from "./db/index.js";
 import { MemoryService } from "./modules/memories/service.js";
 import { SessionService } from "./modules/sessions/service.js";
+import { SkillService } from "./modules/skills/service.js";
 import { createApp, type ServerConfig } from "./server.js";
 import { ToolRegistry } from "./tools/registry.js";
 
 let db: Database;
 let sessionService: SessionService;
 let memoryService: MemoryService;
+let skillService: SkillService;
 let registry: ToolRegistry;
 let app: ReturnType<typeof createApp>;
 
@@ -25,12 +27,14 @@ beforeAll(async () => {
 	db = await getDb();
 	sessionService = new SessionService(db);
 	memoryService = new MemoryService(db);
+	skillService = new SkillService(db);
 	registry = new ToolRegistry();
-	app = createApp(config, db, sessionService, memoryService, registry, {
+	app = createApp(config, db, sessionService, memoryService, skillService, registry, {
 		llmClient: {} as any,
 		toolRegistry: registry,
 		store: sessionService,
 		memoryService,
+		skillService,
 		maxIterations: 10,
 		workDir: "/tmp",
 	});

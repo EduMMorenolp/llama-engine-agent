@@ -3,12 +3,15 @@ import type { Server } from "node:http";
 import { type WebSocket, WebSocketServer } from "ws";
 import type { AgentLoopConfig } from "./agent/loop.js";
 import { runAgent } from "./agent/loop.js";
+import type { AgentDefinition } from "./agent/types.js";
 import type { SessionService } from "./modules/sessions/service.js";
+import { AgentService } from "./modules/agents/service.js";
 import { logger } from "./utils/logger.js";
 
 export function createWebSocketServer(
 	httpServer: Server,
 	store: SessionService,
+	agentService: AgentService,
 	agentConfig: AgentLoopConfig,
 ) {
 	const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
@@ -27,6 +30,7 @@ export function createWebSocketServer(
 						systemPrompt,
 						enabledTools,
 						modelSettings,
+						agent: agentName,
 					} = msg.payload ?? {};
 					const sessionId = inputSessionId ?? randomUUID();
 
@@ -47,11 +51,43 @@ export function createWebSocketServer(
 						}
 					}
 
+					let agentDef: AgentDefinition | null = null;
+					if (agentName) {
+						agentDef = agentService.getOrNull(agentName);
+					}
+
+					const finalSystemPrompt = agentDef?.corePrompt
+						? systemPrompt ?? agentDef.corePrompt
+						: systemPrompt;
+					const finalEnabledTools = agentDef?.tools
+						? enabledTools?.filter((t: string) => agentDef!.tools!.includes(t)) ?? enabledTools
+						: enabledTools;
+					const finalModel = agentDef?.model ?? model;
+
 					await runAgent(
-						{ ...agentConfig, store },
-						{ sessionId, message, model, systemPrompt, enabledTools, modelSettings },
+						{
+							...agentConfig,
+							store,
+							maxIterations: agentDef?.maxIterations ?? agentConfig.maxIterations,
+						},
+						{
+							sessionId,
+							message,
+							model: finalModel,
+							systemPrompt: finalSystemPrompt,
+							enabledTools: finalEnabledTools ? [...finalEnabledTools] : undefined,
+							modelSettings,
+							agent: agentName,
+						},
 						(event) => {
-							ws.send(JSON.stringify(event));
+							const enrichedEvent = {
+								...event,
+								payload: {
+									...event.payload,
+									_subAgent: agentName ?? undefined,
+								},
+							};
+							ws.send(JSON.stringify(enrichedEvent));
 						},
 					);
 				}

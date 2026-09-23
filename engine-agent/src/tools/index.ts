@@ -5,6 +5,13 @@ import path from "node:path";
 import { bashTool } from "./bash.js";
 import { editFileTool, readFileTool, writeFileTool } from "./file-ops.js";
 import { memorizeTool, searchMemoriesTool, updateMemoryTool } from "./memory.js";
+import { createSkillTool } from "./create_skill.js";
+import { deleteSkillTool } from "./delete_skill.js";
+import { loadSkillTool } from "./load_skill.js";
+import { reflectTool } from "./reflect.js";
+import { runSkillScriptTool } from "./run_skill_script.js";
+import { updateSkillTool } from "./update_skill.js";
+import { getConfig } from "../config/index.js";
 import type { ToolRegistry } from "./registry.js";
 import { globSearchTool, grepSearchTool } from "./search.js";
 import type { ToolHandler } from "./types.js";
@@ -181,17 +188,20 @@ const memorizeHandler: ToolHandler = async (args, ctx) => {
 	const key = String(args.key);
 	const content = String(args.content);
 	const tags = args.tags
-		? String(args.tags)
-				.split(",")
-				.map((t) => t.trim())
+		? String(args.tags).split(",").map((t) => t.trim())
 		: [];
-	ctx.store.upsertMemory(key, content, tags);
+	if (ctx.memoryService) {
+		ctx.memoryService.upsert(key, content, tags);
+	} else {
+		throw new Error("Memory service not available");
+	}
 	return `Memoria "${key}" guardada`;
 };
 
 const searchMemoriesHandler: ToolHandler = async (args, ctx) => {
 	const query = String(args.query);
-	const memories = ctx.store.searchMemories(query);
+	if (!ctx.memoryService) return "No se encontraron memorias";
+	const memories = ctx.memoryService.search(query);
 	if (!memories.length) return "No se encontraron memorias";
 	return memories.map((m) => `${m.key}: ${m.content}`).join("\n");
 };
@@ -199,8 +209,103 @@ const searchMemoriesHandler: ToolHandler = async (args, ctx) => {
 const updateMemoryHandler: ToolHandler = async (args, ctx) => {
 	const key = String(args.key);
 	const content = String(args.content);
-	ctx.store.upsertMemory(key, content, []);
+	if (!ctx.memoryService) throw new Error("Memory service not available");
+	ctx.memoryService.upsert(key, content, []);
 	return `Memoria "${key}" actualizada`;
+};
+
+const loadSkillHandler: ToolHandler = async (args, ctx) => {
+	const skillName = String(args.name);
+	if (!ctx.skillService) return `Skill service no disponible`;
+	const skill = ctx.skillService.getOrNull(skillName);
+	if (!skill) return `Skill "${skillName}" no encontrada`;
+	const skillDir = `${skill.directory}/SKILL.md`;
+	const fs = await import("node:fs");
+	if (fs.existsSync(skillDir)) {
+		return fs.readFileSync(skillDir, "utf8");
+	}
+	return skill.description;
+};
+
+const createSkillHandler: ToolHandler = async (args, ctx) => {
+	if (!ctx.skillService) return `Skill service no disponible`;
+	const name = String(args.name);
+	const description = String(args.description);
+	const instructions = String(args.instructions);
+	const triggers = (args.triggers as string[]) ?? [];
+	const tags = (args.tags as string[]) ?? [];
+	const directory = `skills/${name}`;
+	ctx.skillService.create({ name, agent: "default", description, directory, metadata: {}, allowedTools: [], triggers, tags });
+	const fs = await import("node:fs");
+	const path = await import("node:path");
+	const skillDir = path.join(getConfig().SKILL_DIR, directory);
+	if (!fs.existsSync(skillDir)) fs.mkdirSync(skillDir, { recursive: true });
+	fs.writeFileSync(path.join(skillDir, "SKILL.md"), instructions, "utf8");
+	return `Skill "${name}" creada en ${skillDir}`;
+};
+
+const runSkillScriptHandler: ToolHandler = async (args, ctx) => {
+	const skillName = String(args.skillName);
+	const scriptName = String(args.scriptName);
+	const argsStr = args.args ? String(args.args) : "{}";
+	if (!ctx.skillService) return `Skill service no disponible`;
+	const skill = ctx.skillService.getOrNull(skillName);
+	if (!skill) return `Skill "${skillName}" no encontrada`;
+	const fs = await import("node:fs");
+	const scriptPath = `skills/${skill.directory}/scripts/${scriptName}.ts`;
+	if (!fs.existsSync(scriptPath)) return `Script "${scriptPath}" no encontrado`;
+	try {
+		const { execSync } = await import("node:child_process");
+		return execSync(`npx tsx "${scriptPath}" ${argsStr}`, { timeout: 30000, encoding: "utf8" });
+	} catch (err: any) {
+		return `Error ejecutando script: ${err.message || String(err)}`;
+	}
+};
+
+const reflectHandler: ToolHandler = async (args, ctx) => {
+	if (!ctx.memoryService) return `Memory service no disponible`;
+	const success = args.success as boolean;
+	const lesson = String(args.lesson);
+	const key = `reflect_${Date.now()}`;
+	ctx.memoryService.upsert(key, lesson, success ? ["lesson"] : ["insight"]);
+	if (success) {
+		ctx.memoryService.updateRelevance(key, 3);
+	}
+	return `Reflexión guardada: ${lesson.slice(0, 100)}...`;
+};
+
+const updateSkillHandler: ToolHandler = async (args, ctx) => {
+	if (!ctx.skillService) return `Skill service no disponible`;
+	const name = String(args.name);
+	const instructions = args.instructions as string | undefined;
+	const description = args.description as string | undefined;
+	const metadata = args.metadata as Record<string, unknown> | undefined;
+	ctx.skillService.update(name, { description, metadata: metadata ?? {} });
+	if (instructions) {
+		const skill = ctx.skillService.getOrNull(name);
+		if (skill) {
+			const fs = await import("node:fs");
+			const skillDir = path.join(getConfig().SKILL_DIR, skill.directory);
+			if (!fs.existsSync(skillDir)) fs.mkdirSync(skillDir, { recursive: true });
+			fs.writeFileSync(path.join(skillDir, "SKILL.md"), instructions, "utf8");
+		}
+	}
+	return `Skill "${name}" actualizada`;
+};
+
+const deleteSkillHandler: ToolHandler = async (args, ctx) => {
+	if (!ctx.skillService) return `Skill service no disponible`;
+	const name = String(args.name);
+	const skill = ctx.skillService.getOrNull(name);
+	ctx.skillService.delete(name);
+	if (skill) {
+		const fs = await import("node:fs");
+		const skillDir = path.join(getConfig().SKILL_DIR, skill.directory);
+		if (fs.existsSync(skillDir)) {
+			fs.rmSync(skillDir, { recursive: true, force: true });
+		}
+	}
+	return `Skill "${name}" eliminada`;
 };
 
 export function registerAllTools(registry: ToolRegistry): void {
@@ -213,4 +318,10 @@ export function registerAllTools(registry: ToolRegistry): void {
 	registry.register(memorizeTool, memorizeHandler);
 	registry.register(searchMemoriesTool, searchMemoriesHandler);
 	registry.register(updateMemoryTool, updateMemoryHandler);
+	registry.register(loadSkillTool, loadSkillHandler);
+	registry.register(runSkillScriptTool, runSkillScriptHandler);
+	registry.register(createSkillTool, createSkillHandler);
+	registry.register(updateSkillTool, (args, ctx) => updateSkillHandler(args, ctx));
+	registry.register(deleteSkillTool, (args, ctx) => deleteSkillHandler(args, ctx));
+	registry.register(reflectTool, reflectHandler);
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import {
 	BoxIcon,
@@ -15,6 +15,7 @@ import {
 } from "../../../components/ui/Icons.tsx";
 import { useToast } from "../../../providers/ToastProvider.tsx";
 import { useSessions } from "../../sessions/hooks/useSessions.ts";
+import { fetchAgents, type AgentDefinition } from "../../../api.ts";
 
 interface SettingsModalProps {
 	onClose: () => void;
@@ -24,6 +25,7 @@ type TabType =
 	| "general"
 	| "display"
 	| "tools"
+	| "agents"
 	| "agentic"
 	| "import_export"
 	| "sampling"
@@ -50,6 +52,11 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 	const [apiUrl, setApiUrl] = useState("http://localhost:3060");
 	const [engineUrl, setEngineUrl] = useState("http://localhost:3050");
 	const [debugLogs, setDebugLogs] = useState(false);
+
+	// Agents state
+	const [agents, setAgents] = useState<AgentDefinition[]>([]);
+	const [newAgentName, setNewAgentName] = useState("");
+	const [newAgentPrompt, setNewAgentPrompt] = useState("");
 
 	const handleSave = () => {
 		localStorage.setItem(
@@ -87,6 +94,15 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 		localStorage.removeItem("llama_engine_settings");
 		addToast("info", "Valores restaurados por defecto");
 	};
+
+	// Load agents on mount
+	useEffect(() => {
+		fetchAgents()
+			.then((res) => {
+				if (res && res.length > 0) setAgents(res);
+			})
+			.catch(() => {});
+	}, []);
 
 	// Export conversations to JSONL file
 	const handleExportConversations = () => {
@@ -149,6 +165,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 		{ id: "general", label: "General", icon: <SettingsIcon size={16} /> },
 		{ id: "display", label: "Display", icon: <GlobeIcon size={16} /> },
 		{ id: "tools", label: "Tools", icon: <WrenchIcon size={16} /> },
+		{ id: "agents", label: "Agentes", icon: <SparklesIcon size={16} /> },
 		{ id: "agentic", label: "Agentic", icon: <SparklesIcon size={16} /> },
 		{ id: "import_export", label: "Import/Export", icon: <BoxIcon size={16} /> },
 		{ id: "sampling", label: "Sampling & Penalties", icon: <SlidersIcon size={16} /> },
@@ -446,6 +463,63 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 											</div>
 										</div>
 										<input type="checkbox" defaultChecked className="toggle-checkbox" />
+									</div>
+								</div>
+							</div>
+						)}
+
+						{activeTab === "agents" && (
+							<div className="settings-section-container">
+								<div className="settings-group">
+									<div className="settings-group-title">Agentes</div>
+									<div className="settings-item-desc" style={{ marginBottom: "12px" }}>
+										Gestiona agentes especializados que pueden ejecutar tareas con prompts y herramientas
+										configuradas específicamente.
+									</div>
+									{agents.map((a) => (
+										<div key={a.name} className="settings-row">
+											<div>
+												<div className="settings-item-title">{a.name}</div>
+												<div className="settings-item-desc">{a.description}</div>
+											</div>
+										</div>
+									))}
+									<div className="settings-input-block" style={{ marginTop: "12px" }}>
+										<span className="settings-item-title">Nuevo Agente</span>
+										<div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+											<input
+												type="text"
+												className="sidebar-search-input"
+												placeholder="Nombre del agente"
+												value={newAgentName}
+												onChange={(e) => setNewAgentName(e.target.value)}
+											/>
+											<button
+												type="button"
+												className="btn-primary"
+												onClick={() => {
+													if (newAgentName.trim()) {
+														setAgents([
+															...agents,
+															{
+																name: newAgentName.trim(),
+																corePrompt: newAgentPrompt,
+																description: newAgentPrompt.slice(0, 60),
+																tools: [],
+																model: "",
+																maxIterations: 10,
+																enabled: true,
+															},
+														]);
+														setNewAgentName("");
+														setNewAgentPrompt("");
+														addToast("success", `Agente "${newAgentName.trim()}" creado`);
+													}
+												}}
+											>
+												Crear
+											</button>
+										</div>
 									</div>
 								</div>
 							</div>

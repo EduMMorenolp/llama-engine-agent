@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchTools } from "../../../api.ts";
+import { fetchTools, type AgentDefinition } from "../../../api.ts";
 import {
 	MicIcon,
 	PlusIcon,
@@ -7,6 +7,8 @@ import {
 	SlidersIcon,
 	StopIcon,
 	WrenchIcon,
+	SparklesIcon,
+	CheckIcon,
 } from "../../../components/ui/Icons.tsx";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition.ts";
 import { AttachMenu } from "./AttachMenu.tsx";
@@ -24,12 +26,20 @@ interface ComposerProps {
 	onSend: (
 		text: string,
 		attachments: FileAttachment[],
-		options?: { systemPrompt?: string; enabledTools?: string[]; modelSettings?: ModelSettings },
+		options?: {
+			systemPrompt?: string;
+			enabledTools?: string[];
+			modelSettings?: ModelSettings;
+			agent?: string;
+		},
 	) => void;
 	onStop: () => void;
 	disabled: boolean;
 	model?: string;
 	tokenCount?: number;
+	agent?: string;
+	agents?: AgentDefinition[];
+	onAgentChange?: (agent: string | undefined) => void;
 }
 
 const DEFAULT_TOOLS: ToolConfig[] = [
@@ -49,6 +59,9 @@ export function Composer({
 	disabled,
 	model = "qwen3.5",
 	tokenCount = 0,
+	agent,
+	agents: agentsProp,
+	onAgentChange,
 }: ComposerProps) {
 	const [text, setText] = useState("");
 	const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -56,6 +69,7 @@ export function Composer({
 	const [showSystemPrompt, setShowSystemPrompt] = useState(false);
 	const [showMCPServers, setShowMCPServers] = useState(false);
 	const [showModelSettings, setShowModelSettings] = useState(false);
+	const [showAgentMenu, setShowAgentMenu] = useState(false);
 	const [modelSettings, setModelSettings] = useState<ModelSettings>(DEFAULT_MODEL_SETTINGS);
 	const [systemPrompt, setSystemPrompt] = useState(
 		`Sos un asistente de IA inteligente, empático y servicial.
@@ -79,7 +93,9 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 	);
 	const [tools, setTools] = useState(DEFAULT_TOOLS);
 	const [attachments, setAttachments] = useState<FileAttachment[]>([]);
+	const [selectedAgent, setSelectedAgent] = useState(agent);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const agentMenuRef = useRef<HTMLDivElement>(null);
 	const { processFiles } = useFileUpload();
 	const {
 		listening,
@@ -89,6 +105,16 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 		stop: stopListening,
 		reset: resetTranscript,
 	} = useSpeechRecognition();
+
+	// Merge external agents prop with state
+	const agents = agentsProp ?? [];
+
+	// Sync external agent prop
+	useEffect(() => {
+		if (agent !== undefined) {
+			setSelectedAgent(agent);
+		}
+	}, [agent]);
 
 	// Fetch dynamic tools from agent backend API
 	useEffect(() => {
@@ -129,6 +155,19 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 		}
 	}, [text]);
 
+	// Close agent menu on outside click
+	useEffect(() => {
+		function handleClickOutside(e: MouseEvent) {
+			if (agentMenuRef.current && !agentMenuRef.current.contains(e.target as Node)) {
+				setShowAgentMenu(false);
+			}
+		}
+		if (showAgentMenu) {
+			document.addEventListener("mousedown", handleClickOutside);
+			return () => document.removeEventListener("mousedown", handleClickOutside);
+		}
+	}, [showAgentMenu]);
+
 	const handleSend = useCallback(() => {
 		const trimmed = text.trim();
 		if (!trimmed && attachments.length === 0) return;
@@ -138,7 +177,12 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 			resetTranscript();
 		}
 		const enabledTools = tools.filter((t) => t.enabled).map((t) => t.name);
-		onSend(trimmed, attachments, { systemPrompt, enabledTools, modelSettings });
+		onSend(trimmed, attachments, {
+			systemPrompt,
+			enabledTools,
+			modelSettings,
+			agent: selectedAgent,
+		});
 		setText("");
 		setAttachments([]);
 		if (textareaRef.current) {
@@ -155,6 +199,7 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 		listening,
 		stopListening,
 		resetTranscript,
+		selectedAgent,
 	]);
 
 	const handleKeyDown = useCallback(
@@ -292,6 +337,62 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 								<MicIcon size={16} />
 							</button>
 						)}
+
+						{/* Agent Selector */}
+						<div
+							style={{ display: "flex", alignItems: "center", gap: "4px", position: "relative" }}
+							ref={agentMenuRef}
+						>
+							<button
+								type="button"
+								className="composer-btn-icon"
+								onClick={() => {
+									setShowAttachMenu(false);
+									setShowAgentMenu(!showAgentMenu);
+								}}
+								title="Seleccionar agente"
+								style={{
+									position: "relative",
+									color: selectedAgent ? "var(--accent)" : "inherit",
+								}}
+							>
+								<SparklesIcon size={16} />
+							</button>
+							{showAgentMenu && agents.length > 0 && (
+								<div
+									className="popover-menu"
+									style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: "4px" }}
+								>
+									{agents.map((a) => (
+										<div
+											key={a.name}
+											className={`popover-item ${selectedAgent === a.name ? "active-model-item" : ""}`}
+											onClick={() => {
+												setSelectedAgent(a.name);
+												setShowAgentMenu(false);
+												onAgentChange?.(a.name);
+											}}
+										>
+											<span style={{ fontWeight: 600 }}>{a.name}</span>
+											{selectedAgent === a.name && (
+												<CheckIcon size={14} style={{ color: "var(--accent)" }} />
+											)}
+										</div>
+									))}
+									<div
+										className={`popover-item ${!selectedAgent ? "active-model-item" : ""}`}
+										onClick={() => {
+											setSelectedAgent(undefined);
+											setShowAgentMenu(false);
+											onAgentChange?.(undefined);
+										}}
+									>
+										<span>Default</span>
+										{!selectedAgent && <CheckIcon size={14} style={{ color: "var(--accent)" }} />}
+									</div>
+								</div>
+							)}
+						</div>
 
 						<button
 							type="button"

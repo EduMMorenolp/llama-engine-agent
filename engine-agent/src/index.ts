@@ -4,6 +4,8 @@ import { getConfig } from "./config/index.js";
 import { closeDb, forceSaveIfPending, getDb } from "./db/index.js";
 import { MemoryService } from "./modules/memories/service.js";
 import { SessionService } from "./modules/sessions/service.js";
+import { SkillService } from "./modules/skills/service.js";
+import { AgentService } from "./modules/agents/service.js";
 import { createApp } from "./server.js";
 import { registerAllTools } from "./tools/index.js";
 import { toolRegistry } from "./tools/registry.js";
@@ -16,6 +18,8 @@ async function bootstrap() {
 	const db = await getDb();
 	const sessionService = new SessionService(db);
 	const memoryService = new MemoryService(db);
+	const skillService = new SkillService(db);
+	const agentService = new AgentService(db);
 
 	registerAllTools(toolRegistry);
 	logger.info(`${toolRegistry.list().length} tools registered`);
@@ -31,6 +35,7 @@ async function bootstrap() {
 		toolRegistry,
 		store: sessionService,
 		memoryService,
+		skillService,
 		maxIterations: config.MAX_ITERATIONS,
 		workDir: process.cwd(),
 	};
@@ -40,12 +45,13 @@ async function bootstrap() {
 		db,
 		sessionService,
 		memoryService,
+		skillService,
 		toolRegistry,
 		agentConfig,
 	);
 
 	const server = createServer(app);
-	createWebSocketServer(server, sessionService, agentConfig);
+	createWebSocketServer(server, sessionService, agentService, agentConfig);
 
 	server.listen(config.AGENT_PORT, config.HOST, () => {
 		const apiKeySanitized = config.ENGINE_API_KEY ? "***" : "not set";
