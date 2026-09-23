@@ -16,7 +16,6 @@ export interface SendMessageOptions {
 	systemPrompt?: string;
 	enabledTools?: string[];
 	modelSettings?: ModelSettings;
-	agent?: string;
 }
 
 interface UseChatReturn {
@@ -111,7 +110,6 @@ export function useChat(): UseChatReturn {
 							systemPrompt: options?.systemPrompt,
 							enabledTools: options?.enabledTools,
 							modelSettings: options?.modelSettings,
-							agent: options?.agent,
 						},
 					}),
 				);

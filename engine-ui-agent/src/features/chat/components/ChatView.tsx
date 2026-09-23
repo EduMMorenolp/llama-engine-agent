@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { fetchAvailableModels, fetchAgents, type AgentDefinition, type Message, type ModelInfo } from "../../../api.ts";
+import { fetchAvailableModels, type Message, type ModelInfo } from "../../../api.ts";
 import logoImg from "../../../assets/logo.jpg";
 import {
 	ArrowDownIcon,
@@ -125,7 +125,6 @@ export function ChatView() {
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const messagesContainerRef = useRef<HTMLDivElement>(null);
 	const modelMenuRef = useRef<HTMLDivElement>(null);
-	const agentMenuRef = useRef<HTMLDivElement>(null);
 	const { sidebarOpen, toggleSidebar } = useOutletContext<LayoutContextType>() ?? {
 		sidebarOpen: true,
 		toggleSidebar: () => {},
@@ -139,9 +138,6 @@ export function ChatView() {
 	const [tabEditingSessionId, setTabEditingSessionId] = useState<string | null>(null);
 	const [tabEditingName, setTabEditingName] = useState("");
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
-	const [agents, setAgents] = useState<AgentDefinition[]>([]);
-	const [selectedAgent, setSelectedAgent] = useState<string | undefined>(undefined);
-	const [showAgentMenu, setShowAgentMenu] = useState(false);
 
 	const prevSessionIdRef = useRef<string | null>(null);
 	const prevMessagesCountRef = useRef<number>(0);
@@ -162,45 +158,6 @@ export function ChatView() {
 				// Fallback to static model list
 			});
 	}, []);
-
-	// Load agents from backend API
-	useEffect(() => {
-		fetchAgents()
-			.then((res) => {
-				if (res && res.length > 0) {
-					setAgents(res);
-				}
-			})
-			.catch(() => {
-				// Fallback: no agents
-			});
-	}, []);
-
-	// Close model menu when clicking outside
-	useEffect(() => {
-		function handleClickOutside(e: MouseEvent) {
-			if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
-				setShowModelMenu(false);
-			}
-		}
-		if (showModelMenu) {
-			document.addEventListener("mousedown", handleClickOutside);
-			return () => document.removeEventListener("mousedown", handleClickOutside);
-		}
-	}, [showModelMenu]);
-
-	// Close agent menu when clicking outside
-	useEffect(() => {
-		function handleClickOutside(e: MouseEvent) {
-			if (agentMenuRef.current && !agentMenuRef.current.contains(e.target as Node)) {
-				setShowAgentMenu(false);
-			}
-		}
-		if (showAgentMenu) {
-			document.addEventListener("mousedown", handleClickOutside);
-			return () => document.removeEventListener("mousedown", handleClickOutside);
-		}
-	}, [showAgentMenu]);
 
 	// Close model menu when clicking outside
 	useEffect(() => {
@@ -324,7 +281,6 @@ export function ChatView() {
 				systemPrompt: options?.systemPrompt,
 				enabledTools: options?.enabledTools,
 				modelSettings: options?.modelSettings,
-				agent: selectedAgent,
 			},
 			(msg) => addMessage(msg),
 			() => {
@@ -424,28 +380,6 @@ export function ChatView() {
 							title="Información del modelo activo"
 						>
 							<InfoIcon size={15} style={{ color: "var(--text-secondary)" }} />
-						</button>
-					</div>
-
-					{/* Agent Dropdown Button */}
-					<div style={{ display: "flex", alignItems: "center", gap: "6px" }} ref={agentMenuRef}>
-						<button
-							type="button"
-							className="model-badge-selector"
-							onClick={() => setShowAgentMenu((prev) => !prev)}
-							title="Seleccionar agente"
-							style={selectedAgent ? { borderColor: "var(--accent)" } : {}}
-						>
-							<SparklesIcon size={14} style={{ color: selectedAgent ? "var(--accent)" : "var(--text-muted)" }} />
-							<span>{selectedAgent || "Default"}</span>
-							<ChevronDownIcon
-								size={14}
-								style={{
-									color: "var(--text-muted)",
-									transform: showAgentMenu ? "rotate(180deg)" : "none",
-									transition: "transform 0.2s ease",
-								}}
-							/>
 						</button>
 					</div>
 
@@ -577,57 +511,7 @@ export function ChatView() {
 						</div>
 					)}
 				</div>
-
-				{/* Agent Dropdown Menu */}
-				{showAgentMenu && (
-					<div className="popover-menu model-dropdown-popover">
-						<div className="popover-header">
-							<span>Agentes</span>
-						</div>
-						<div
-							className={`popover-item ${!selectedAgent ? "active-model-item" : ""}`}
-							onClick={() => {
-								setSelectedAgent(undefined);
-								setShowAgentMenu(false);
-							}}
-						>
-							<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-								<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-									<span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
-										Default
-									</span>
-								</div>
-								<span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-									Agente principal sin configuración especial
-								</span>
-							</div>
-							{!selectedAgent && <CheckIcon size={15} style={{ color: "var(--accent)" }} />}
-						</div>
-						{agents.map((a) => (
-							<div
-								key={a.name}
-								className={`popover-item ${selectedAgent === a.name ? "active-model-item" : ""}`}
-								onClick={() => {
-									setSelectedAgent(a.name);
-									setShowAgentMenu(false);
-								}}
-							>
-								<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-									<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-										<span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
-											{a.name}
-										</span>
-									</div>
-									<span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-										{a.description}
-									</span>
-								</div>
-								{selectedAgent === a.name && <CheckIcon size={15} style={{ color: "var(--accent)" }} />}
-							</div>
-						))}
-					</div>
-				)}
-		</header>
+			</header>
 
 			{/* Message Stream */}
 			<div className="messages-container" ref={messagesContainerRef} onScroll={handleScroll}>
@@ -707,8 +591,6 @@ export function ChatView() {
 				onStop={stopStreaming}
 				disabled={streaming}
 				model={selectedModel}
-				agent={selectedAgent}
-				agents={agents}
 			/>
 
 			{/* Floating Scroll to Bottom Button */}
