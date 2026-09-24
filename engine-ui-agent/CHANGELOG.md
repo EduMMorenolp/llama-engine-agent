@@ -2,6 +2,9 @@
 
 ## Sin liberar
 
+- **Corregido**: Clic en un agente no recreaba el chat después de borrar la sesión — el mapping localStorage `session_agents` quedaba huérfano. `removeSession` ahora limpia el mapping y `handleSelectAgent` valida que la sesión exista antes de reutilizarla. [2026-09-23]
+  * **Archivos**: `src/lib/session-agents.ts`, `src/providers/SessionsProvider.tsx`, `src/features/sessions/components/SessionList.tsx`. [2026-09-23]
+
 - **Corregido**: Chat con agentes roto — cada token del stream se pintaba como mensaje "AI" separado y la UI parpadeaba con "Iniciando sesión..." en cada envío. `useChat` ya no emite `onMessage` por chunk (un solo mensaje final en `done` con `_subAgent`); `SessionsProvider` ya no re-carga sesiones por cada cambio de `messages.length` (refreshSessions silencioso); ChatView solo muestra el gate de loading en la carga inicial; fix de `ws.onclose` con `streamingRef` para no dejar el Composer bloqueado. [2026-09-23]
   * **Archivos**: `src/features/chat/hooks/useChat.ts`, `src/providers/SessionsProvider.tsx`, `src/features/sessions/components/SessionList.tsx`, `src/features/chat/components/ChatView.tsx`. [2026-09-23]
 

@@ -16,6 +16,7 @@ import {
 	type Message,
 	type Session,
 } from "../api.ts";
+import { removeAgentForSession } from "../lib/session-agents.ts";
 
 interface SessionsContextType {
 	sessions: Session[];
@@ -184,6 +185,7 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 			} catch (err) {
 				console.warn("[sessions] Error al eliminar en backend:", err);
 			}
+			removeAgentForSession(id);
 			setSessions((prev) => prev.filter((s) => s.id !== id));
 			if (activeSessionId === id) {
 				const remaining = sessions.filter((s) => s.id !== id);

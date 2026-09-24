@@ -13,7 +13,11 @@ import {
 	TrashIcon,
 	XIcon,
 } from "../../../components/ui/Icons.tsx";
-import { findSessionIdForAgent, setAgentForSession } from "../../../lib/session-agents.ts";
+import {
+	findSessionIdForAgent,
+	removeAgentForSession,
+	setAgentForSession,
+} from "../../../lib/session-agents.ts";
 import { SettingsModal } from "../../chat/components/SettingsModal.tsx";
 import { useSessions } from "../hooks/useSessions.ts";
 
@@ -99,6 +103,10 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 
 	const handleSelectAgent = async (agentName: string) => {
 		let sessionId = findSessionIdForAgent(agentName);
+		if (sessionId && !sessions.some((s) => s.id === sessionId)) {
+			removeAgentForSession(sessionId);
+			sessionId = null;
+		}
 		if (!sessionId) {
 			const byName = sessions.find((s) => s.name === agentName);
 			if (byName) {

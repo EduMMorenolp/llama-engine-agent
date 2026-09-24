@@ -30,3 +30,15 @@ export function findSessionIdForAgent(agent: string): string | null {
 	const entry = Object.entries(map).find(([, a]) => a === agent);
 	return entry?.[0] ?? null;
 }
+
+export function removeAgentForSession(sessionId: string): void {
+	try {
+		const map = getAgentSessionMap();
+		if (sessionId in map) {
+			delete map[sessionId];
+			localStorage.setItem(KEY, JSON.stringify(map));
+		}
+	} catch {
+		// noop
+	}
+}
