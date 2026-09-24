@@ -12,6 +12,7 @@ export interface ToolCallInfo {
 }
 
 export interface SendMessageOptions {
+	agent?: string;
 	model?: string;
 	systemPrompt?: string;
 	enabledTools?: string[];
@@ -106,6 +107,7 @@ export function useChat(): UseChatReturn {
 						payload: {
 							sessionId,
 							message,
+							agent: options?.agent,
 							model: options?.model,
 							systemPrompt: options?.systemPrompt,
 							enabledTools: options?.enabledTools,

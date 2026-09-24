@@ -15,6 +15,7 @@ import {
 	TerminalIcon,
 	XIcon,
 } from "../../../components/ui/Icons.tsx";
+import { getAgentForSession } from "../../../lib/session-agents.ts";
 import { useToast } from "../../../providers/ToastProvider.tsx";
 import { useSessions } from "../../sessions/hooks/useSessions.ts";
 import { useChat } from "../hooks/useChat.ts";
@@ -277,6 +278,7 @@ export function ChatView() {
 			sessionId,
 			fullMessage,
 			{
+				agent: getAgentForSession(sessionId) ?? undefined,
 				model: selectedModel,
 				systemPrompt: options?.systemPrompt,
 				enabledTools: options?.enabledTools,

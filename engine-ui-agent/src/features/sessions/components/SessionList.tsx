@@ -13,6 +13,7 @@ import {
 	TrashIcon,
 	XIcon,
 } from "../../../components/ui/Icons.tsx";
+import { findSessionIdForAgent, setAgentForSession } from "../../../lib/session-agents.ts";
 import { SettingsModal } from "../../chat/components/SettingsModal.tsx";
 import { useSessions } from "../hooks/useSessions.ts";
 
@@ -98,6 +99,25 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 			}
 		} catch {
 			// noop
+		}
+	};
+
+	const handleSelectAgent = async (agentName: string) => {
+		let sessionId = findSessionIdForAgent(agentName);
+		if (!sessionId) {
+			const byName = sessions.find((s) => s.name === agentName);
+			if (byName) {
+				sessionId = byName.id;
+			}
+		}
+		if (!sessionId) {
+			const session = await createNewSession(agentName);
+			sessionId = session.id;
+		}
+		if (sessionId) {
+			setAgentForSession(sessionId, agentName);
+			await selectSession(sessionId);
+			setSidebarTab("chat");
 		}
 	};
 
@@ -312,30 +332,35 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 					{agents.length === 0 ? (
 						<div className="sidebar-empty">Sin agentes aún</div>
 					) : (
-						agents.map((agent) => (
-							<div key={agent.name} className="session-item">
-								<button
-									type="button"
-									className="session-item-main"
-									style={{
-										background: "none",
-										border: "none",
-										color: "inherit",
-										cursor: "pointer",
-										textAlign: "left",
-										width: "100%",
-										padding: 0,
-									}}
-								>
-									<span className="session-item-icon">
-										<SparklesIcon size={15} />
-									</span>
-									<span className="session-name" title={agent.name}>
-										{agent.name}
-									</span>
-								</button>
-							</div>
-						))
+						agents.map((agent) => {
+							const mappedId = findSessionIdForAgent(agent.name);
+							const isActive = mappedId !== null && mappedId === activeSessionId;
+							return (
+								<div key={agent.name} className={`session-item ${isActive ? "active" : ""}`}>
+									<button
+										type="button"
+										className="session-item-main"
+										onClick={() => handleSelectAgent(agent.name)}
+										style={{
+											background: "none",
+											border: "none",
+											color: "inherit",
+											cursor: "pointer",
+											textAlign: "left",
+											width: "100%",
+											padding: 0,
+										}}
+									>
+										<span className="session-item-icon">
+											<SparklesIcon size={15} />
+										</span>
+										<span className="session-name" title={agent.name}>
+											{agent.name}
+										</span>
+									</button>
+								</div>
+							);
+						})
 					)}
 
 					<div className="sidebar-new-agent">

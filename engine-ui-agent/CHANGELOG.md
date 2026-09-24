@@ -2,6 +2,9 @@
 
 ## Sin liberar
 
+- **Agregado**: Clic en un agente del tab Agentes crea o selecciona una sesión de chat asociada a ese agente, cambia al tab Chat y envía los mensajes con `agent` en el payload WebSocket para usar el core_prompt/tools del agente. Mapeo sesión↔agente en localStorage. [2026-09-23]
+  * **Archivos**: `src/features/sessions/components/SessionList.tsx`, `src/features/chat/hooks/useChat.ts`, `src/features/chat/components/ChatView.tsx`, `src/lib/session-agents.ts`. [2026-09-23]
+
 - **Agregado**: Dos tabs en el sidebar principal (Chat / Agentes) debajo del header. Tab Chat muestra el contenido actual (sesiones, búsqueda, nueva conversación). Tab Agentes muestra la lista de agentes del backend con opción de crear nuevos. [2026-09-23]
   * **Archivos**: `src/features/sessions/components/SessionList.tsx`, `src/index.css`. [2026-09-23]
 
