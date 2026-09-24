@@ -44,6 +44,7 @@ export function useChat(): UseChatReturn {
 		"connected" | "reconnecting" | "disconnected"
 	>("disconnected");
 	const wsRef = useRef<WebSocket | null>(null);
+	const streamingRef = useRef(false);
 
 	const checkHealth = useCallback(async (): Promise<boolean> => {
 		try {
@@ -80,7 +81,8 @@ export function useChat(): UseChatReturn {
 			onDone: () => void,
 			onError: (msg: string) => void,
 		) => {
-			if (streaming) return;
+			if (streamingRef.current) return;
+			streamingRef.current = true;
 			setStreaming(true);
 			setCurrentContent("");
 			setToolCalls([]);
@@ -90,6 +92,7 @@ export function useChat(): UseChatReturn {
 				ws = connectWebSocket();
 				wsRef.current = ws;
 			} catch (err) {
+				streamingRef.current = false;
 				setConnectionState("disconnected");
 				setStreaming(false);
 				onError(err instanceof Error ? err.message : "Error al conectar WebSocket");
@@ -97,6 +100,7 @@ export function useChat(): UseChatReturn {
 			}
 
 			let assistantContent = "";
+			let subAgent: string | undefined;
 			const activeToolCalls: ToolCallInfo[] = [];
 
 			ws.onopen = () => {
@@ -124,21 +128,12 @@ export function useChat(): UseChatReturn {
 					switch (data.type) {
 						case "message": {
 							const content = (data.payload.content as string) ?? "";
-							const subAgent = data.payload._subAgent as string | undefined;
+							const chunkSubAgent = data.payload._subAgent as string | undefined;
+							if (chunkSubAgent && !subAgent) {
+								subAgent = chunkSubAgent;
+							}
 							assistantContent += content;
 							setCurrentContent(assistantContent);
-							if (subAgent) {
-								onMessage({
-									id: randomUUID(),
-									sessionId,
-									role: "assistant",
-									content,
-									toolCalls: null,
-									toolCallId: null,
-									createdAt: Date.now(),
-									_subAgent: subAgent,
-								});
-							}
 							break;
 						}
 						case "tool_start": {
@@ -179,8 +174,10 @@ export function useChat(): UseChatReturn {
 									toolCalls: activeToolCalls.length > 0 ? JSON.stringify(activeToolCalls) : null,
 									toolCallId: null,
 									createdAt: Date.now(),
+									_subAgent: subAgent,
 								});
 							}
+							streamingRef.current = false;
 							setStreaming(false);
 							setCurrentContent("");
 							setToolCalls([]);
@@ -189,8 +186,7 @@ export function useChat(): UseChatReturn {
 							break;
 						}
 						case "error": {
-							const errorMsg =
-								(data.payload?.message as string) ?? "Error desconocido en el agente";
+							const errorMsg = (data.payload?.message as string) ?? "Error desconocido del agente";
 							onMessage({
 								id: randomUUID(),
 								sessionId,
@@ -201,6 +197,7 @@ export function useChat(): UseChatReturn {
 								createdAt: Date.now(),
 							});
 							onError(errorMsg);
+							streamingRef.current = false;
 							setStreaming(false);
 							setCurrentContent("");
 							setToolCalls([]);
@@ -226,18 +223,22 @@ export function useChat(): UseChatReturn {
 					createdAt: Date.now(),
 				});
 				onError(errorMsg);
+				streamingRef.current = false;
 				setStreaming(false);
 				setCurrentContent("");
 				setToolCalls([]);
 			};
 
 			ws.onclose = () => {
-				if (streaming) {
+				if (streamingRef.current) {
+					streamingRef.current = false;
 					setStreaming(false);
+					setCurrentContent("");
+					setToolCalls([]);
 				}
 			};
 		},
-		[streaming],
+		[],
 	);
 
 	const stopStreaming = useCallback(() => {
@@ -245,6 +246,7 @@ export function useChat(): UseChatReturn {
 			wsRef.current.close();
 			wsRef.current = null;
 		}
+		streamingRef.current = false;
 		setStreaming(false);
 		setCurrentContent("");
 		setToolCalls([]);

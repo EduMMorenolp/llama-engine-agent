@@ -116,7 +116,7 @@ export function ChatView() {
 		renameSession,
 		forkSession,
 		deleteMessage,
-		loadSessions,
+		refreshSessions,
 		loading: sessionsLoading,
 		hasMore,
 		loadingMore,
@@ -286,7 +286,7 @@ export function ChatView() {
 			},
 			(msg) => addMessage(msg),
 			() => {
-				loadSessions();
+				refreshSessions();
 			},
 			(err) => {
 				console.error("[chat] error:", err);
@@ -330,7 +330,7 @@ export function ChatView() {
 
 	const activeModelObj = models.find((m) => m.id === selectedModel) || models[0];
 
-	if (sessionsLoading) {
+	if (sessionsLoading && messages.length === 0 && !streaming) {
 		return (
 			<div className="view-loading">
 				<div className="spinner" />

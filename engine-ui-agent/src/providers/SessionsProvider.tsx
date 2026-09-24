@@ -1,4 +1,12 @@
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import {
+	createContext,
+	type ReactNode,
+	useCallback,
+	useContext,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import {
 	createSession as apiCreateSession,
 	deleteSession as apiDeleteSession,
@@ -17,6 +25,7 @@ interface SessionsContextType {
 	hasMore: boolean;
 	loadingMore: boolean;
 	loadSessions: () => Promise<void>;
+	refreshSessions: () => Promise<void>;
 	selectSession: (id: string) => Promise<void>;
 	loadMoreMessages: () => Promise<void>;
 	createNewSession: (name?: string, model?: string) => Promise<Session>;
@@ -44,6 +53,12 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 	const [loading, setLoading] = useState(false);
 	const [hasMore, setHasMore] = useState(false);
 	const [loadingMore, setLoadingMore] = useState(false);
+	const messagesLengthRef = useRef(0);
+	const initialLoadedRef = useRef(false);
+
+	useEffect(() => {
+		messagesLengthRef.current = messages.length;
+	}, [messages.length]);
 
 	const selectSession = useCallback(async (id: string) => {
 		setActiveSessionId(id);
@@ -88,7 +103,7 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 				setActiveSessionId(targetId);
 				try {
 					localStorage.setItem("active_session_id", targetId);
-					if (isSwitching || messages.length === 0) {
+					if (isSwitching || messagesLengthRef.current === 0) {
 						const session = await fetchSession(targetId, 50, 0);
 						setMessages(session?.messages ?? []);
 						setHasMore(session?.hasMore ?? false);
@@ -97,13 +112,23 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 					console.error("[sessions] Error al cargar mensajes:", err);
 				}
 			}
+			initialLoadedRef.current = true;
 		} catch (err) {
 			console.warn("[sessions] Error al cargar sesiones:", err);
 			setSessions([]);
 		} finally {
 			setLoading(false);
 		}
-	}, [activeSessionId, messages.length]);
+	}, [activeSessionId]);
+
+	const refreshSessions = useCallback(async () => {
+		try {
+			const list = await fetchSessions();
+			setSessions(list ?? []);
+		} catch (err) {
+			console.warn("[sessions] Error al refrescar sesiones:", err);
+		}
+	}, []);
 
 	const loadMoreMessages = useCallback(async () => {
 		if (!hasMore || loadingMore || !activeSessionId) return;
@@ -238,6 +263,7 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 				hasMore,
 				loadingMore,
 				loadSessions,
+				refreshSessions,
 				selectSession,
 				loadMoreMessages,
 				createNewSession,

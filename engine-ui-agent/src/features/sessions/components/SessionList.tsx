@@ -26,7 +26,6 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 	const {
 		sessions,
 		activeSessionId,
-		loadSessions,
 		createNewSession,
 		selectSession,
 		removeSession,
@@ -41,10 +40,6 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 	const [agents, setAgents] = useState<AgentDefinition[]>([]);
 	const [newAgentName, setNewAgentName] = useState("");
 	const editInputRef = useRef<HTMLInputElement>(null);
-
-	useEffect(() => {
-		loadSessions();
-	}, [loadSessions]);
 
 	// Load agents when switching to agents tab
 	useEffect(() => {

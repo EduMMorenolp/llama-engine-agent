@@ -2,6 +2,9 @@
 
 ## Sin liberar
 
+- **Corregido**: Chat con agentes roto — cada token del stream se pintaba como mensaje "AI" separado y la UI parpadeaba con "Iniciando sesión..." en cada envío. `useChat` ya no emite `onMessage` por chunk (un solo mensaje final en `done` con `_subAgent`); `SessionsProvider` ya no re-carga sesiones por cada cambio de `messages.length` (refreshSessions silencioso); ChatView solo muestra el gate de loading en la carga inicial; fix de `ws.onclose` con `streamingRef` para no dejar el Composer bloqueado. [2026-09-23]
+  * **Archivos**: `src/features/chat/hooks/useChat.ts`, `src/providers/SessionsProvider.tsx`, `src/features/sessions/components/SessionList.tsx`, `src/features/chat/components/ChatView.tsx`. [2026-09-23]
+
 - **Agregado**: Clic en un agente del tab Agentes crea o selecciona una sesión de chat asociada a ese agente, cambia al tab Chat y envía los mensajes con `agent` en el payload WebSocket para usar el core_prompt/tools del agente. Mapeo sesión↔agente en localStorage. [2026-09-23]
   * **Archivos**: `src/features/sessions/components/SessionList.tsx`, `src/features/chat/hooks/useChat.ts`, `src/features/chat/components/ChatView.tsx`, `src/lib/session-agents.ts`. [2026-09-23]
 
