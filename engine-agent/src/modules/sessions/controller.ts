@@ -1,4 +1,10 @@
-import type { CreateSessionDto, ForkSessionDto } from "./dto.js";
+import type { NextFunction, Request, Response } from "express";
+import type {
+	CreateSessionDto,
+	ForkSessionDto,
+	UpdateMessageDto,
+	UpdateSessionDto,
+} from "./dto.js";
 import type { SessionService } from "./service.js";
 
 export class SessionController {
@@ -41,9 +47,17 @@ export class SessionController {
 
 	update = (req: Request, res: Response, _next: NextFunction) => {
 		const id = String(req.params.id);
-		const dto = req.body;
+		const dto = req.body as UpdateSessionDto;
 		const session = this.service.updateSession(id, dto);
 		res.json(session);
+	};
+
+	updateMessage = (req: Request, res: Response, _next: NextFunction) => {
+		const id = String(req.params.id);
+		const messageId = String(req.params.messageId);
+		const dto = req.body as UpdateMessageDto;
+		const message = this.service.updateMessage(id, messageId, dto);
+		res.json(message);
 	};
 
 	deleteMessage = (req: Request, res: Response, _next: NextFunction) => {
@@ -62,5 +76,18 @@ export class SessionController {
 		const dto = (req.body || {}) as ForkSessionDto;
 		const forked = this.service.forkSession(id, dto.upToMessageId, dto.name);
 		res.status(201).json(forked);
+	};
+
+	listFavorites = (req: Request, res: Response, _next: NextFunction) => {
+		const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
+		const favorites = this.service.listFavorites(limit);
+		res.json({ favorites });
+	};
+
+	searchMessages = (req: Request, res: Response, _next: NextFunction) => {
+		const q = String(req.query.q || "");
+		const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 100);
+		const results = this.service.searchMessages(q, limit);
+		res.json({ results });
 	};
 }

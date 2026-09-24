@@ -2,6 +2,9 @@
 
 ## Sin liberar
 
+- **Agregado**: 5 features de uso cotidiano — (1) **Auto-título de sesión**: refresco reactivo automático que adopta el nuevo nombre generado por el backend sin bloquear la interfaz; (2) **Tags de sesión**: visualización de chips de tags en la lista de chats, agregador rápido de tags inline y filtro dinámico por tag en el sidebar; (3) **Favoritos en mensajes**: botón de estrella en la barra de acciones de `MessageBubble` con persistencia instantánea y modal dedicado `FavoritesModal` (tab "Guardados") para explorar y saltar a respuestas clave; (4) **Búsqueda full-text en mensajes**: buscador debounced en tiempo real que encuentra coincidencias dentro del contenido de los mensajes con snippets de contexto y navegación directa a la sesión correspondiente; (5) **Indicador de ventana de contexto**: badge dinámico en la barra superior de chat (`chat-navbar-right`) que muestra el porcentaje de contexto consumido con alerta visual cuando supera el 85%. [2026-09-24]
+  * **Archivos**: `src/api.ts`, `src/providers/SessionsProvider.tsx`, `src/components/ui/Icons.tsx`, `src/features/chat/components/ChatView.tsx`, `src/features/chat/components/MessageBubble.tsx`, `src/features/sessions/components/SessionList.tsx`, `src/features/sessions/components/FavoritesModal.tsx`. [2026-09-24]
+
 - **Agregado**: Modal de configuración y edición de agentes (`AgentEditModal.tsx`) con icono de rueda (engranaje) en cada item de la lista de agentes del sidebar. Permite modificar nombre, descripción, system prompt / core instructions, modelo específico, número máximo de iteraciones, toggle de activación y selección interactiva de herramientas (tools) permitidas, además de eliminación segura del agente con actualización en tiempo real en la UI. [2026-09-23]
   * **Archivos**: `src/features/sessions/components/AgentEditModal.tsx`, `src/features/sessions/components/SessionList.tsx`. [2026-09-23]
 

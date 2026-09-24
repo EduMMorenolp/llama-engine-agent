@@ -5,7 +5,7 @@ import type { SkillService } from "../modules/skills/service.js";
 import type { ToolRegistry } from "../tools/registry.js";
 import type { ToolContext } from "../tools/types.js";
 import type { LLMClient } from "./llm-client.js";
-import { buildPrompt, getMemoriesForContext } from "./prompt.js";
+import { buildPrompt, calculateContextUsage, getMemoriesForContext } from "./prompt.js";
 import { toolCache } from "./tool-cache.js";
 import type {
 	AgentOptions,
@@ -219,8 +219,55 @@ export async function runAgent(
 		store.addMessage(assistantMsgId, sessionId, "assistant", finalContent);
 	}
 
+	// Auto-title fire-and-forget if session has no manual title
+	let currentSession = null;
+	try {
+		const s = store as unknown as {
+			getSessionOrNull?: (id: string) => { name?: string | null; autoTitled?: boolean } | null;
+			getSession?: (id: string) => { name?: string | null; autoTitled?: boolean } | null;
+		};
+		if (typeof s.getSessionOrNull === "function") {
+			currentSession = s.getSessionOrNull(sessionId);
+		} else if (typeof s.getSession === "function") {
+			currentSession = s.getSession(sessionId);
+		}
+	} catch {
+		// safe fallback
+	}
+	if (currentSession && (!currentSession.name || currentSession.autoTitled)) {
+		const allMsgs = store.getMessages(sessionId);
+		const userMsg = allMsgs.find((m) => m.role === "user")?.content || "";
+		const assistantMsg = allMsgs.find((m) => m.role === "assistant")?.content || "";
+		if (userMsg) {
+			Promise.resolve().then(async () => {
+				try {
+					const titlePrompt = [
+						"Genera un título corto y conciso de máximo 5 palabras para este chat. No uses comillas ni explicaciones, solo el título directo.",
+						`Usuario: ${userMsg.slice(0, 300)}`,
+						`Asistente: ${assistantMsg.slice(0, 300)}`,
+					].join("\n");
+					const res = await llmClient.sendMessage(
+						[{ role: "user", content: titlePrompt }],
+						[],
+						model,
+					);
+					const rawTitle = (res.content || "").replace(/["'\n]/g, "").trim();
+					if (rawTitle && rawTitle.length < 60) {
+						const fresh = store.getSessionOrNull(sessionId);
+						if (fresh && (!fresh.name || fresh.autoTitled)) {
+							store.updateSession(sessionId, { name: rawTitle, autoTitled: true });
+						}
+					}
+				} catch {
+					// fire-and-forget
+				}
+			});
+		}
+	}
+
+	const usage = calculateContextUsage(store, sessionId);
 	const msgId = randomUUID();
-	onEvent?.({ type: "done", payload: { messageId: msgId } });
+	onEvent?.({ type: "done", payload: { messageId: msgId, usage } });
 
 	return {
 		content: finalContent,

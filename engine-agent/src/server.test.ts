@@ -232,6 +232,73 @@ describe("server", () => {
 		});
 	});
 
+	describe("PATCH /api/sessions/:id/messages/:messageId", () => {
+		it("toggles message favorite status", async () => {
+			const create = await request(app)
+				.post("/api/sessions")
+				.set("x-api-key", "test-key")
+				.send({ name: "Favorite Test" });
+			const sessionId = create.body.id;
+			sessionService.addMessage("fav-msg-1", sessionId, "assistant", "Important advice");
+
+			const res = await request(app)
+				.patch(`/api/sessions/${sessionId}/messages/fav-msg-1`)
+				.set("x-api-key", "test-key")
+				.send({ favorite: true });
+			expect(res.status).toBe(200);
+			expect(res.body.favorite).toBe(true);
+
+			const favs = await request(app).get("/api/messages/favorites").set("x-api-key", "test-key");
+			expect(favs.status).toBe(200);
+			expect(favs.body.favorites).toHaveLength(1);
+			expect(favs.body.favorites[0].message.id).toBe("fav-msg-1");
+			expect(favs.body.favorites[0].session.name).toBe("Favorite Test");
+		});
+	});
+
+	describe("GET /api/messages/search", () => {
+		it("searches across message content", async () => {
+			const create = await request(app)
+				.post("/api/sessions")
+				.set("x-api-key", "test-key")
+				.send({ name: "Search Test Session" });
+			const sessionId = create.body.id;
+			sessionService.addMessage("search-m1", sessionId, "user", "How do I configure Vite?");
+			sessionService.addMessage(
+				"search-m2",
+				sessionId,
+				"assistant",
+				"You configure vite.config.ts with plugins.",
+			);
+
+			const res = await request(app)
+				.get("/api/messages/search?q=plugins")
+				.set("x-api-key", "test-key");
+			expect(res.status).toBe(200);
+			expect(res.body.results.length).toBeGreaterThanOrEqual(1);
+			expect(res.body.results[0].snippet).toContain("plugins");
+			expect(res.body.results[0].session.id).toBe(sessionId);
+		});
+	});
+
+	describe("PATCH /api/sessions/:id with tags and summary", () => {
+		it("updates tags and summary", async () => {
+			const create = await request(app)
+				.post("/api/sessions")
+				.set("x-api-key", "test-key")
+				.send({ name: "Tagged Session" });
+			const sessionId = create.body.id;
+
+			const res = await request(app)
+				.patch(`/api/sessions/${sessionId}`)
+				.set("x-api-key", "test-key")
+				.send({ tags: ["dev", "ai"], summary: "Conversation summary." });
+			expect(res.status).toBe(200);
+			expect(res.body.tags).toEqual(["dev", "ai"]);
+			expect(res.body.summary).toBe("Conversation summary.");
+		});
+	});
+
 	describe("GET /api/tools", () => {
 		it("returns tool list", async () => {
 			const res = await request(app).get("/api/tools").set("x-api-key", "test-key");

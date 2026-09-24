@@ -58,6 +58,27 @@ Reglas:
 
 	messages.push({ role: "system", content: systemParts.join("\n") });
 
+	let sessionSummary: string | null = null;
+	try {
+		const s = store as unknown as {
+			getSessionOrNull?: (id: string) => { summary?: string | null } | null;
+			getSession?: (id: string) => { summary?: string | null } | null;
+		};
+		if (typeof s.getSessionOrNull === "function") {
+			sessionSummary = s.getSessionOrNull(sessionId)?.summary ?? null;
+		} else if (typeof s.getSession === "function") {
+			sessionSummary = s.getSession(sessionId)?.summary ?? null;
+		}
+	} catch {
+		// safe fallback
+	}
+	if (sessionSummary) {
+		messages.push({
+			role: "system",
+			content: `## Resumen de la conversación previa:\n${sessionSummary}`,
+		});
+	}
+
 	const rawHistory = store.getMessages(sessionId);
 	const convertedMessages: LLMMessage[] = [];
 
@@ -186,4 +207,24 @@ export function getMemoriesForContext(
 	memoryService: MemoryService,
 ): Array<{ key: string; content: string }> {
 	return memoryService.search("").map((m) => ({ key: m.key, content: m.content }));
+}
+
+export function calculateContextUsage(
+	store: SessionService,
+	sessionId: string,
+	maxHistoryChars = DEFAULT_MAX_HISTORY_CHARS,
+): { contextChars: number; maxHistoryChars: number; contextPercent: number; compacted: boolean } {
+	const rawHistory = store.getMessages(sessionId);
+	let totalChars = 0;
+	for (const msg of rawHistory) {
+		totalChars += (msg.content || "").length;
+	}
+	const contextPercent = Math.min(100, Math.round((totalChars / maxHistoryChars) * 100));
+	const compacted = totalChars > maxHistoryChars;
+	return {
+		contextChars: totalChars,
+		maxHistoryChars,
+		contextPercent,
+		compacted,
+	};
 }

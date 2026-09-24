@@ -118,6 +118,7 @@ export function ChatView() {
 		renameSession,
 		forkSession,
 		deleteMessage,
+		toggleFavoriteMessage,
 		refreshSessions,
 		loading: sessionsLoading,
 		hasMore,
@@ -144,6 +145,11 @@ export function ChatView() {
 	const [tabEditingName, setTabEditingName] = useState("");
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
 	const [draftText, setDraftText] = useState("");
+
+	const totalChars = messages.reduce((sum, m) => sum + (m.content?.length || 0), 0);
+	const MAX_CONTEXT_CHARS = 60000;
+	const contextPercent = Math.min(100, Math.round((totalChars / MAX_CONTEXT_CHARS) * 100));
+	const isHighContext = contextPercent >= 85;
 
 	const prevSessionIdRef = useRef<string | null>(null);
 	const prevMessagesCountRef = useRef<number>(0);
@@ -588,8 +594,28 @@ export function ChatView() {
 					)}
 				</div>
 
-				{/* Right Controls: Export session & Actions */}
-				<div className="chat-navbar-right" ref={exportMenuRef} style={{ position: "relative" }}>
+				{/* Right Controls: Export session, Context Badge & Actions */}
+				<div
+					className="chat-navbar-right"
+					ref={exportMenuRef}
+					style={{ position: "relative", display: "flex", alignItems: "center", gap: "8px" }}
+				>
+					{messages.length > 0 && (
+						<span
+							className="model-tag-badge"
+							style={{
+								background: isHighContext ? "rgba(239, 68, 68, 0.15)" : "rgba(255, 255, 255, 0.06)",
+								color: isHighContext ? "#ef4444" : "var(--text-secondary)",
+								border: isHighContext ? "1px solid rgba(239, 68, 68, 0.3)" : undefined,
+								fontSize: "11px",
+								fontWeight: 500,
+							}}
+							title={`Uso de ventana de contexto: ${totalChars.toLocaleString()} / 60,000 caracteres (${contextPercent}%)`}
+						>
+							Contexto {contextPercent}%
+						</span>
+					)}
+
 					<button
 						type="button"
 						className="action-icon-btn"
@@ -672,6 +698,7 @@ export function ChatView() {
 									onDelete={handleDeleteMsg}
 									onEdit={handleEditMsg}
 									onReload={handleReloadMsg}
+									onFavorite={toggleFavoriteMessage}
 								/>
 							))}
 

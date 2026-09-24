@@ -37,6 +37,11 @@ export function createApiRoutes(
 	const sessionController = new SessionController(sessionService);
 	router.use("/sessions", createSessionRoutes(sessionController));
 
+	const messagesRouter = Router();
+	messagesRouter.get("/favorites", sessionController.listFavorites);
+	messagesRouter.get("/search", sessionController.searchMessages);
+	router.use("/messages", messagesRouter);
+
 	const memoryController = new MemoryController(memoryService);
 	router.use("/memories", createMemoryRoutes(memoryController));
 

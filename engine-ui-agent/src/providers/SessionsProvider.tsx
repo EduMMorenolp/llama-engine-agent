@@ -32,8 +32,10 @@ interface SessionsContextType {
 	createNewSession: (name?: string, model?: string) => Promise<Session>;
 	removeSession: (id: string) => Promise<void>;
 	renameSession: (id: string, newName: string) => Promise<void>;
+	tagSession: (id: string, tags: string[]) => Promise<void>;
 	forkSession: (upToMessageId: string) => Promise<Session>;
 	deleteMessage: (messageId: string) => void;
+	toggleFavoriteMessage: (messageId: string) => Promise<void>;
 	addMessage: (msg: Message) => void;
 	updateLastMessage: (content: string) => void;
 	setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -225,6 +227,41 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 		}
 	}, []);
 
+	const tagSession = useCallback(async (id: string, tags: string[]) => {
+		// Optimistic update
+		setSessions((prev) =>
+			prev.map((s) => (s.id === id ? { ...s, tags, updatedAt: Date.now() } : s)),
+		);
+		try {
+			await apiUpdateSession(id, { tags });
+		} catch (err) {
+			console.warn("[sessions] Error al actualizar tags en backend:", err);
+		}
+	}, []);
+
+	const toggleFavoriteMessage = useCallback(
+		async (messageId: string) => {
+			if (!activeSessionId) return;
+			let newFavState = false;
+			setMessages((prev) =>
+				prev.map((m) => {
+					if (m.id === messageId) {
+						newFavState = !m.favorite;
+						return { ...m, favorite: newFavState };
+					}
+					return m;
+				}),
+			);
+			try {
+				const { updateSessionMessage } = await import("../api.ts");
+				await updateSessionMessage(activeSessionId, messageId, { favorite: newFavState });
+			} catch (err) {
+				console.warn("[sessions] Error al actualizar favorito en backend:", err);
+			}
+		},
+		[activeSessionId],
+	);
+
 	const forkSession = useCallback(
 		async (upToMessageId: string) => {
 			const active = sessions.find((s) => s.id === activeSessionId);
@@ -272,8 +309,10 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 				createNewSession,
 				removeSession,
 				renameSession,
+				tagSession,
 				forkSession,
 				deleteMessage,
+				toggleFavoriteMessage,
 				addMessage,
 				updateLastMessage,
 				setMessages,

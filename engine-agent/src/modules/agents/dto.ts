@@ -5,7 +5,12 @@ export const createAgentDto = z.object({
 		.string()
 		.min(1)
 		.max(64)
-		.transform((val) => val.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-"))
+		.transform((val) =>
+			val
+				.trim()
+				.toLowerCase()
+				.replace(/[^a-z0-9_-]/g, "-"),
+		)
 		.pipe(z.string().min(1)),
 	description: z
 		.string()

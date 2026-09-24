@@ -2,6 +2,9 @@
 
 ## Sin liberar
 
+- **Agregado**: 5 features de uso cotidiano — (1) **Auto-título de sesión**: generación automática fire-and-forget de título conciso tras el primer turno sin pisar títulos manuales (`loop.ts`); (2) **Tags de sesión**: migración `006`, soporte en DTOs y persistencia en SQLite; (3) **Favoritos en mensajes**: estrella persistida en mensajes (`messages.favorite`), endpoint `PATCH /api/sessions/:id/messages/:messageId` y `GET /api/messages/favorites`; (4) **Búsqueda full-text en mensajes**: endpoint `GET /api/messages/search?q=...` con extracción de snippets contextuales; (5) **Compaction e indicador de contexto**: cálculo de uso de ventana de contexto en `prompt.ts`/`loop.ts` emitido en eventos `done`, soporte de `summary` en sesiones (migración `007`). [2026-09-24]
+  * **Archivos**: `src/db/migrations/006-session-tags-favorites.sql`, `src/db/migrations/007-session-summary.sql`, `src/sessions/types.ts`, `src/modules/sessions/dto.ts`, `src/modules/sessions/service.ts`, `src/modules/sessions/controller.ts`, `src/modules/sessions/routes.ts`, `src/routes/index.ts`, `src/agent/prompt.ts`, `src/agent/loop.ts`, `src/server.test.ts`. [2026-09-24]
+
 - **Agregado**: Endpoints REST de eliminación granular de mensajes y bifurcación de sesiones — `DELETE /api/sessions/:id/messages/:messageId` para eliminar mensajes individuales de la base de datos SQLite y `POST /api/sessions/:id/fork` para clonar conversaciones existentes con su historial de mensajes hasta un punto seleccionado. [2026-09-23]
   * **Archivos**: `src/modules/sessions/dto.ts`, `src/modules/sessions/service.ts`, `src/modules/sessions/controller.ts`, `src/modules/sessions/routes.ts`, `src/server.test.ts`. [2026-09-23]
 

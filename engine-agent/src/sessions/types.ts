@@ -2,6 +2,9 @@ export interface Session {
 	id: string;
 	name: string | null;
 	model: string | null;
+	tags?: string[];
+	autoTitled?: boolean;
+	summary?: string | null;
 	createdAt: number;
 	updatedAt: number;
 }
@@ -13,6 +16,7 @@ export interface Message {
 	content: string | null;
 	toolCalls: string | null;
 	toolCallId: string | null;
+	favorite?: boolean;
 	createdAt: number;
 }
 

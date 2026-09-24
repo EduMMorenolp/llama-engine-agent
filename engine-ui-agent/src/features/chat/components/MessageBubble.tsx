@@ -16,6 +16,7 @@ import {
 	LightbulbIcon,
 	RefreshCwIcon,
 	SparklesIcon,
+	StarIcon,
 	TerminalIcon,
 	TrashIcon,
 	UserIcon,
@@ -41,6 +42,7 @@ interface MessageBubbleProps {
 	onCopy?: (text: string) => void;
 	onEdit?: (message: Message) => void;
 	onReload?: (message: Message) => void;
+	onFavorite?: (message: Message) => void;
 	onFork?: (messageId: string) => void;
 	onDelete?: (messageId: string) => void;
 }
@@ -134,6 +136,7 @@ export function MessageBubble({
 	onCopy,
 	onEdit,
 	onReload,
+	onFavorite,
 	onFork,
 	onDelete,
 }: MessageBubbleProps) {
@@ -414,6 +417,18 @@ export function MessageBubble({
 								<CopyIcon size={14} />
 							)}
 						</button>
+
+						{onFavorite && (
+							<button
+								type="button"
+								className="action-icon-btn"
+								title={message.favorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+								onClick={() => onFavorite(message)}
+								style={message.favorite ? { color: "#fbbf24" } : undefined}
+							>
+								<StarIcon size={14} filled={!!message.favorite} />
+							</button>
+						)}
 
 						{isUser && onEdit && (
 							<button

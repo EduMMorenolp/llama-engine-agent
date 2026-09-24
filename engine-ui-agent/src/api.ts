@@ -6,6 +6,9 @@ export interface Session {
 	id: string;
 	name: string | null;
 	model: string | null;
+	tags?: string[];
+	autoTitled?: boolean;
+	summary?: string | null;
 	createdAt: number;
 	updatedAt: number;
 }
@@ -17,6 +20,7 @@ export interface Message {
 	content: string | null;
 	toolCalls: string | null;
 	toolCallId: string | null;
+	favorite?: boolean;
 	createdAt: number;
 	_subAgent?: string;
 }
@@ -75,13 +79,17 @@ export async function fetchSessions(): Promise<Session[]> {
 	return res.sessions;
 }
 
-export async function createSession(name?: string, model?: string): Promise<Session> {
-	return apiPost<Session>("/api/sessions", { name, model });
+export async function createSession(
+	name?: string,
+	model?: string,
+	tags?: string[],
+): Promise<Session> {
+	return apiPost<Session>("/api/sessions", { name, model, tags });
 }
 
 export async function updateSession(
 	id: string,
-	data: { name?: string; model?: string },
+	data: { name?: string | null; model?: string | null; tags?: string[]; summary?: string | null },
 ): Promise<Session> {
 	return apiPatch<Session>(`/api/sessions/${id}`, data);
 }
@@ -108,8 +116,45 @@ export async function deleteSession(id: string): Promise<void> {
 	await apiDelete(`/api/sessions/${id}`);
 }
 
+export async function updateSessionMessage(
+	sessionId: string,
+	messageId: string,
+	data: { favorite: boolean },
+): Promise<Message> {
+	return apiPatch<Message>(`/api/sessions/${sessionId}/messages/${messageId}`, data);
+}
+
 export async function deleteSessionMessage(sessionId: string, messageId: string): Promise<void> {
 	await apiDelete(`/api/sessions/${sessionId}/messages/${messageId}`);
+}
+
+export async function fetchFavoriteMessages(
+	limit = 50,
+): Promise<Array<{ message: Message; session: { id: string; name: string | null } }>> {
+	const res = await apiGet<{
+		favorites: Array<{ message: Message; session: { id: string; name: string | null } }>;
+	}>(`/api/messages/favorites?limit=${limit}`);
+	return res.favorites;
+}
+
+export async function searchMessages(
+	query: string,
+	limit = 30,
+): Promise<
+	Array<{
+		message: Message;
+		session: { id: string; name: string | null };
+		snippet: string;
+	}>
+> {
+	const res = await apiGet<{
+		results: Array<{
+			message: Message;
+			session: { id: string; name: string | null };
+			snippet: string;
+		}>;
+	}>(`/api/messages/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+	return res.results;
 }
 
 export async function forkSession(

@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { type AgentDefinition, createAgent, fetchAgents, fetchHealth } from "../../../api.ts";
+import {
+	type AgentDefinition,
+	createAgent,
+	fetchAgents,
+	fetchHealth,
+	type Message,
+	searchMessages,
+} from "../../../api.ts";
 import logoImg from "../../../assets/logo.jpg";
 import {
 	CheckIcon,
@@ -10,6 +17,8 @@ import {
 	SettingsIcon,
 	SidebarIcon,
 	SparklesIcon,
+	StarIcon,
+	TagIcon,
 	TrashIcon,
 	XIcon,
 } from "../../../components/ui/Icons.tsx";
@@ -21,6 +30,7 @@ import {
 import { SettingsModal } from "../../chat/components/SettingsModal.tsx";
 import { useSessions } from "../hooks/useSessions.ts";
 import { AgentEditModal } from "./AgentEditModal.tsx";
+import { FavoritesModal } from "./FavoritesModal.tsx";
 
 interface SessionListProps {
 	onToggleSidebar?: () => void;
@@ -35,18 +45,58 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 		selectSession,
 		removeSession,
 		renameSession,
+		tagSession,
 	} = useSessions();
 
 	const [searchQuery, setSearchQuery] = useState("");
+	const [activeTag, setActiveTag] = useState<string | null>(null);
 	const [showSettings, setShowSettings] = useState(false);
+	const [showFavorites, setShowFavorites] = useState(false);
 	const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 	const [editingName, setEditingName] = useState("");
+	const [tagInputSessionId, setTagInputSessionId] = useState<string | null>(null);
+	const [newTagText, setNewTagText] = useState("");
 	const [sidebarTab, setSidebarTab] = useState<"chat" | "agents">("chat");
 	const [agents, setAgents] = useState<AgentDefinition[]>([]);
 	const [newAgentName, setNewAgentName] = useState("");
 	const [connectionState, setConnectionState] = useState<"connected" | "disconnected">("connected");
 	const [editingAgent, setEditingAgent] = useState<AgentDefinition | null>(null);
+	const [searchMessageResults, setSearchMessageResults] = useState<
+		Array<{
+			message: Message;
+			session: { id: string; name: string | null };
+			snippet: string;
+		}>
+	>([]);
 	const editInputRef = useRef<HTMLInputElement>(null);
+	const tagInputRef = useRef<HTMLInputElement>(null);
+
+	// Debounced message search
+	useEffect(() => {
+		if (searchQuery.trim().length < 3) {
+			setSearchMessageResults([]);
+			return;
+		}
+		const timer = setTimeout(() => {
+			searchMessages(searchQuery.trim())
+				.then((results) => setSearchMessageResults(results || []))
+				.catch(() => setSearchMessageResults([]));
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [searchQuery]);
+
+	// Extract unique tags across all sessions
+	const allTags = useMemo(() => {
+		const set = new Set<string>();
+		for (const s of sessions) {
+			if (Array.isArray(s.tags)) {
+				for (const t of s.tags) {
+					if (t?.trim()) set.add(t.trim());
+				}
+			}
+		}
+		return Array.from(set);
+	}, [sessions]);
 
 	// Check health periodically for connection status
 	useEffect(() => {
@@ -104,6 +154,26 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 		setEditingSessionId(null);
 	};
 
+	const handleAddTag = async (sessionId: string, currentTags: string[] = []) => {
+		const tag = newTagText.trim().toLowerCase();
+		if (tag && !currentTags.includes(tag) && currentTags.length < 10) {
+			await tagSession(sessionId, [...currentTags, tag]);
+		}
+		setNewTagText("");
+		setTagInputSessionId(null);
+	};
+
+	const handleRemoveTag = async (
+		sessionId: string,
+		tagToRemove: string,
+		currentTags: string[] = [],
+	) => {
+		await tagSession(
+			sessionId,
+			currentTags.filter((t) => t !== tagToRemove),
+		);
+	};
+
 	const handleCreateAgent = async () => {
 		const rawName = newAgentName.trim();
 		if (!rawName) return;
@@ -150,10 +220,17 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 	};
 
 	const filteredSessions = useMemo(() => {
-		if (!searchQuery.trim()) return sessions;
-		const query = searchQuery.toLowerCase();
-		return sessions.filter((s) => (s.name ?? s.id).toLowerCase().includes(query));
-	}, [sessions, searchQuery]);
+		return sessions.filter((s) => {
+			if (activeTag && !s.tags?.includes(activeTag)) {
+				return false;
+			}
+			if (searchQuery.trim()) {
+				const query = searchQuery.toLowerCase();
+				return (s.name ?? s.id).toLowerCase().includes(query);
+			}
+			return true;
+		});
+	}, [sessions, searchQuery, activeTag]);
 
 	return (
 		<div className="sidebar-content">
@@ -198,6 +275,15 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 					<SparklesIcon size={14} />
 					<span>Agentes</span>
 				</button>
+				<button
+					type="button"
+					className="sidebar-tab"
+					onClick={() => setShowFavorites(true)}
+					title="Ver mensajes guardados"
+				>
+					<StarIcon size={14} />
+					<span>Guardados</span>
+				</button>
 			</div>
 
 			{sidebarTab === "chat" ? (
@@ -223,11 +309,54 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 							<input
 								type="text"
 								className="sidebar-search-input"
-								placeholder="Buscar en el historial..."
+								placeholder="Buscar en sesiones y mensajes..."
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
 							/>
 						</div>
+
+						{allTags.length > 0 && (
+							<div
+								style={{
+									display: "flex",
+									flexWrap: "wrap",
+									gap: "4px",
+									padding: "4px 2px 0 2px",
+								}}
+							>
+								<button
+									type="button"
+									className={`model-tag-badge ${activeTag === null ? "active" : ""}`}
+									onClick={() => setActiveTag(null)}
+									style={{
+										cursor: "pointer",
+										fontSize: "11px",
+										padding: "2px 6px",
+										background: activeTag === null ? "var(--accent-glow)" : undefined,
+										color: activeTag === null ? "var(--accent)" : undefined,
+									}}
+								>
+									Todos
+								</button>
+								{allTags.map((tag) => (
+									<button
+										key={tag}
+										type="button"
+										className={`model-tag-badge ${activeTag === tag ? "active" : ""}`}
+										onClick={() => setActiveTag((prev) => (prev === tag ? null : tag))}
+										style={{
+											cursor: "pointer",
+											fontSize: "11px",
+											padding: "2px 6px",
+											background: activeTag === tag ? "var(--accent-glow)" : undefined,
+											color: activeTag === tag ? "var(--accent)" : undefined,
+										}}
+									>
+										#{tag}
+									</button>
+								))}
+							</div>
+						)}
 					</div>
 
 					<div className="sidebar-sessions-container">
@@ -235,17 +364,22 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 
 						{filteredSessions.length === 0 ? (
 							<div className="sidebar-empty">
-								{searchQuery ? "No se encontraron coincidencias" : "Sin conversaciones aún"}
+								{searchQuery || activeTag
+									? "No se encontraron coincidencias"
+									: "Sin conversaciones aún"}
 							</div>
 						) : (
 							filteredSessions.map((session) => {
 								const isEditing = editingSessionId === session.id;
+								const isAddingTag = tagInputSessionId === session.id;
 								const displayName = session.name || `Chat ${session.id.slice(0, 6)}`;
+								const sessionTags = session.tags || [];
 
 								return (
 									<div
 										key={session.id}
 										className={`session-item ${session.id === activeSessionId ? "active" : ""}`}
+										style={{ flexDirection: "column", alignItems: "stretch", gap: "4px" }}
 									>
 										{isEditing ? (
 											<div
@@ -300,7 +434,14 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 												</button>
 											</div>
 										) : (
-											<>
+											<div
+												style={{
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "space-between",
+													width: "100%",
+												}}
+											>
 												<button
 													type="button"
 													className="session-item-main"
@@ -312,8 +453,9 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 														color: "inherit",
 														cursor: "pointer",
 														textAlign: "left",
-														width: "100%",
+														flex: 1,
 														padding: 0,
+														overflow: "hidden",
 													}}
 												>
 													<span className="session-item-icon">
@@ -325,6 +467,19 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 												</button>
 
 												<div className="session-item-actions">
+													<button
+														type="button"
+														className="session-action-btn"
+														title="Agregar tag a la sesión"
+														onClick={(e) => {
+															e.stopPropagation();
+															setTagInputSessionId(isAddingTag ? null : session.id);
+															setNewTagText("");
+															setTimeout(() => tagInputRef.current?.focus(), 30);
+														}}
+													>
+														<TagIcon size={13} />
+													</button>
 													<button
 														type="button"
 														className="session-action-btn edit-btn"
@@ -345,11 +500,160 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 														<TrashIcon size={14} />
 													</button>
 												</div>
-											</>
+											</div>
+										)}
+
+										{/* Tags row & Inline Tag Input */}
+										{(sessionTags.length > 0 || isAddingTag) && (
+											<div
+												style={{
+													display: "flex",
+													flexWrap: "wrap",
+													alignItems: "center",
+													gap: "4px",
+													paddingLeft: "26px",
+													marginTop: "2px",
+												}}
+											>
+												{sessionTags.map((tag) => (
+													<span
+														key={tag}
+														className="model-tag-badge"
+														style={{
+															fontSize: "10px",
+															padding: "1px 5px",
+															display: "inline-flex",
+															alignItems: "center",
+															gap: "3px",
+														}}
+													>
+														<span>#{tag}</span>
+														<button
+															type="button"
+															style={{
+																background: "none",
+																border: "none",
+																color: "inherit",
+																cursor: "pointer",
+																padding: 0,
+																display: "inline-flex",
+																opacity: 0.6,
+															}}
+															onClick={(e) => {
+																e.stopPropagation();
+																handleRemoveTag(session.id, tag, sessionTags);
+															}}
+															title={`Eliminar tag "${tag}"`}
+														>
+															<XIcon size={10} />
+														</button>
+													</span>
+												))}
+
+												{isAddingTag && (
+													<span
+														style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}
+													>
+														<input
+															ref={tagInputRef}
+															type="text"
+															value={newTagText}
+															onChange={(e) => setNewTagText(e.target.value)}
+															placeholder="nuevo tag..."
+															style={{
+																fontSize: "11px",
+																padding: "1px 4px",
+																background: "var(--bg-app)",
+																border: "1px solid var(--accent)",
+																borderRadius: "var(--r-sm)",
+																color: "var(--text-primary)",
+																width: "70px",
+															}}
+															onKeyDown={(e) => {
+																if (e.key === "Enter") {
+																	e.preventDefault();
+																	handleAddTag(session.id, sessionTags);
+																} else if (e.key === "Escape") {
+																	e.preventDefault();
+																	setTagInputSessionId(null);
+																}
+															}}
+															onBlur={() => handleAddTag(session.id, sessionTags)}
+														/>
+													</span>
+												)}
+											</div>
 										)}
 									</div>
 								);
 							})
+						)}
+
+						{/* Full-text message search results */}
+						{searchMessageResults.length > 0 && (
+							<div style={{ marginTop: "16px" }}>
+								<div className="sidebar-section-title">
+									Mensajes Encontrados ({searchMessageResults.length})
+								</div>
+								{searchMessageResults.map((res) => (
+									<button
+										type="button"
+										key={res.message.id}
+										className="session-item"
+										onClick={() => selectSession(res.session.id)}
+										style={{
+											flexDirection: "column",
+											alignItems: "flex-start",
+											gap: "4px",
+											padding: "8px 10px",
+											cursor: "pointer",
+											marginBottom: "4px",
+											textAlign: "left",
+											width: "100%",
+											background: "none",
+											border: "none",
+										}}
+									>
+										<div
+											style={{
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "space-between",
+												width: "100%",
+											}}
+										>
+											<span
+												style={{
+													fontSize: "12px",
+													fontWeight: 600,
+													color: "var(--accent)",
+													whiteSpace: "nowrap",
+													overflow: "hidden",
+													textOverflow: "ellipsis",
+												}}
+											>
+												{res.session.name || `Chat ${res.session.id.slice(0, 6)}`}
+											</span>
+											<span
+												className="model-tag-badge"
+												style={{ fontSize: "9px", padding: "0 4px" }}
+											>
+												{res.message.role}
+											</span>
+										</div>
+										<span
+											style={{
+												fontSize: "11px",
+												color: "var(--text-secondary)",
+												lineHeight: 1.3,
+												wordBreak: "break-word",
+											}}
+										>
+											{res.snippet}
+										</span>
+									</button>
+								))}
+							</div>
 						)}
 					</div>
 				</>
@@ -454,6 +758,13 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 			</div>
 
 			{showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
+			{showFavorites && (
+				<FavoritesModal
+					onClose={() => setShowFavorites(false)}
+					onSelectSession={(id) => selectSession(id)}
+				/>
+			)}
 
 			{editingAgent && (
 				<AgentEditModal
