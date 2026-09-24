@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { type AgentDefinition, createAgent, fetchAgents } from "../../../api.ts";
 import logoImg from "../../../assets/logo.jpg";
 import {
 	CheckIcon,
@@ -8,6 +9,7 @@ import {
 	SearchIcon,
 	SettingsIcon,
 	SidebarIcon,
+	SparklesIcon,
 	TrashIcon,
 	XIcon,
 } from "../../../components/ui/Icons.tsx";
@@ -34,11 +36,23 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 	const [showSettings, setShowSettings] = useState(false);
 	const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 	const [editingName, setEditingName] = useState("");
+	const [sidebarTab, setSidebarTab] = useState<"chat" | "agents">("chat");
+	const [agents, setAgents] = useState<AgentDefinition[]>([]);
+	const [newAgentName, setNewAgentName] = useState("");
 	const editInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		loadSessions();
 	}, [loadSessions]);
+
+	// Load agents when switching to agents tab
+	useEffect(() => {
+		if (sidebarTab === "agents") {
+			fetchAgents()
+				.then(setAgents)
+				.catch(() => {});
+		}
+	}, [sidebarTab]);
 
 	// Global shortcut for new chat: Ctrl+K or Cmd+K
 	useEffect(() => {
@@ -73,6 +87,20 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 		setEditingSessionId(null);
 	};
 
+	const handleCreateAgent = async () => {
+		const name = newAgentName.trim();
+		if (!name) return;
+		try {
+			const agent = await createAgent({ name });
+			if (agent) {
+				setAgents((prev) => [...prev, agent]);
+				setNewAgentName("");
+			}
+		} catch {
+			// noop
+		}
+	};
+
 	const filteredSessions = useMemo(() => {
 		if (!searchQuery.trim()) return sessions;
 		const query = searchQuery.toLowerCase();
@@ -104,156 +132,241 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 				)}
 			</div>
 
-			<div className="sidebar-actions">
+			{/* Sidebar Tabs */}
+			<div className="sidebar-tabs">
 				<button
 					type="button"
-					className="new-chat-btn"
-					onClick={() => createNewSession()}
-					title="Iniciar nueva conversación"
+					className={`sidebar-tab ${sidebarTab === "chat" ? "active" : ""}`}
+					onClick={() => setSidebarTab("chat")}
 				>
-					<div className="new-chat-btn-left">
-						<PlusIcon size={16} />
-						<span>Nueva conversación</span>
-					</div>
-					<span className="new-chat-shortcut">Ctrl K</span>
+					<MessageSquareIcon size={14} />
+					<span>Chat</span>
 				</button>
-
-				<div className="sidebar-search-wrapper">
-					<span className="sidebar-search-icon">
-						<SearchIcon size={14} />
-					</span>
-					<input
-						type="text"
-						className="sidebar-search-input"
-						placeholder="Buscar en el historial..."
-						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
-					/>
-				</div>
+				<button
+					type="button"
+					className={`sidebar-tab ${sidebarTab === "agents" ? "active" : ""}`}
+					onClick={() => setSidebarTab("agents")}
+				>
+					<SparklesIcon size={14} />
+					<span>Agentes</span>
+				</button>
 			</div>
 
-			<div className="sidebar-sessions-container">
-				<div className="sidebar-section-title">Conversaciones Recientes</div>
+			{sidebarTab === "chat" ? (
+				<>
+					<div className="sidebar-actions">
+						<button
+							type="button"
+							className="new-chat-btn"
+							onClick={() => createNewSession()}
+							title="Iniciar nueva conversación"
+						>
+							<div className="new-chat-btn-left">
+								<PlusIcon size={16} />
+								<span>Nueva conversación</span>
+							</div>
+							<span className="new-chat-shortcut">Ctrl K</span>
+						</button>
 
-				{filteredSessions.length === 0 ? (
-					<div className="sidebar-empty">
-						{searchQuery ? "No se encontraron coincidencias" : "Sin conversaciones aún"}
+						<div className="sidebar-search-wrapper">
+							<span className="sidebar-search-icon">
+								<SearchIcon size={14} />
+							</span>
+							<input
+								type="text"
+								className="sidebar-search-input"
+								placeholder="Buscar en el historial..."
+								value={searchQuery}
+								onChange={(e) => setSearchQuery(e.target.value)}
+							/>
+						</div>
 					</div>
-				) : (
-					filteredSessions.map((session) => {
-						const isEditing = editingSessionId === session.id;
-						const displayName = session.name || `Chat ${session.id.slice(0, 6)}`;
 
-						return (
-							<div
-								key={session.id}
-								className={`session-item ${session.id === activeSessionId ? "active" : ""}`}
-								onDoubleClick={() => !isEditing && handleStartEdit(session)}
-							>
-								{isEditing ? (
+					<div className="sidebar-sessions-container">
+						<div className="sidebar-section-title">Conversaciones Recientes</div>
+
+						{filteredSessions.length === 0 ? (
+							<div className="sidebar-empty">
+								{searchQuery ? "No se encontraron coincidencias" : "Sin conversaciones aún"}
+							</div>
+						) : (
+							filteredSessions.map((session) => {
+								const isEditing = editingSessionId === session.id;
+								const displayName = session.name || `Chat ${session.id.slice(0, 6)}`;
+
+								return (
 									<div
-										style={{
-											display: "flex",
-											alignItems: "center",
-											gap: "6px",
-											width: "100%",
-										}}
+										key={session.id}
+										className={`session-item ${session.id === activeSessionId ? "active" : ""}`}
+										onDoubleClick={() => !isEditing && handleStartEdit(session)}
 									>
-										<span className="session-item-icon">
-											<MessageSquareIcon size={15} />
-										</span>
-										<input
-											ref={editInputRef}
-											type="text"
-											className="session-rename-input"
-											value={editingName}
-											onChange={(e) => setEditingName(e.target.value)}
-											onKeyDown={(e) => {
-												if (e.key === "Enter") {
-													e.preventDefault();
-													handleSaveEdit(session.id);
-												} else if (e.key === "Escape") {
-													e.preventDefault();
-													handleCancelEdit();
-												}
-											}}
-											onClick={(e) => e.stopPropagation()}
-										/>
-										<button
-											type="button"
-											className="session-action-btn confirm-btn"
-											title="Guardar nombre (Enter)"
-											onClick={(e) => {
-												e.stopPropagation();
-												handleSaveEdit(session.id);
-											}}
-										>
-											<CheckIcon size={13} />
-										</button>
-										<button
-											type="button"
-											className="session-action-btn cancel-btn"
-											title="Cancelar (Esc)"
-											onClick={(e) => {
-												e.stopPropagation();
-												handleCancelEdit();
-											}}
-										>
-											<XIcon size={13} />
-										</button>
-									</div>
-								) : (
-									<>
-										<button
-											type="button"
-											className="session-item-main"
-											onClick={() => selectSession(session.id)}
-											style={{
-												background: "none",
-												border: "none",
-												color: "inherit",
-												cursor: "pointer",
-												textAlign: "left",
-												width: "100%",
-												padding: 0,
-											}}
-										>
-											<span className="session-item-icon">
-												<MessageSquareIcon size={15} />
-											</span>
-											<span className="session-name" title={displayName}>
-												{displayName}
-											</span>
-										</button>
-
-										<div className="session-item-actions">
-											<button
-												type="button"
-												className="session-action-btn edit-btn"
-												title="Renombrar chat"
-												onClick={(e) => handleStartEdit(session, e)}
-											>
-												<EditIcon size={13} />
-											</button>
-											<button
-												type="button"
-												className="session-action-btn"
-												title="Eliminar conversación"
-												onClick={(e) => {
-													e.stopPropagation();
-													removeSession(session.id);
+										{isEditing ? (
+											<div
+												style={{
+													display: "flex",
+													alignItems: "center",
+													gap: "6px",
+													width: "100%",
 												}}
 											>
-												<TrashIcon size={14} />
-											</button>
-										</div>
-									</>
-								)}
+												<span className="session-item-icon">
+													<MessageSquareIcon size={15} />
+												</span>
+												<input
+													ref={editInputRef}
+													type="text"
+													className="session-rename-input"
+													value={editingName}
+													onChange={(e) => setEditingName(e.target.value)}
+													onKeyDown={(e) => {
+														if (e.key === "Enter") {
+															e.preventDefault();
+															handleSaveEdit(session.id);
+														} else if (e.key === "Escape") {
+															e.preventDefault();
+															handleCancelEdit();
+														}
+													}}
+													onClick={(e) => e.stopPropagation()}
+												/>
+												<button
+													type="button"
+													className="session-action-btn confirm-btn"
+													title="Guardar nombre (Enter)"
+													onClick={(e) => {
+														e.stopPropagation();
+														handleSaveEdit(session.id);
+													}}
+												>
+													<CheckIcon size={13} />
+												</button>
+												<button
+													type="button"
+													className="session-action-btn cancel-btn"
+													title="Cancelar (Esc)"
+													onClick={(e) => {
+														e.stopPropagation();
+														handleCancelEdit();
+													}}
+												>
+													<XIcon size={13} />
+												</button>
+											</div>
+										) : (
+											<>
+												<button
+													type="button"
+													className="session-item-main"
+													onClick={() => selectSession(session.id)}
+													style={{
+														background: "none",
+														border: "none",
+														color: "inherit",
+														cursor: "pointer",
+														textAlign: "left",
+														width: "100%",
+														padding: 0,
+													}}
+												>
+													<span className="session-item-icon">
+														<MessageSquareIcon size={15} />
+													</span>
+													<span className="session-name" title={displayName}>
+														{displayName}
+													</span>
+												</button>
+
+												<div className="session-item-actions">
+													<button
+														type="button"
+														className="session-action-btn edit-btn"
+														title="Renombrar chat"
+														onClick={(e) => handleStartEdit(session, e)}
+													>
+														<EditIcon size={13} />
+													</button>
+													<button
+														type="button"
+														className="session-action-btn"
+														title="Eliminar conversación"
+														onClick={(e) => {
+															e.stopPropagation();
+															removeSession(session.id);
+														}}
+													>
+														<TrashIcon size={14} />
+													</button>
+												</div>
+											</>
+										)}
+									</div>
+								);
+							})
+						)}
+					</div>
+				</>
+			) : (
+				<div className="sidebar-sessions-container">
+					<div className="sidebar-section-title">Agentes</div>
+
+					{agents.length === 0 ? (
+						<div className="sidebar-empty">Sin agentes aún</div>
+					) : (
+						agents.map((agent) => (
+							<div key={agent.name} className="session-item">
+								<button
+									type="button"
+									className="session-item-main"
+									style={{
+										background: "none",
+										border: "none",
+										color: "inherit",
+										cursor: "pointer",
+										textAlign: "left",
+										width: "100%",
+										padding: 0,
+									}}
+								>
+									<span className="session-item-icon">
+										<SparklesIcon size={15} />
+									</span>
+									<span className="session-name" title={agent.name}>
+										{agent.name}
+									</span>
+								</button>
 							</div>
-						);
-					})
-				)}
-			</div>
+						))
+					)}
+
+					<div className="sidebar-new-agent">
+						<input
+							type="text"
+							className="sidebar-search-input"
+							placeholder="Nombre del agente"
+							value={newAgentName}
+							onChange={(e) => setNewAgentName(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									e.preventDefault();
+									handleCreateAgent();
+								}
+							}}
+						/>
+						<button
+							type="button"
+							className="new-chat-btn"
+							disabled={!newAgentName.trim()}
+							onClick={handleCreateAgent}
+							title="Crear agente"
+						>
+							<div className="new-chat-btn-left">
+								<PlusIcon size={16} />
+								<span>Crear agente</span>
+							</div>
+						</button>
+					</div>
+				</div>
+			)}
 
 			<div className="sidebar-footer">
 				<div className="sidebar-footer-status">

@@ -2,6 +2,9 @@
 
 ## Sin liberar
 
+- **Agregado**: Dos tabs en el sidebar principal (Chat / Agentes) debajo del header. Tab Chat muestra el contenido actual (sesiones, búsqueda, nueva conversación). Tab Agentes muestra la lista de agentes del backend con opción de crear nuevos. [2026-09-23]
+  * **Archivos**: `src/features/sessions/components/SessionList.tsx`, `src/index.css`. [2026-09-23]
+
 - **Agregado**: Entrada de micrófono vía Web Speech API — hook `useSpeechRecognition` permite voz-a-texto directo en el navegador. Botón de micrófono en el composer con animación de pulso de grabación y visualización de transcript interim. [2026-09-22]
   * **Archivos**: `src/features/chat/hooks/useSpeechRecognition.ts`, `src/features/chat/components/Composer.tsx`, `src/components/ui/Icons.tsx`, `src/index.css`, `src/vite-env.d.ts`. [2026-09-22]
 
