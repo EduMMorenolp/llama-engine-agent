@@ -2,6 +2,9 @@
 
 ## Sin liberar
 
+- **Agregado**: Modal de configuración y edición de agentes (`AgentEditModal.tsx`) con icono de rueda (engranaje) en cada item de la lista de agentes del sidebar. Permite modificar nombre, descripción, system prompt / core instructions, modelo específico, número máximo de iteraciones, toggle de activación y selección interactiva de herramientas (tools) permitidas, además de eliminación segura del agente con actualización en tiempo real en la UI. [2026-09-23]
+  * **Archivos**: `src/features/sessions/components/AgentEditModal.tsx`, `src/features/sessions/components/SessionList.tsx`. [2026-09-23]
+
 - **Agregado/Mejorado**: Sincronización integral de configuraciones y experiencia de chat — (1) store reactivo de configuraciones de la aplicación (`useAppSettings`, `loadSettings`, `saveSettings`) con efecto inmediato en `ChatView` (auto-scroll), `MessageBubble` (visibilidad de métricas y apertura por defecto de reasoning), y `Composer` (parámetros de inferencia); (2) conexión del botón `Editar mensaje` (`onEdit`) cargando el texto en el Composer para reenvío/corrección rápida; (3) soporte completo de gestión de Habilidades (Skills) y creación de agentes persistidos en el backend desde `SettingsModal`; (4) importación real de conversaciones creando las sesiones en el servidor; (5) confirmación al eliminar conversaciones e indicador dinámico de estado de conexión (`Online`/`Desconectado`) en el pie del sidebar; (6) integración de endpoints para bifurcación de sesión y borrado individual de mensajes. [2026-09-23]
   * **Archivos**: `src/lib/settings.ts`, `src/lib/useAppSettings.ts`, `src/api.ts`, `src/features/chat/components/ChatView.tsx`, `src/features/chat/components/Composer.tsx`, `src/features/chat/components/MessageBubble.tsx`, `src/features/chat/components/SettingsModal.tsx`, `src/features/sessions/components/SessionList.tsx`, `src/index.css`. [2026-09-23]
 

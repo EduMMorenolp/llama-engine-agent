@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { type AgentDefinition, createAgent, fetchAgents } from "../../../api.ts";
+import { type AgentDefinition, createAgent, fetchAgents, fetchHealth } from "../../../api.ts";
 import logoImg from "../../../assets/logo.jpg";
 import {
 	CheckIcon,
@@ -20,6 +20,7 @@ import {
 } from "../../../lib/session-agents.ts";
 import { SettingsModal } from "../../chat/components/SettingsModal.tsx";
 import { useSessions } from "../hooks/useSessions.ts";
+import { AgentEditModal } from "./AgentEditModal.tsx";
 
 interface SessionListProps {
 	onToggleSidebar?: () => void;
@@ -43,7 +44,23 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 	const [sidebarTab, setSidebarTab] = useState<"chat" | "agents">("chat");
 	const [agents, setAgents] = useState<AgentDefinition[]>([]);
 	const [newAgentName, setNewAgentName] = useState("");
+	const [connectionState, setConnectionState] = useState<"connected" | "disconnected">("connected");
+	const [editingAgent, setEditingAgent] = useState<AgentDefinition | null>(null);
 	const editInputRef = useRef<HTMLInputElement>(null);
+
+	// Check health periodically for connection status
+	useEffect(() => {
+		const check = () => {
+			fetchHealth()
+				.then((res) => {
+					setConnectionState(res?.status === "ok" ? "connected" : "disconnected");
+				})
+				.catch(() => setConnectionState("disconnected"));
+		};
+		check();
+		const interval = setInterval(check, 15000);
+		return () => clearInterval(interval);
+	}, []);
 
 	// Load agents when switching to agents tab
 	useEffect(() => {
@@ -88,16 +105,24 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 	};
 
 	const handleCreateAgent = async () => {
-		const name = newAgentName.trim();
-		if (!name) return;
+		const rawName = newAgentName.trim();
+		if (!rawName) return;
+		const slug = rawName.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 		try {
-			const agent = await createAgent({ name });
+			const agent = await createAgent({
+				name: slug || rawName,
+				description: `Agente especializado ${rawName}`,
+				corePrompt: `Sos un agente especializado llamado ${rawName}.`,
+				tools: [],
+				enabled: true,
+			});
 			if (agent) {
 				setAgents((prev) => [...prev, agent]);
 				setNewAgentName("");
+				setEditingAgent(agent);
 			}
-		} catch {
-			// noop
+		} catch (err) {
+			console.error("[SessionList] Error creating agent:", err);
 		}
 	};
 
@@ -361,6 +386,20 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 											{agent.name}
 										</span>
 									</button>
+
+									<div className="session-item-actions">
+										<button
+											type="button"
+											className="session-action-btn"
+											title={`Configurar agente "${agent.name}"`}
+											onClick={(e) => {
+												e.stopPropagation();
+												setEditingAgent(agent);
+											}}
+										>
+											<SettingsIcon size={13} />
+										</button>
+									</div>
 								</div>
 							);
 						})
@@ -398,8 +437,10 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 
 			<div className="sidebar-footer">
 				<div className="sidebar-footer-status">
-					<div className="connection-dot connected" />
-					<span>Engine v0.1.0</span>
+					<div
+						className={`connection-dot ${connectionState === "connected" ? "connected" : "disconnected"}`}
+					/>
+					<span>{connectionState === "connected" ? "Engine Online" : "Desconectado"}</span>
 				</div>
 				<button
 					type="button"
@@ -413,6 +454,19 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 			</div>
 
 			{showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
+			{editingAgent && (
+				<AgentEditModal
+					agent={editingAgent}
+					onClose={() => setEditingAgent(null)}
+					onSaved={(updated) => {
+						setAgents((prev) => prev.map((a) => (a.name === updated.name ? updated : a)));
+					}}
+					onDeleted={(name) => {
+						setAgents((prev) => prev.filter((a) => a.name !== name));
+					}}
+				/>
+			)}
 		</div>
 	);
 }
