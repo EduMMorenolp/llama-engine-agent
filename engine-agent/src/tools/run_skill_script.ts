@@ -4,7 +4,8 @@ export const runSkillScriptTool: ToolSpec = {
 	type: "function",
 	function: {
 		name: "run_skill_script",
-		description: "Ejecuta un script de una skill. El script debe existir en skills/{agent}/{skill}/scripts/.",
+		description:
+			"Ejecuta un script de una skill. El script debe existir en skills/{agent}/{skill}/scripts/.",
 		parameters: {
 			type: "object",
 			properties: {

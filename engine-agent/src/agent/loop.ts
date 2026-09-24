@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { MemoryService } from "../modules/memories/service.js";
-import type { SkillService } from "../modules/skills/service.js";
 import type { SessionService } from "../modules/sessions/service.js";
+import type { SkillService } from "../modules/skills/service.js";
 import type { ToolRegistry } from "../tools/registry.js";
 import type { ToolContext } from "../tools/types.js";
 import type { LLMClient } from "./llm-client.js";
@@ -41,7 +41,13 @@ export async function runAgent(
 	if (enabledTools !== undefined) {
 		tools = tools.filter((t) => enabledTools.includes(t.function.name));
 	}
-	const toolContext: ToolContext = { sessionId, workDir, store, memoryService, skillService: config.skillService };
+	const toolContext: ToolContext = {
+		sessionId,
+		workDir,
+		store,
+		memoryService,
+		skillService: config.skillService,
+	};
 
 	const reasoningInstruction =
 		modelSettings?.enableReasoning === false
@@ -163,6 +169,7 @@ export async function runAgent(
 							result = `Error: ${err instanceof Error ? err.message : String(err)}`;
 						}
 						toolCache.set(tc.function.name, args, result);
+						toolCache.invalidateOnMutation(tc.function.name);
 					}
 
 					onEvent?.({

@@ -184,7 +184,10 @@ export async function createAgent(dto: Partial<AgentDefinition>): Promise<AgentD
 	return apiPost<AgentDefinition>("/api/agents", dto);
 }
 
-export async function updateAgent(name: string, dto: Partial<AgentDefinition>): Promise<AgentDefinition> {
+export async function updateAgent(
+	name: string,
+	dto: Partial<AgentDefinition>,
+): Promise<AgentDefinition> {
 	return apiPatch<AgentDefinition>(`/api/agents/${name}`, dto);
 }
 

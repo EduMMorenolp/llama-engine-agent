@@ -45,4 +45,28 @@ describe("ToolCache", () => {
 		cache.set("read_file", args, "Error: file not found");
 		expect(cache.get("read_file", args)).toBe("Error: file not found");
 	});
+
+	it("invalidates file cache entries on file mutation tools", () => {
+		const cache = new ToolCache();
+		cache.set("read_file", { path: "/app/index.ts" }, "original content");
+		cache.set("glob_search", { pattern: "*.ts" }, "file list");
+		cache.set("search_memories", { query: "name" }, "user is Alice");
+
+		cache.invalidateOnMutation("edit_file");
+
+		expect(cache.get("read_file", { path: "/app/index.ts" })).toBeNull();
+		expect(cache.get("glob_search", { pattern: "*.ts" })).toBeNull();
+		expect(cache.get("search_memories", { query: "name" })).toBe("user is Alice");
+	});
+
+	it("invalidates memory cache entries on memory mutation tools", () => {
+		const cache = new ToolCache();
+		cache.set("read_file", { path: "/app/index.ts" }, "original content");
+		cache.set("search_memories", { query: "name" }, "user is Alice");
+
+		cache.invalidateOnMutation("memorize");
+
+		expect(cache.get("read_file", { path: "/app/index.ts" })).toBe("original content");
+		expect(cache.get("search_memories", { query: "name" })).toBeNull();
+	});
 });

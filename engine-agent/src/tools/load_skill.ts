@@ -4,7 +4,8 @@ export const loadSkillTool: ToolSpec = {
 	type: "function",
 	function: {
 		name: "load_skill",
-		description: "Carga una skill completa con sus instrucciones. Usa esta skill cuando el task sea relevante.",
+		description:
+			"Carga una skill completa con sus instrucciones. Usa esta skill cuando el task sea relevante.",
 		parameters: {
 			type: "object",
 			properties: {

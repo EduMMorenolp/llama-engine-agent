@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import type { AgentLoopConfig } from "../../agent/loop.js";
 import { runAgent } from "../../agent/loop.js";
 import type { AgentDefinition } from "../../agent/types.js";
-import { AgentService } from "../../modules/agents/service.js";
+import type { AgentService } from "../../modules/agents/service.js";
 import { logger } from "../../utils/logger.js";
 import type { SessionService } from "../sessions/service.js";
 

@@ -221,7 +221,6 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 									<div
 										key={session.id}
 										className={`session-item ${session.id === activeSessionId ? "active" : ""}`}
-										onDoubleClick={() => !isEditing && handleStartEdit(session)}
 									>
 										{isEditing ? (
 											<div
@@ -281,6 +280,7 @@ export function SessionList({ onToggleSidebar }: SessionListProps) {
 													type="button"
 													className="session-item-main"
 													onClick={() => selectSession(session.id)}
+													onDoubleClick={() => !isEditing && handleStartEdit(session)}
 													style={{
 														background: "none",
 														border: "none",

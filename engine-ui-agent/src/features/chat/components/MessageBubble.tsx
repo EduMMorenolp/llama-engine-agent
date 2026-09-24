@@ -3,7 +3,6 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
-import { SparklesIcon } from "../../../components/ui/Icons.tsx";
 import type { Message } from "../../../api.ts";
 import logoImg from "../../../assets/logo.jpg";
 import {
@@ -16,6 +15,7 @@ import {
 	ForkIcon,
 	LightbulbIcon,
 	RefreshCwIcon,
+	SparklesIcon,
 	TerminalIcon,
 	TrashIcon,
 	UserIcon,
@@ -49,8 +49,8 @@ function parseThinking(content: string): { thinking: string; rest: string } {
 	const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|$)/gi;
 	const thinkings: string[] = [];
 
-	let match: RegExpExecArray | null;
-	while ((match = thinkRegex.exec(content)) !== null) {
+	const matches = content.matchAll(thinkRegex);
+	for (const match of matches) {
 		if (match[1]?.trim()) {
 			thinkings.push(match[1].trim());
 		}
@@ -292,14 +292,26 @@ export function MessageBubble({
 											if (!src) return null;
 											return (
 												<span className="attached-media-container">
-													<img
-														src={src}
-														alt={alt || "Imagen adjunta"}
-														className="attached-media-img"
-														loading="lazy"
+													<button
+														type="button"
+														className="attached-media-btn"
+														style={{
+															background: "none",
+															border: "none",
+															padding: 0,
+															cursor: "pointer",
+															display: "inline-flex",
+														}}
 														onClick={() => window.open(src, "_blank")}
 														title="Ver imagen en tamaño completo"
-													/>
+													>
+														<img
+															src={src}
+															alt={alt || "Imagen adjunta"}
+															className="attached-media-img"
+															loading="lazy"
+														/>
+													</button>
 													{alt && <span className="attached-media-name">{alt}</span>}
 												</span>
 											);

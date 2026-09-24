@@ -4,7 +4,8 @@ export const reflectTool: ToolSpec = {
 	type: "function",
 	function: {
 		name: "reflect",
-		description: "Reflexiona sobre un resultado. Escribe lecciones aprendidas en la memoria para mejorar futuras ejecuciones.",
+		description:
+			"Reflexiona sobre un resultado. Escribe lecciones aprendidas en la memoria para mejorar futuras ejecuciones.",
 		parameters: {
 			type: "object",
 			properties: {

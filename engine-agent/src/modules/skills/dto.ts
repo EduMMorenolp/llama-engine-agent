@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 export const createSkillDto = z.object({
-	name: z.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/),
+	name: z
+		.string()
+		.min(1)
+		.max(64)
+		.regex(/^[a-z][a-z0-9-]*$/),
 	agent: z.string().min(1),
 	description: z.string().min(1).max(500),
 	directory: z.string().min(1).max(255),

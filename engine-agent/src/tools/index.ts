@@ -1,20 +1,23 @@
-import { execSync } from "node:child_process";
+import { exec } from "node:child_process";
 import fs from "node:fs";
 import { glob } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
+import { getConfig } from "../config/index.js";
 import { bashTool } from "./bash.js";
-import { editFileTool, readFileTool, writeFileTool } from "./file-ops.js";
-import { memorizeTool, searchMemoriesTool, updateMemoryTool } from "./memory.js";
 import { createSkillTool } from "./create_skill.js";
 import { deleteSkillTool } from "./delete_skill.js";
+import { editFileTool, readFileTool, writeFileTool } from "./file-ops.js";
 import { loadSkillTool } from "./load_skill.js";
+import { memorizeTool, searchMemoriesTool, updateMemoryTool } from "./memory.js";
 import { reflectTool } from "./reflect.js";
-import { runSkillScriptTool } from "./run_skill_script.js";
-import { updateSkillTool } from "./update_skill.js";
-import { getConfig } from "../config/index.js";
 import type { ToolRegistry } from "./registry.js";
+import { runSkillScriptTool } from "./run_skill_script.js";
 import { globSearchTool, grepSearchTool } from "./search.js";
 import type { ToolHandler } from "./types.js";
+import { updateSkillTool } from "./update_skill.js";
+
+const execAsync = promisify(exec);
 
 const MAX_OUTPUT_CHARS = 12000; // ~3000 tokens max per tool execution
 const IGNORED_DIRS = new Set([
@@ -35,15 +38,16 @@ function truncate(text: string, limit = MAX_OUTPUT_CHARS): string {
 	return `${head}\n\n... [Contenido truncado (${text.length} caracteres totales). Usa parámetros o rangos más específicos] ...\n\n${tail}`;
 }
 
-const bashHandler: ToolHandler = async (args) => {
+const bashHandler: ToolHandler = async (args, ctx) => {
 	const command = String(args.command);
 	try {
-		const stdout = execSync(command, {
+		const { stdout, stderr } = await execAsync(command, {
 			encoding: "utf8",
 			timeout: 30000,
 			maxBuffer: 5 * 1024 * 1024,
+			cwd: ctx?.workDir || process.cwd(),
 		});
-		return truncate(stdout);
+		return truncate(stdout || stderr || "(comando ejecutado sin salida)");
 	} catch (err: unknown) {
 		const error = err as { stderr?: string; stdout?: string; message?: string };
 		return truncate(error.stderr || error.stdout || error.message || "Unknown error");
@@ -91,8 +95,16 @@ const editFileHandler: ToolHandler = async (args) => {
 			return `Error: el archivo "${filePath}" no existe.`;
 		}
 		let content = fs.readFileSync(filePath, "utf8");
-		if (!content.includes(oldText)) return "Error: texto no encontrado en el archivo";
-		content = content.replace(oldText, newText);
+		if (!content.includes(oldText)) {
+			const normalizedContent = content.replace(/\r\n/g, "\n");
+			const normalizedOld = oldText.replace(/\r\n/g, "\n");
+			if (!normalizedContent.includes(normalizedOld)) {
+				return "Error: texto no encontrado en el archivo";
+			}
+			content = normalizedContent.replace(normalizedOld, newText.replace(/\r\n/g, "\n"));
+		} else {
+			content = content.replace(oldText, newText);
+		}
 		fs.writeFileSync(filePath, content, "utf8");
 		return "Archivo editado correctamente";
 	} catch (err: unknown) {
@@ -122,11 +134,20 @@ const globSearchHandler: ToolHandler = async (args) => {
 	}
 };
 
+function createSearchRegex(pattern: string): RegExp {
+	try {
+		return new RegExp(pattern, "gi");
+	} catch {
+		const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		return new RegExp(escaped, "gi");
+	}
+}
+
 const grepSearchHandler: ToolHandler = async (args) => {
 	const pattern = String(args.pattern);
 	const searchPath = args.path ? String(args.path) : ".";
 	try {
-		const regex = new RegExp(pattern, "gi");
+		const regex = createSearchRegex(pattern);
 		const results: string[] = [];
 
 		function searchInPath(currentPath: string) {
@@ -188,7 +209,9 @@ const memorizeHandler: ToolHandler = async (args, ctx) => {
 	const key = String(args.key);
 	const content = String(args.content);
 	const tags = args.tags
-		? String(args.tags).split(",").map((t) => t.trim())
+		? String(args.tags)
+				.split(",")
+				.map((t) => t.trim())
 		: [];
 	if (ctx.memoryService) {
 		ctx.memoryService.upsert(key, content, tags);
@@ -235,7 +258,16 @@ const createSkillHandler: ToolHandler = async (args, ctx) => {
 	const triggers = (args.triggers as string[]) ?? [];
 	const tags = (args.tags as string[]) ?? [];
 	const directory = `skills/${name}`;
-	ctx.skillService.create({ name, agent: "default", description, directory, metadata: {}, allowedTools: [], triggers, tags });
+	ctx.skillService.create({
+		name,
+		agent: "default",
+		description,
+		directory,
+		metadata: {},
+		allowedTools: [],
+		triggers,
+		tags,
+	});
 	const fs = await import("node:fs");
 	const path = await import("node:path");
 	const skillDir = path.join(getConfig().SKILL_DIR, directory);
@@ -248,17 +280,21 @@ const runSkillScriptHandler: ToolHandler = async (args, ctx) => {
 	const skillName = String(args.skillName);
 	const scriptName = String(args.scriptName);
 	const argsStr = args.args ? String(args.args) : "{}";
-	if (!ctx.skillService) return `Skill service no disponible`;
+	if (!ctx.skillService) return "Skill service no disponible";
 	const skill = ctx.skillService.getOrNull(skillName);
 	if (!skill) return `Skill "${skillName}" no encontrada`;
-	const fs = await import("node:fs");
 	const scriptPath = `skills/${skill.directory}/scripts/${scriptName}.ts`;
 	if (!fs.existsSync(scriptPath)) return `Script "${scriptPath}" no encontrado`;
 	try {
-		const { execSync } = await import("node:child_process");
-		return execSync(`npx tsx "${scriptPath}" ${argsStr}`, { timeout: 30000, encoding: "utf8" });
-	} catch (err: any) {
-		return `Error ejecutando script: ${err.message || String(err)}`;
+		const { stdout, stderr } = await execAsync(`npx tsx "${scriptPath}" ${argsStr}`, {
+			timeout: 30000,
+			encoding: "utf8",
+			cwd: ctx?.workDir || process.cwd(),
+		});
+		return truncate(stdout || stderr || "(script ejecutado sin salida)");
+	} catch (err: unknown) {
+		const error = err as { stderr?: string; message?: string };
+		return `Error ejecutando script: ${error.stderr || error.message || String(err)}`;
 	}
 };
 

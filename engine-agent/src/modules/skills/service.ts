@@ -1,7 +1,7 @@
 import type { Database } from "sql.js";
+import type { Skill } from "../../agent/types.js";
 import { NotFoundException } from "../../common/exceptions/http-exception.js";
 import { scheduleSave } from "../../db/index.js";
-import type { Skill } from "../../agent/types.js";
 import type { CreateSkillDto, UpdateSkillDto } from "./dto.js";
 
 export class SkillService {
@@ -56,7 +56,16 @@ export class SkillService {
 		const { name, agent, description, directory, metadata, allowedTools, triggers, tags } = dto;
 		this.db.run(
 			"INSERT INTO skills (name, agent, description, directory, metadata, allowed_tools, triggers, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-			[name, agent, description, directory, JSON.stringify(metadata), JSON.stringify(allowedTools), JSON.stringify(triggers), JSON.stringify(tags)],
+			[
+				name,
+				agent,
+				description,
+				directory,
+				JSON.stringify(metadata),
+				JSON.stringify(allowedTools),
+				JSON.stringify(triggers),
+				JSON.stringify(tags),
+			],
 		);
 		scheduleSave();
 		return this.get(name);
@@ -66,12 +75,30 @@ export class SkillService {
 		this.get(name);
 		const fields: string[] = [];
 		const values: unknown[] = [];
-		if (dto.description !== undefined) { fields.push("description = ?"); values.push(dto.description); }
-		if (dto.directory !== undefined) { fields.push("directory = ?"); values.push(dto.directory); }
-		if (dto.metadata !== undefined) { fields.push("metadata = ?"); values.push(JSON.stringify(dto.metadata)); }
-		if (dto.allowedTools !== undefined) { fields.push("allowed_tools = ?"); values.push(JSON.stringify(dto.allowedTools)); }
-		if (dto.triggers !== undefined) { fields.push("triggers = ?"); values.push(JSON.stringify(dto.triggers)); }
-		if (dto.tags !== undefined) { fields.push("tags = ?"); values.push(JSON.stringify(dto.tags)); }
+		if (dto.description !== undefined) {
+			fields.push("description = ?");
+			values.push(dto.description);
+		}
+		if (dto.directory !== undefined) {
+			fields.push("directory = ?");
+			values.push(dto.directory);
+		}
+		if (dto.metadata !== undefined) {
+			fields.push("metadata = ?");
+			values.push(JSON.stringify(dto.metadata));
+		}
+		if (dto.allowedTools !== undefined) {
+			fields.push("allowed_tools = ?");
+			values.push(JSON.stringify(dto.allowedTools));
+		}
+		if (dto.triggers !== undefined) {
+			fields.push("triggers = ?");
+			values.push(JSON.stringify(dto.triggers));
+		}
+		if (dto.tags !== undefined) {
+			fields.push("tags = ?");
+			values.push(JSON.stringify(dto.tags));
+		}
 		if (fields.length > 0) {
 			values.push(name);
 			fields.push("updated_at = unixepoch()");
@@ -94,7 +121,10 @@ export class SkillService {
 	}
 
 	incrementSuccess(name: string): void {
-		this.db.run("UPDATE skills SET success_count = success_count + 1, usage_count = usage_count + 1 WHERE name = ?", [name]);
+		this.db.run(
+			"UPDATE skills SET success_count = success_count + 1, usage_count = usage_count + 1 WHERE name = ?",
+			[name],
+		);
 	}
 
 	private _rowToSkill(row: Record<string, unknown>): Skill {

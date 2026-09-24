@@ -2,6 +2,9 @@
 
 ## Sin liberar
 
+- **Agregado/Mejorado**: Exportación de conversaciones y mejoras de calidad de código — (1) funcionalidad para exportar cualquier conversación activa a formato **Markdown (.md)** o **JSON (.json)** descargable desde la barra superior de chat; (2) resolución de accesibilidad en modales, botones de pestañas, sliders y previsualizadores de medios; (3) eliminación de warning de `act(...)` en suite de tests; (4) formateo unificado con Biome. [2026-09-23]
+  * **Archivos**: `src/features/chat/components/ChatView.tsx`, `src/features/chat/components/MessageBubble.tsx`, `src/features/chat/components/MessageBubble.test.tsx`, `src/features/chat/components/ModelSettingsModal.tsx`, `src/features/sessions/components/SessionList.tsx`, `src/main.tsx`, `src/providers/SessionsProvider.tsx`. [2026-09-23]
+
 - **Corregido**: Clic en un agente no recreaba el chat después de borrar la sesión — el mapping localStorage `session_agents` quedaba huérfano. `removeSession` ahora limpia el mapping y `handleSelectAgent` valida que la sesión exista antes de reutilizarla. [2026-09-23]
   * **Archivos**: `src/lib/session-agents.ts`, `src/providers/SessionsProvider.tsx`, `src/features/sessions/components/SessionList.tsx`. [2026-09-23]
 

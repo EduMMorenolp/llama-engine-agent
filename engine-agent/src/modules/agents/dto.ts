@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 export const createAgentDto = z.object({
-	name: z.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/),
+	name: z
+		.string()
+		.min(1)
+		.max(64)
+		.regex(/^[a-z][a-z0-9-]*$/),
 	description: z.string().min(1).max(500),
 	corePrompt: z.string().min(1).max(10000).optional(),
 	tools: z.array(z.string()).optional(),

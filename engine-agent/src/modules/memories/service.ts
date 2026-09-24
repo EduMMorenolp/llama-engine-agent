@@ -94,14 +94,13 @@ export class MemoryService {
 
 		if (oldMemories.length >= 5) {
 			const distilledContent = oldMemories.map((m) => m.content).join("\n");
-			this.upsert(
-				`distilled_${Date.now()}`,
-				distilledContent,
-				["distilled"],
-			);
+			this.upsert(`distilled_${Date.now()}`, distilledContent, ["distilled"]);
 			const mem = this.get(`distilled_${Date.now()}`);
 			if (mem) {
-				this.db.run("UPDATE memories SET type = 'distilled', relevance = 3, updated_at = unixepoch() WHERE id = ?", [mem.id]);
+				this.db.run(
+					"UPDATE memories SET type = 'distilled', relevance = 3, updated_at = unixepoch() WHERE id = ?",
+					[mem.id],
+				);
 			}
 			const ids = oldMemories.map((m) => m.id).join(",");
 			this.db.run(`DELETE FROM memories WHERE id IN (${ids})`);

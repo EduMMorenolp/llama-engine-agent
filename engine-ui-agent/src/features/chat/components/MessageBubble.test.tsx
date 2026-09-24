@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MessageBubble } from "./MessageBubble.tsx";
 
@@ -137,7 +137,9 @@ describe("MessageBubble", () => {
 			createdAt: 1,
 		};
 		render(<MessageBubble message={message} onCopy={onCopy} />);
-		await screen.getByTitle("Copiar mensaje").click();
+		await act(async () => {
+			fireEvent.click(screen.getByTitle("Copiar mensaje"));
+		});
 		expect(onCopy).toHaveBeenCalledWith("text");
 	});
 

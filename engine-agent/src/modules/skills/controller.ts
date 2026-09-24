@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
-import type { SkillService } from "./service.js";
 import type { CreateSkillDto, UpdateSkillDto } from "./dto.js";
+import type { SkillService } from "./service.js";
 
 export class SkillController {
 	constructor(private service: SkillService) {}

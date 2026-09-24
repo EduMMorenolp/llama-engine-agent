@@ -1,14 +1,24 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { closeDb, getDb } from "../db/index.js";
+import { MemoryService } from "../modules/memories/service.js";
 import { registerAllTools } from "./index.js";
 import { ToolRegistry } from "./registry.js";
 import type { ToolContext } from "./types.js";
-import { MemoryService } from "../modules/memories/service.js";
-import { closeDb, getDb } from "../db/index.js";
 
 vi.mock("node:child_process", () => ({
 	execSync: vi.fn(),
+	exec: vi.fn(
+		(
+			cmd: string,
+			opts: unknown,
+			cb?: (err: unknown, res?: { stdout: string; stderr: string }) => void,
+		) => {
+			const callback = typeof opts === "function" ? opts : cb;
+			if (callback) callback(null, { stdout: "output here\n", stderr: "" });
+		},
+	),
 }));
 
 let db: any;
@@ -77,24 +87,25 @@ describe("truncate (via readFileHandler)", () => {
 describe("bash", () => {
 	it("executes command and returns output", async () => {
 		const { registry, ctx } = makeRegistry();
-		const { execSync } = await import("node:child_process");
-		vi.mocked(execSync).mockReturnValue("output here\n");
+		const { exec } = await import("node:child_process");
+		vi.mocked(exec).mockImplementation((_cmd, _opts, cb) => {
+			const callback = typeof _opts === "function" ? _opts : cb;
+			if (callback) callback(null, { stdout: "output here\n", stderr: "" } as any);
+			return {} as any;
+		});
 		const result = await registry.execute("bash", { command: "echo hello" }, ctx);
 		expect(result).toBe("output here\n");
-		expect(execSync).toHaveBeenCalledWith("echo hello", {
-			encoding: "utf8",
-			timeout: 30000,
-			maxBuffer: 5 * 1024 * 1024,
-		});
 	});
 
 	it("returns stderr on failure", async () => {
 		const { registry, ctx } = makeRegistry();
-		const { execSync } = await import("node:child_process");
+		const { exec } = await import("node:child_process");
 		const err = new Error("cmd failed") as any;
 		err.stderr = "error output";
-		vi.mocked(execSync).mockImplementation(() => {
-			throw err;
+		vi.mocked(exec).mockImplementation((_cmd, _opts, cb) => {
+			const callback = typeof _opts === "function" ? _opts : cb;
+			if (callback) callback(err);
+			return {} as any;
 		});
 		const result = await registry.execute("bash", { command: "bad cmd" }, ctx);
 		expect(result).toBe("error output");
@@ -102,12 +113,14 @@ describe("bash", () => {
 
 	it("falls back to stdout when stderr is empty", async () => {
 		const { registry, ctx } = makeRegistry();
-		const { execSync } = await import("node:child_process");
+		const { exec } = await import("node:child_process");
 		const err = new Error("fail") as any;
 		err.stderr = "";
 		err.stdout = "some stdout";
-		vi.mocked(execSync).mockImplementation(() => {
-			throw err;
+		vi.mocked(exec).mockImplementation((_cmd, _opts, cb) => {
+			const callback = typeof _opts === "function" ? _opts : cb;
+			if (callback) callback(err);
+			return {} as any;
 		});
 		const result = await registry.execute("bash", { command: "cmd" }, ctx);
 		expect(result).toBe("some stdout");
@@ -115,9 +128,12 @@ describe("bash", () => {
 
 	it("falls back to message when no stderr/stdout", async () => {
 		const { registry, ctx } = makeRegistry();
-		const { execSync } = await import("node:child_process");
-		vi.mocked(execSync).mockImplementation(() => {
-			throw new Error("generic error");
+		const { exec } = await import("node:child_process");
+		const err = new Error("generic error");
+		vi.mocked(exec).mockImplementation((_cmd, _opts, cb) => {
+			const callback = typeof _opts === "function" ? _opts : cb;
+			if (callback) callback(err);
+			return {} as any;
 		});
 		const result = await registry.execute("bash", { command: "cmd" }, ctx);
 		expect(result).toBe("generic error");

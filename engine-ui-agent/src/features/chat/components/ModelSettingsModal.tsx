@@ -127,7 +127,7 @@ export function ModelSettingsModal({
 				<div style={{ display: "flex", flexDirection: "column", gap: "18px", marginTop: "8px" }}>
 					{/* Quick Presets */}
 					<div>
-						<label
+						<div
 							style={{
 								fontSize: "12px",
 								fontWeight: 600,
@@ -137,7 +137,7 @@ export function ModelSettingsModal({
 							}}
 						>
 							Presets Rápidos
-						</label>
+						</div>
 						<div className="presets-grid">
 							{PRESETS.map((p) => (
 								<button
@@ -157,8 +157,10 @@ export function ModelSettingsModal({
 					</div>
 
 					{/* Reasoning Toggle */}
-					<div
+					<button
+						type="button"
 						className={`reasoning-toggle-card ${settings.enableReasoning ? "active" : ""}`}
+						style={{ textAlign: "left", width: "100%", border: "none" }}
 						onClick={() =>
 							setSettings((prev) => ({ ...prev, enableReasoning: !prev.enableReasoning }))
 						}
@@ -199,12 +201,12 @@ export function ModelSettingsModal({
 						<div className={`toggle-switch ${settings.enableReasoning ? "active" : ""}`}>
 							<div className="toggle-knob" />
 						</div>
-					</div>
+					</button>
 
 					{/* Temperature Slider */}
 					<div className="settings-slider-block">
 						<div className="slider-header">
-							<label className="slider-header-label">Temperatura (Creatividad)</label>
+							<span className="slider-header-label">Temperatura (Creatividad)</span>
 							<span className="slider-header-val">{settings.temperature.toFixed(2)}</span>
 						</div>
 						<input
@@ -231,7 +233,7 @@ export function ModelSettingsModal({
 					{/* Top P Slider */}
 					<div className="settings-slider-block">
 						<div className="slider-header">
-							<label className="slider-header-label">Top P (Nucleus Sampling)</label>
+							<span className="slider-header-label">Top P (Nucleus Sampling)</span>
 							<span className="slider-header-val">{settings.topP.toFixed(2)}</span>
 						</div>
 						<input
@@ -255,7 +257,7 @@ export function ModelSettingsModal({
 					{/* Max Tokens Slider */}
 					<div className="settings-slider-block">
 						<div className="slider-header">
-							<label className="slider-header-label">Tokens Máximos de Respuesta</label>
+							<span className="slider-header-label">Tokens Máximos de Respuesta</span>
 							<span className="slider-header-val">{settings.maxTokens}</span>
 						</div>
 						<input

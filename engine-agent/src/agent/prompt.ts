@@ -1,8 +1,7 @@
 import type { MemoryService } from "../modules/memories/service.js";
 import type { SessionService } from "../modules/sessions/service.js";
-import type { LLMMessage } from "./types.js";
 import { getSkillLevel0Metadata } from "./skill-loader.js";
-import type { Skill } from "./types.js";
+import type { LLMMessage, Skill } from "./types.js";
 
 export interface PromptContext {
 	store: SessionService;

@@ -1,7 +1,7 @@
 import type { Database } from "sql.js";
+import type { AgentDefinition } from "../../agent/types.js";
 import { NotFoundException } from "../../common/exceptions/http-exception.js";
 import { scheduleSave } from "../../db/index.js";
-import type { AgentDefinition } from "../../agent/types.js";
 import type { CreateAgentDto, UpdateAgentDto } from "./dto.js";
 
 export class AgentService {
@@ -42,10 +42,28 @@ export class AgentService {
 	}
 
 	create(dto: CreateAgentDto): AgentDefinition {
-		const { name, description, corePrompt, tools, model, maxIterations, memoryBudget, skillBudget } = dto;
+		const {
+			name,
+			description,
+			corePrompt,
+			tools,
+			model,
+			maxIterations,
+			memoryBudget,
+			skillBudget,
+		} = dto;
 		this.db.run(
 			"INSERT INTO agents (name, description, core_prompt, tools, model, max_iterations, memory_budget, skill_budget) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-			[name, description, corePrompt ?? "", JSON.stringify(tools ?? []), model ?? null, maxIterations ?? null, memoryBudget ?? 500, skillBudget ?? 3000],
+			[
+				name,
+				description,
+				corePrompt ?? "",
+				JSON.stringify(tools ?? []),
+				model ?? null,
+				maxIterations ?? null,
+				memoryBudget ?? 500,
+				skillBudget ?? 3000,
+			],
 		);
 		scheduleSave();
 		return this.get(name);
@@ -55,14 +73,38 @@ export class AgentService {
 		this.get(name);
 		const fields: string[] = [];
 		const values: unknown[] = [];
-		if (dto.description !== undefined) { fields.push("description = ?"); values.push(dto.description); }
-		if (dto.corePrompt !== undefined) { fields.push("core_prompt = ?"); values.push(dto.corePrompt); }
-		if (dto.tools !== undefined) { fields.push("tools = ?"); values.push(JSON.stringify(dto.tools)); }
-		if (dto.model !== undefined) { fields.push("model = ?"); values.push(dto.model); }
-		if (dto.maxIterations !== undefined) { fields.push("max_iterations = ?"); values.push(dto.maxIterations); }
-		if (dto.memoryBudget !== undefined) { fields.push("memory_budget = ?"); values.push(dto.memoryBudget); }
-		if (dto.skillBudget !== undefined) { fields.push("skill_budget = ?"); values.push(dto.skillBudget); }
-		if (dto.enabled !== undefined) { fields.push("enabled = ?"); values.push(dto.enabled ? 1 : 0); }
+		if (dto.description !== undefined) {
+			fields.push("description = ?");
+			values.push(dto.description);
+		}
+		if (dto.corePrompt !== undefined) {
+			fields.push("core_prompt = ?");
+			values.push(dto.corePrompt);
+		}
+		if (dto.tools !== undefined) {
+			fields.push("tools = ?");
+			values.push(JSON.stringify(dto.tools));
+		}
+		if (dto.model !== undefined) {
+			fields.push("model = ?");
+			values.push(dto.model);
+		}
+		if (dto.maxIterations !== undefined) {
+			fields.push("max_iterations = ?");
+			values.push(dto.maxIterations);
+		}
+		if (dto.memoryBudget !== undefined) {
+			fields.push("memory_budget = ?");
+			values.push(dto.memoryBudget);
+		}
+		if (dto.skillBudget !== undefined) {
+			fields.push("skill_budget = ?");
+			values.push(dto.skillBudget);
+		}
+		if (dto.enabled !== undefined) {
+			fields.push("enabled = ?");
+			values.push(dto.enabled ? 1 : 0);
+		}
 		if (fields.length > 0) {
 			values.push(name);
 			fields.push("updated_at = unixepoch()");

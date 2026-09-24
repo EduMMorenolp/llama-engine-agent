@@ -4,7 +4,8 @@ export const updateSkillTool: ToolSpec = {
 	type: "function",
 	function: {
 		name: "update_skill",
-		description: "Actualiza una skill existente. Usa para refinar instrucciones basándote en resultados.",
+		description:
+			"Actualiza una skill existente. Usa para refinar instrucciones basándote en resultados.",
 		parameters: {
 			type: "object",
 			properties: {

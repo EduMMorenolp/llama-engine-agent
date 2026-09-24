@@ -2,6 +2,9 @@
 
 ## Sin liberar
 
+- **Corregido/Mejorado**: Auditoría integral y optimizaciones de fiabilidad del agente — (1) `bashHandler` y `runSkillScriptHandler` convertidos a ejecución asíncrona no bloqueante con `child_process.exec` (evita congelamiento del event loop); (2) invalidación proactiva de caché en `ToolCache` ante mutaciones de archivos o memoria (`invalidateOnMutation`); (3) tolerancia a saltos de línea (CRLF/LF) en `editFileHandler`; (4) compilación segura de expresiones regulares en `grepSearchHandler` con fallback literal; (5) resolución de diagnósticos estrictos de Biome linter. [2026-09-23]
+  * **Archivos**: `src/tools/index.ts`, `src/tools/index.test.ts`, `src/agent/tool-cache.ts`, `src/agent/tool-cache.test.ts`, `src/agent/loop.ts`. [2026-09-23]
+
 - **Agregado**: Carga paginada de mensajes — `GET /api/sessions/:id` ahora acepta params `limit` (default 100, max 500) y `offset`, retorna `hasMore` y `totalMessages` en la respuesta. `SessionService.getMessagesPaginated()` reemplaza a `getMessages()` para queries paginadas. [2026-09-20]
   * **Archivos**: `src/modules/sessions/service.ts`, `src/modules/sessions/controller.ts`, `src/server.test.ts`. [2026-09-20]
 

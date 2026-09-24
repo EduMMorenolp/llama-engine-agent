@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
-import type { AgentService } from "./service.js";
 import type { CreateAgentDto, UpdateAgentDto } from "./dto.js";
+import type { AgentService } from "./service.js";
 
 export class AgentController {
 	constructor(private service: AgentService) {}

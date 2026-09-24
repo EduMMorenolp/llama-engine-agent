@@ -4,8 +4,8 @@ import { type WebSocket, WebSocketServer } from "ws";
 import type { AgentLoopConfig } from "./agent/loop.js";
 import { runAgent } from "./agent/loop.js";
 import type { AgentDefinition } from "./agent/types.js";
+import type { AgentService } from "./modules/agents/service.js";
 import type { SessionService } from "./modules/sessions/service.js";
-import { AgentService } from "./modules/agents/service.js";
 import { logger } from "./utils/logger.js";
 
 export function createWebSocketServer(
@@ -57,10 +57,10 @@ export function createWebSocketServer(
 					}
 
 					const finalSystemPrompt = agentDef?.corePrompt
-						? systemPrompt ?? agentDef.corePrompt
+						? (systemPrompt ?? agentDef.corePrompt)
 						: systemPrompt;
 					const finalEnabledTools = agentDef?.tools
-						? enabledTools?.filter((t: string) => agentDef!.tools!.includes(t)) ?? enabledTools
+						? (enabledTools?.filter((t: string) => agentDef?.tools?.includes(t)) ?? enabledTools)
 						: enabledTools;
 					const finalModel = agentDef?.model ?? model;
 

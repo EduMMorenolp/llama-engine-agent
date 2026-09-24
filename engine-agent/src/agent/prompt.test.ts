@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { MemoryService } from "../modules/memories/service.js";
 import type { SessionService } from "../modules/sessions/service.js";
 import { buildPrompt, getMemoriesForContext } from "./prompt.js";
@@ -176,8 +176,8 @@ describe("prompt", () => {
 			const messages = buildPrompt({ store, sessionId: "s1" });
 			const toolMsg = messages.find((m) => m.role === "tool");
 			expect(toolMsg).toBeDefined();
-			expect((toolMsg!.content as string).length).toBeLessThan(20000);
-			expect(toolMsg!.content).toContain("truncado");
+			expect(String(toolMsg?.content).length).toBeLessThan(20000);
+			expect(toolMsg?.content).toContain("truncado");
 		});
 
 		it("detects vision models for image messages", () => {
@@ -197,7 +197,7 @@ describe("prompt", () => {
 			});
 			const userMsg = messages.find((m) => m.role === "user");
 			expect(userMsg).toBeDefined();
-			expect(Array.isArray(userMsg!.content)).toBe(true);
+			expect(Array.isArray(userMsg?.content)).toBe(true);
 		});
 
 		it("formats image messages as multimodal image_url parts", () => {
@@ -217,9 +217,9 @@ describe("prompt", () => {
 			});
 			const userMsg = messages.find((m) => m.role === "user");
 			expect(userMsg).toBeDefined();
-			expect(Array.isArray(userMsg!.content)).toBe(true);
-			const parts = userMsg!.content as any[];
-			expect(parts.some((p) => p.type === "image_url")).toBe(true);
+			expect(Array.isArray(userMsg?.content)).toBe(true);
+			const parts = (userMsg?.content as unknown[]) ?? [];
+			expect(parts.some((p: any) => p?.type === "image_url")).toBe(true);
 		});
 	});
 

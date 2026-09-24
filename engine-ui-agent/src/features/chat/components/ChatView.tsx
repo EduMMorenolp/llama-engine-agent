@@ -6,6 +6,7 @@ import {
 	ArrowDownIcon,
 	CheckIcon,
 	ChevronDownIcon,
+	DownloadIcon,
 	FileCodeIcon,
 	InfoIcon,
 	PlusIcon,
@@ -134,6 +135,7 @@ export function ChatView() {
 	const [models, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS);
 	const [selectedModel, setSelectedModel] = useState("qwen3.5-9b");
 	const [showModelMenu, setShowModelMenu] = useState(false);
+	const [showExportMenu, setShowExportMenu] = useState(false);
 	const [selectedModelInfo, setSelectedModelInfo] = useState<ModelInfo | null>(null);
 	const [showSettings, setShowSettings] = useState(false);
 	const [tabEditingSessionId, setTabEditingSessionId] = useState<string | null>(null);
@@ -142,6 +144,49 @@ export function ChatView() {
 
 	const prevSessionIdRef = useRef<string | null>(null);
 	const prevMessagesCountRef = useRef<number>(0);
+	const exportMenuRef = useRef<HTMLDivElement>(null);
+
+	const handleExport = (format: "markdown" | "json") => {
+		setShowExportMenu(false);
+		if (messages.length === 0) {
+			addToast("No hay mensajes para exportar", "info");
+			return;
+		}
+		let blob: Blob;
+		let filename: string;
+		const activeSession = sessions.find((s) => s.id === activeSessionId);
+		const sessionTitle = activeSession?.name || `chat-${activeSessionId?.slice(0, 8) || "session"}`;
+
+		if (format === "markdown") {
+			const mdContent = messages
+				.map((m) => {
+					const roleName =
+						m.role === "user"
+							? "### 👤 Usuario"
+							: m.role === "assistant"
+								? "### 🤖 Asistente"
+								: `### ⚙️ Herramienta (${m.role})`;
+					return `${roleName}\n\n${m.content || ""}\n`;
+				})
+				.join("\n---\n\n");
+			blob = new Blob([`# ${sessionTitle}\n\n${mdContent}`], {
+				type: "text/markdown;charset=utf-8",
+			});
+			filename = `${sessionTitle.replace(/[^a-zA-Z0-9_-]/g, "_")}.md`;
+		} else {
+			const jsonContent = JSON.stringify({ session: activeSession, messages }, null, 2);
+			blob = new Blob([jsonContent], { type: "application/json;charset=utf-8" });
+			filename = `${sessionTitle.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+		}
+
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = filename;
+		a.click();
+		URL.revokeObjectURL(url);
+		addToast(`Sesión exportada como ${format.toUpperCase()}`, "success");
+	};
 
 	// Load models from llama.cpp / engine-api
 	useEffect(() => {
@@ -160,18 +205,21 @@ export function ChatView() {
 			});
 	}, []);
 
-	// Close model menu when clicking outside
+	// Close menus when clicking outside
 	useEffect(() => {
 		function handleClickOutside(e: MouseEvent) {
 			if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
 				setShowModelMenu(false);
 			}
+			if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+				setShowExportMenu(false);
+			}
 		}
-		if (showModelMenu) {
+		if (showModelMenu || showExportMenu) {
 			document.addEventListener("mousedown", handleClickOutside);
 			return () => document.removeEventListener("mousedown", handleClickOutside);
 		}
-	}, [showModelMenu]);
+	}, [showModelMenu, showExportMenu]);
 
 	const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
 		if (messagesContainerRef.current) {
@@ -204,6 +252,7 @@ export function ChatView() {
 	}, [messages, scrollToBottom]);
 
 	// Auto-scroll when streaming if the user hasn't scrolled up
+	// biome-ignore lint/correctness/useExhaustiveDependencies: auto-scroll on stream text chunks
 	useEffect(() => {
 		if (streaming && !showScrollBottom) {
 			scrollToBottom("smooth");
@@ -395,7 +444,14 @@ export function ChatView() {
 								<div
 									key={s.id}
 									className={`chat-tab-chip ${s.id === activeSessionId ? "active" : ""}`}
+									role="tab"
+									tabIndex={0}
 									onClick={() => !isEditingTab && selectSession(s.id)}
+									onKeyDown={(e) => {
+										if ((e.key === "Enter" || e.key === " ") && !isEditingTab) {
+											selectSession(s.id);
+										}
+									}}
 									onDoubleClick={(e) => {
 										e.stopPropagation();
 										setTabEditingSessionId(s.id);
@@ -405,7 +461,7 @@ export function ChatView() {
 								>
 									{isEditingTab ? (
 										<input
-											autoFocus
+											ref={(el) => el?.focus()}
 											type="text"
 											className="chat-tab-rename-input"
 											value={tabEditingName}
@@ -464,7 +520,8 @@ export function ChatView() {
 								<span>Modelos GGUF (llama.cpp)</span>
 							</div>
 							{models.map((m) => (
-								<div
+								<button
+									type="button"
 									key={m.id}
 									className={`popover-item ${m.id === selectedModel ? "active-model-item" : ""}`}
 									onClick={() => {
@@ -472,7 +529,9 @@ export function ChatView() {
 										setShowModelMenu(false);
 									}}
 								>
-									<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+									<div
+										style={{ display: "flex", flexDirection: "column", flex: 1, textAlign: "left" }}
+									>
 										<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
 											<span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
 												{m.name}
@@ -508,8 +567,43 @@ export function ChatView() {
 											<CheckIcon size={15} style={{ color: "var(--accent)" }} />
 										)}
 									</div>
-								</div>
+								</button>
 							))}
+						</div>
+					)}
+				</div>
+
+				{/* Right Controls: Export session & Actions */}
+				<div className="chat-navbar-right" ref={exportMenuRef} style={{ position: "relative" }}>
+					<button
+						type="button"
+						className="action-icon-btn"
+						onClick={() => setShowExportMenu((prev) => !prev)}
+						title="Exportar conversación (Markdown / JSON)"
+					>
+						<DownloadIcon size={16} style={{ color: "var(--text-secondary)" }} />
+					</button>
+
+					{showExportMenu && (
+						<div
+							className="popover-menu"
+							style={{ right: 0, top: "calc(100% + 6px)", minWidth: 160 }}
+						>
+							<div className="popover-header">
+								<span>Exportar Chat</span>
+							</div>
+							<button
+								type="button"
+								className="popover-item"
+								onClick={() => handleExport("markdown")}
+							>
+								<FileCodeIcon size={15} />
+								<span>Markdown (.md)</span>
+							</button>
+							<button type="button" className="popover-item" onClick={() => handleExport("json")}>
+								<SparklesIcon size={15} />
+								<span>JSON (.json)</span>
+							</button>
 						</div>
 					)}
 				</div>

@@ -4,6 +4,8 @@ interface CacheEntry {
 }
 
 const CACHEABLE_TOOLS = new Set(["read_file", "glob_search", "grep_search", "search_memories"]);
+const FILE_TOOLS = new Set(["read_file", "glob_search", "grep_search"]);
+const MEMORY_TOOLS = new Set(["search_memories"]);
 const DEFAULT_TTL_MS = 60_000;
 
 export class ToolCache {
@@ -36,6 +38,31 @@ export class ToolCache {
 			result,
 			timestamp: Date.now(),
 		});
+	}
+
+	invalidateCategory(category: "files" | "memories" | "all"): void {
+		if (category === "all") {
+			this.cache.clear();
+			return;
+		}
+		for (const key of this.cache.keys()) {
+			const tool = key.split(":")[0];
+			if (category === "files" && FILE_TOOLS.has(tool)) {
+				this.cache.delete(key);
+			} else if (category === "memories" && MEMORY_TOOLS.has(tool)) {
+				this.cache.delete(key);
+			}
+		}
+	}
+
+	invalidateOnMutation(mutatingToolName: string): void {
+		if (["write_file", "edit_file", "bash", "run_skill_script"].includes(mutatingToolName)) {
+			this.invalidateCategory("files");
+		} else if (["memorize", "update_memory", "reflect"].includes(mutatingToolName)) {
+			this.invalidateCategory("memories");
+		} else if (["create_skill", "update_skill", "delete_skill"].includes(mutatingToolName)) {
+			this.invalidateCategory("all");
+		}
 	}
 
 	clear(): void {

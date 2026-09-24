@@ -8,7 +8,7 @@ import { createAuthMiddleware } from "./middleware/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import type { MemoryService } from "./modules/memories/service.js";
 import type { SessionService } from "./modules/sessions/service.js";
-import { SkillService } from "./modules/skills/service.js";
+import type { SkillService } from "./modules/skills/service.js";
 import { createApiRoutes } from "./routes/index.js";
 import type { ToolRegistry } from "./tools/registry.js";
 

@@ -145,6 +145,7 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 		}
 	}, [activeSessionId, hasMore, loadingMore, messages.length]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: initial mount only
 	useEffect(() => {
 		loadSessions();
 	}, []);
