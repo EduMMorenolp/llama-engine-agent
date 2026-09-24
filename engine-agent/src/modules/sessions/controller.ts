@@ -1,5 +1,4 @@
-import type { NextFunction, Request, Response } from "express";
-import type { CreateSessionDto } from "./dto.js";
+import type { CreateSessionDto, ForkSessionDto } from "./dto.js";
 import type { SessionService } from "./service.js";
 
 export class SessionController {
@@ -45,5 +44,23 @@ export class SessionController {
 		const dto = req.body;
 		const session = this.service.updateSession(id, dto);
 		res.json(session);
+	};
+
+	deleteMessage = (req: Request, res: Response, _next: NextFunction) => {
+		const id = String(req.params.id);
+		const messageId = String(req.params.messageId);
+		const deleted = this.service.deleteMessage(id, messageId);
+		if (!deleted) {
+			res.status(404).json({ error: "Mensaje no encontrado" });
+			return;
+		}
+		res.json({ ok: true });
+	};
+
+	fork = (req: Request, res: Response, _next: NextFunction) => {
+		const id = String(req.params.id);
+		const dto = (req.body || {}) as ForkSessionDto;
+		const forked = this.service.forkSession(id, dto.upToMessageId, dto.name);
+		res.status(201).json(forked);
 	};
 }

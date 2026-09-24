@@ -183,6 +183,55 @@ describe("server", () => {
 		});
 	});
 
+	describe("DELETE /api/sessions/:id/messages/:messageId", () => {
+		it("deletes a single message from session", async () => {
+			const create = await request(app)
+				.post("/api/sessions")
+				.set("x-api-key", "test-key")
+				.send({ name: "Message Delete Test" });
+			const sessionId = create.body.id;
+			await sessionService.addMessage("msg-to-del", sessionId, "user", "Delete me");
+
+			const res = await request(app)
+				.delete(`/api/sessions/${sessionId}/messages/msg-to-del`)
+				.set("x-api-key", "test-key");
+			expect(res.status).toBe(200);
+			expect(res.body.ok).toBe(true);
+
+			const check = await request(app)
+				.get(`/api/sessions/${sessionId}`)
+				.set("x-api-key", "test-key");
+			expect(check.body.messages).toHaveLength(0);
+		});
+	});
+
+	describe("POST /api/sessions/:id/fork", () => {
+		it("forks a session with its messages", async () => {
+			const create = await request(app)
+				.post("/api/sessions")
+				.set("x-api-key", "test-key")
+				.send({ name: "Original Session" });
+			const sessionId = create.body.id;
+			await sessionService.addMessage("fork_m1", sessionId, "user", "Message 1");
+			await sessionService.addMessage("fork_m2", sessionId, "assistant", "Message 2");
+
+			const res = await request(app)
+				.post(`/api/sessions/${sessionId}/fork`)
+				.set("x-api-key", "test-key")
+				.send({ name: "Forked Session" });
+
+			expect(res.status).toBe(201);
+			expect(res.body.id).toBeDefined();
+			expect(res.body.name).toBe("Forked Session");
+
+			const forkedDetails = await request(app)
+				.get(`/api/sessions/${res.body.id}`)
+				.set("x-api-key", "test-key");
+			expect(forkedDetails.body.messages).toHaveLength(2);
+			expect(forkedDetails.body.messages[0].content).toBe("Message 1");
+		});
+	});
+
 	describe("GET /api/tools", () => {
 		it("returns tool list", async () => {
 			const res = await request(app).get("/api/tools").set("x-api-key", "test-key");

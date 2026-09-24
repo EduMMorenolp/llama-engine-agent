@@ -195,4 +195,45 @@ export class SessionService {
 		stmt.free();
 		return { messages: messages.reverse(), total };
 	}
+
+	deleteMessage(sessionId: string, messageId: string): boolean {
+		this.db.run("DELETE FROM messages WHERE id = ? AND session_id = ?", [messageId, sessionId]);
+		const modified = this.db.getRowsModified() > 0;
+		if (modified) {
+			this.db.run("UPDATE sessions SET updated_at = unixepoch() WHERE id = ?", [sessionId]);
+			scheduleSave();
+		}
+		return modified;
+	}
+
+	forkSession(sessionId: string, upToMessageId?: string, name?: string): Session {
+		const original = this.getSession(sessionId);
+		const newId = crypto.randomUUID();
+		const forkedName = name || `${original.name || "Conversación"} (Fork)`;
+		this.db.run("INSERT INTO sessions (id, name, model) VALUES (?, ?, ?)", [
+			newId,
+			forkedName,
+			original.model,
+		]);
+
+		const allMessages = this.getMessages(sessionId);
+		let messagesToCopy = allMessages;
+		if (upToMessageId) {
+			const idx = allMessages.findIndex((m) => m.id === upToMessageId);
+			if (idx !== -1) {
+				messagesToCopy = allMessages.slice(0, idx + 1);
+			}
+		}
+
+		for (const msg of messagesToCopy) {
+			const msgId = crypto.randomUUID();
+			this.db.run(
+				"INSERT INTO messages (id, session_id, role, content, tool_calls, tool_call_id) VALUES (?, ?, ?, ?, ?, ?)",
+				[msgId, newId, msg.role, msg.content, msg.toolCalls ?? null, msg.toolCallId ?? null],
+			);
+		}
+
+		scheduleSave();
+		return this.getSession(newId);
+	}
 }

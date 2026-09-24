@@ -2,6 +2,9 @@
 
 ## Sin liberar
 
+- **Agregado**: Endpoints REST de eliminación granular de mensajes y bifurcación de sesiones — `DELETE /api/sessions/:id/messages/:messageId` para eliminar mensajes individuales de la base de datos SQLite y `POST /api/sessions/:id/fork` para clonar conversaciones existentes con su historial de mensajes hasta un punto seleccionado. [2026-09-23]
+  * **Archivos**: `src/modules/sessions/dto.ts`, `src/modules/sessions/service.ts`, `src/modules/sessions/controller.ts`, `src/modules/sessions/routes.ts`, `src/server.test.ts`. [2026-09-23]
+
 - **Corregido/Mejorado**: Auditoría integral y optimizaciones de fiabilidad del agente — (1) `bashHandler` y `runSkillScriptHandler` convertidos a ejecución asíncrona no bloqueante con `child_process.exec` (evita congelamiento del event loop); (2) invalidación proactiva de caché en `ToolCache` ante mutaciones de archivos o memoria (`invalidateOnMutation`); (3) tolerancia a saltos de línea (CRLF/LF) en `editFileHandler`; (4) compilación segura de expresiones regulares en `grepSearchHandler` con fallback literal; (5) resolución de diagnósticos estrictos de Biome linter. [2026-09-23]
   * **Archivos**: `src/tools/index.ts`, `src/tools/index.test.ts`, `src/agent/tool-cache.ts`, `src/agent/tool-cache.test.ts`, `src/agent/loop.ts`. [2026-09-23]
 

@@ -17,6 +17,7 @@ import {
 	XIcon,
 } from "../../../components/ui/Icons.tsx";
 import { getAgentForSession } from "../../../lib/session-agents.ts";
+import { useAppSettings } from "../../../lib/useAppSettings.ts";
 import { useToast } from "../../../providers/ToastProvider.tsx";
 import { useSessions } from "../../sessions/hooks/useSessions.ts";
 import { useChat } from "../hooks/useChat.ts";
@@ -132,6 +133,7 @@ export function ChatView() {
 		toggleSidebar: () => {},
 	};
 
+	const appSettings = useAppSettings();
 	const [models, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS);
 	const [selectedModel, setSelectedModel] = useState("qwen3.5-9b");
 	const [showModelMenu, setShowModelMenu] = useState(false);
@@ -141,6 +143,7 @@ export function ChatView() {
 	const [tabEditingSessionId, setTabEditingSessionId] = useState<string | null>(null);
 	const [tabEditingName, setTabEditingName] = useState("");
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
+	const [draftText, setDraftText] = useState("");
 
 	const prevSessionIdRef = useRef<string | null>(null);
 	const prevMessagesCountRef = useRef<number>(0);
@@ -251,13 +254,20 @@ export function ChatView() {
 		prevMessagesCountRef.current = messages.length;
 	}, [messages, scrollToBottom]);
 
-	// Auto-scroll when streaming if the user hasn't scrolled up
+	// Auto-scroll when streaming if the user hasn't scrolled up and autoScroll is enabled
 	// biome-ignore lint/correctness/useExhaustiveDependencies: auto-scroll on stream text chunks
 	useEffect(() => {
-		if (streaming && !showScrollBottom) {
+		if (streaming && !showScrollBottom && appSettings.autoScroll) {
 			scrollToBottom("smooth");
 		}
-	}, [streaming, currentContent, toolCalls, showScrollBottom, scrollToBottom]);
+	}, [
+		streaming,
+		currentContent,
+		toolCalls,
+		showScrollBottom,
+		scrollToBottom,
+		appSettings.autoScroll,
+	]);
 
 	const handleScroll = useCallback(() => {
 		const container = messagesContainerRef.current;
@@ -284,6 +294,7 @@ export function ChatView() {
 		attachments: FileAttachment[],
 		options?: { systemPrompt?: string; enabledTools?: string[]; modelSettings?: any },
 	) => {
+		setDraftText("");
 		let sessionId = activeSessionId;
 		if (!sessionId) {
 			const session = await createNewSession(undefined, selectedModel);
@@ -356,6 +367,10 @@ export function ChatView() {
 	const handleDeleteMsg = (messageId: string) => {
 		deleteMessage(messageId);
 		addToast("info", "Mensaje eliminado");
+	};
+
+	const handleEditMsg = (msg: Message) => {
+		setDraftText(msg.content ?? "");
 	};
 
 	const handleReloadMsg = (msg: Message) => {
@@ -655,6 +670,7 @@ export function ChatView() {
 									modelName={selectedModel}
 									onFork={handleFork}
 									onDelete={handleDeleteMsg}
+									onEdit={handleEditMsg}
 									onReload={handleReloadMsg}
 								/>
 							))}
@@ -687,6 +703,8 @@ export function ChatView() {
 				onStop={stopStreaming}
 				disabled={streaming}
 				model={selectedModel}
+				draftText={draftText}
+				onDraftTextChange={setDraftText}
 			/>
 
 			{/* Floating Scroll to Bottom Button */}

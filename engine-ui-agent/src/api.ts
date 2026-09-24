@@ -108,6 +108,17 @@ export async function deleteSession(id: string): Promise<void> {
 	await apiDelete(`/api/sessions/${id}`);
 }
 
+export async function deleteSessionMessage(sessionId: string, messageId: string): Promise<void> {
+	await apiDelete(`/api/sessions/${sessionId}/messages/${messageId}`);
+}
+
+export async function forkSession(
+	sessionId: string,
+	data?: { upToMessageId?: string; name?: string },
+): Promise<Session> {
+	return apiPost<Session>(`/api/sessions/${sessionId}/fork`, data || {});
+}
+
 export async function fetchTools(): Promise<Tool[]> {
 	const res = await apiGet<{ tools: Tool[] }>("/api/tools");
 	return res.tools;

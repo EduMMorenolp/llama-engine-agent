@@ -8,6 +8,7 @@ import {
 	StopIcon,
 	WrenchIcon,
 } from "../../../components/ui/Icons.tsx";
+import { useAppSettings } from "../../../lib/useAppSettings.ts";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition.ts";
 import { AttachMenu } from "./AttachMenu.tsx";
 import { type FileAttachment, FileUpload, useFileUpload } from "./FileUpload.tsx";
@@ -34,6 +35,8 @@ interface ComposerProps {
 	disabled: boolean;
 	model?: string;
 	tokenCount?: number;
+	draftText?: string;
+	onDraftTextChange?: (text: string) => void;
 }
 
 const DEFAULT_TOOLS: ToolConfig[] = [
@@ -53,14 +56,32 @@ export function Composer({
 	disabled,
 	model = "qwen3.5",
 	tokenCount = 0,
+	draftText,
+	onDraftTextChange,
 }: ComposerProps) {
-	const [text, setText] = useState("");
+	const appSettings = useAppSettings();
+	const [text, setText] = useState(draftText || "");
 	const [showAttachMenu, setShowAttachMenu] = useState(false);
 	const [showToolSelector, setShowToolSelector] = useState(false);
 	const [showSystemPrompt, setShowSystemPrompt] = useState(false);
 	const [showMCPServers, setShowMCPServers] = useState(false);
 	const [showModelSettings, setShowModelSettings] = useState(false);
-	const [modelSettings, setModelSettings] = useState<ModelSettings>(DEFAULT_MODEL_SETTINGS);
+	const [modelSettings, setModelSettings] = useState<ModelSettings>({
+		...DEFAULT_MODEL_SETTINGS,
+		temperature: appSettings.temperature,
+		topP: appSettings.topP,
+		topK: appSettings.topK,
+		repeatPenalty: appSettings.repeatPenalty,
+	});
+
+	useEffect(() => {
+		if (draftText !== undefined) {
+			setText(draftText);
+			if (draftText) {
+				textareaRef.current?.focus();
+			}
+		}
+	}, [draftText]);
 	const [systemPrompt, setSystemPrompt] = useState(
 		`Sos un asistente de IA inteligente, empático y servicial.
 

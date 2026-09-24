@@ -11,5 +11,11 @@ export const updateSessionDto = z.object({
 	model: z.string().optional().nullable(),
 });
 
+export const forkSessionDto = z.object({
+	upToMessageId: z.string().optional(),
+	name: z.string().optional(),
+});
+
 export type CreateSessionDto = z.infer<typeof createSessionDto>;
 export type UpdateSessionDto = z.infer<typeof updateSessionDto>;
+export type ForkSessionDto = z.infer<typeof forkSessionDto>;

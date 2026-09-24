@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { type AgentDefinition, fetchAgents } from "../../../api.ts";
 import {
+	type AgentDefinition,
+	createAgent,
+	createSession,
+	deleteAgent,
+	deleteSkill,
+	fetchAgents,
+	fetchSkills,
+	type Skill,
+} from "../../../api.ts";
+import {
+	CodeIcon,
 	DownloadIcon,
 	SparklesIcon,
 	TrashIcon,
@@ -9,6 +19,7 @@ import {
 	WrenchIcon,
 	XIcon,
 } from "../../../components/ui/Icons.tsx";
+import { DEFAULT_APP_SETTINGS, loadSettings, saveSettings } from "../../../lib/settings.ts";
 import { useToast } from "../../../providers/ToastProvider.tsx";
 import { useSessions } from "../../sessions/hooks/useSessions.ts";
 
@@ -16,69 +27,73 @@ interface SettingsModalProps {
 	onClose: () => void;
 }
 
-type TabType = "chat" | "agents";
+type TabType = "chat" | "agents" | "skills";
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
 	const { addToast } = useToast();
 	const { sessions, removeSession, loadSessions } = useSessions();
 	const [activeTab, setActiveTab] = useState<TabType>("chat");
 
-	const [autoScroll, setAutoScroll] = useState(true);
-	const [streamResponses, setStreamResponses] = useState(true);
-	const [showMetrics, setShowMetrics] = useState(true);
-	const [expandReasoning, setExpandReasoning] = useState(true);
-	const [temperature, setTemperature] = useState(0.7);
-	const [topP, setTopP] = useState(0.9);
-	const [topK, setTopK] = useState(40);
-	const [repeatPenalty, setRepeatPenalty] = useState(1.1);
-	const [apiUrl, setApiUrl] = useState("http://localhost:3060");
-	const [engineUrl, setEngineUrl] = useState("http://localhost:3050");
-	const [debugLogs, setDebugLogs] = useState(false);
+	const initial = loadSettings();
+	const [autoScroll, setAutoScroll] = useState(initial.autoScroll);
+	const [streamResponses, setStreamResponses] = useState(initial.streamResponses);
+	const [showMetrics, setShowMetrics] = useState(initial.showMetrics);
+	const [expandReasoning, setExpandReasoning] = useState(initial.expandReasoning);
+	const [temperature, setTemperature] = useState(initial.temperature);
+	const [topP, setTopP] = useState(initial.topP);
+	const [topK, setTopK] = useState(initial.topK);
+	const [repeatPenalty, setRepeatPenalty] = useState(initial.repeatPenalty);
+	const [apiUrl, setApiUrl] = useState(initial.apiUrl);
+	const [engineUrl, setEngineUrl] = useState(initial.engineUrl);
+	const [debugLogs, setDebugLogs] = useState(initial.debugLogs);
 	const [agents, setAgents] = useState<AgentDefinition[]>([]);
+	const [skills, setSkills] = useState<Skill[]>([]);
 	const [newAgentName, setNewAgentName] = useState("");
 	const [newAgentPrompt, setNewAgentPrompt] = useState("");
 
 	const handleSave = () => {
-		localStorage.setItem(
-			"llama_engine_settings",
-			JSON.stringify({
-				autoScroll,
-				streamResponses,
-				showMetrics,
-				expandReasoning,
-				temperature,
-				topP,
-				topK,
-				repeatPenalty,
-				apiUrl,
-				engineUrl,
-				debugLogs,
-			}),
-		);
-		addToast("success", "Configuración guardada correctamente");
+		saveSettings({
+			autoScroll,
+			streamResponses,
+			showMetrics,
+			expandReasoning,
+			temperature,
+			topP,
+			topK,
+			repeatPenalty,
+			apiUrl,
+			engineUrl,
+			debugLogs,
+		});
+		addToast("Configuración guardada correctamente", "success");
 		onClose();
 	};
 
 	const handleReset = () => {
-		setAutoScroll(true);
-		setStreamResponses(true);
-		setShowMetrics(true);
-		setExpandReasoning(true);
-		setTemperature(0.7);
-		setTopP(0.9);
-		setTopK(40);
-		setRepeatPenalty(1.1);
-		setApiUrl("http://localhost:3060");
-		setEngineUrl("http://localhost:3050");
-		setDebugLogs(false);
-		localStorage.removeItem("llama_engine_settings");
-		addToast("info", "Valores restaurados por defecto");
+		setAutoScroll(DEFAULT_APP_SETTINGS.autoScroll);
+		setStreamResponses(DEFAULT_APP_SETTINGS.streamResponses);
+		setShowMetrics(DEFAULT_APP_SETTINGS.showMetrics);
+		setExpandReasoning(DEFAULT_APP_SETTINGS.expandReasoning);
+		setTemperature(DEFAULT_APP_SETTINGS.temperature);
+		setTopP(DEFAULT_APP_SETTINGS.topP);
+		setTopK(DEFAULT_APP_SETTINGS.topK);
+		setRepeatPenalty(DEFAULT_APP_SETTINGS.repeatPenalty);
+		setApiUrl(DEFAULT_APP_SETTINGS.apiUrl);
+		setEngineUrl(DEFAULT_APP_SETTINGS.engineUrl);
+		setDebugLogs(DEFAULT_APP_SETTINGS.debugLogs);
+		saveSettings(DEFAULT_APP_SETTINGS);
+		addToast("Valores restaurados por defecto", "info");
 	};
 
 	useEffect(() => {
 		fetchAgents()
 			.then((res) => {
 				if (res && res.length > 0) setAgents(res);
+			})
+			.catch(() => {});
+		fetchSkills()
+			.then((res) => {
+				if (res && res.length > 0) setSkills(res);
 			})
 			.catch(() => {});
 	}, []);
@@ -95,9 +110,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 			a.click();
 			document.body.removeChild(a);
 			URL.revokeObjectURL(url);
-			addToast("success", "Conversaciones exportadas exitosamente");
+			addToast("Conversaciones exportadas exitosamente", "success");
 		} catch {
-			addToast("error", "Error al exportar conversaciones");
+			addToast("Error al exportar conversaciones", "error");
 		}
 	};
 
@@ -105,18 +120,27 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 		const file = e.target.files?.[0];
 		if (!file) return;
 		const reader = new FileReader();
-		reader.onload = () => {
+		reader.onload = async () => {
 			try {
 				const content = reader.result as string;
 				const imported = JSON.parse(content);
 				if (Array.isArray(imported)) {
-					addToast("success", `${imported.length} conversaciones importadas`);
-					loadSessions();
+					let count = 0;
+					for (const item of imported) {
+						if (item && typeof item === "object") {
+							const name = item.name || item.session?.name || "Conversación importada";
+							const model = item.model || item.session?.model;
+							await createSession(name, model);
+							count++;
+						}
+					}
+					addToast(`${count} conversaciones importadas con éxito`, "success");
+					await loadSessions();
 				} else {
-					addToast("error", "Formato de archivo inválido");
+					addToast("Formato de archivo JSON inválido", "error");
 				}
 			} catch {
-				addToast("error", "Error al leer el archivo JSON");
+				addToast("Error al leer el archivo JSON", "error");
 			}
 		};
 		reader.readAsText(file);
@@ -132,14 +156,59 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 			for (const s of sessions) {
 				await removeSession(s.id);
 			}
-			addToast("info", "Todas las conversaciones han sido eliminadas");
+			addToast("Todas las conversaciones han sido eliminadas", "info");
 			loadSessions();
+		}
+	};
+
+	const handleCreateAgentSubmit = async () => {
+		const name = newAgentName.trim();
+		if (!name) return;
+		try {
+			const agent = await createAgent({
+				name,
+				corePrompt: newAgentPrompt,
+				description: newAgentPrompt.slice(0, 60) || name,
+				tools: [],
+				model: "",
+				maxIterations: 10,
+				enabled: true,
+			});
+			if (agent) {
+				setAgents((prev) => [...prev, agent]);
+				setNewAgentName("");
+				setNewAgentPrompt("");
+				addToast(`Agente "${name}" creado exitosamente`, "success");
+			}
+		} catch (_err: unknown) {
+			addToast("Error al crear el agente", "error");
+		}
+	};
+
+	const handleDeleteAgent = async (agentName: string) => {
+		try {
+			await deleteAgent(agentName);
+			setAgents((prev) => prev.filter((a) => a.name !== agentName));
+			addToast(`Agente "${agentName}" eliminado`, "info");
+		} catch {
+			addToast("Error al eliminar agente", "error");
+		}
+	};
+
+	const handleDeleteSkill = async (skillName: string) => {
+		try {
+			await deleteSkill(skillName);
+			setSkills((prev) => prev.filter((s) => s.name !== skillName));
+			addToast(`Habilidad "${skillName}" eliminada`, "info");
+		} catch {
+			addToast("Error al eliminar habilidad", "error");
 		}
 	};
 
 	const navItems: { id: TabType; label: string; icon: React.ReactNode }[] = [
 		{ id: "chat", label: "Chat", icon: <WrenchIcon size={16} /> },
 		{ id: "agents", label: "Agentes", icon: <SparklesIcon size={16} /> },
+		{ id: "skills", label: "Habilidades", icon: <CodeIcon size={16} /> },
 	];
 
 	return createPortal(
@@ -435,11 +504,26 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 												<div className="settings-item-title">{a.name}</div>
 												<div className="settings-item-desc">{a.description}</div>
 											</div>
+											<button
+												type="button"
+												className="session-action-btn"
+												title="Eliminar agente"
+												onClick={() => handleDeleteAgent(a.name)}
+											>
+												<TrashIcon size={14} />
+											</button>
 										</div>
 									))}
 									<div className="settings-input-block" style={{ marginTop: "12px" }}>
 										<span className="settings-item-title">Nuevo Agente</span>
-										<div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+										<div
+											style={{
+												display: "flex",
+												flexDirection: "column",
+												gap: "8px",
+												marginTop: "4px",
+											}}
+										>
 											<input
 												type="text"
 												className="sidebar-search-input"
@@ -447,33 +531,65 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 												value={newAgentName}
 												onChange={(e) => setNewAgentName(e.target.value)}
 											/>
+											<textarea
+												className="sidebar-search-input"
+												placeholder="System prompt / instrucciones del agente"
+												value={newAgentPrompt}
+												onChange={(e) => setNewAgentPrompt(e.target.value)}
+												rows={2}
+												style={{ resize: "vertical", height: "auto" }}
+											/>
 											<button
 												type="button"
 												className="btn-primary"
-												onClick={() => {
-													if (newAgentName.trim()) {
-														setAgents([
-															...agents,
-															{
-																name: newAgentName.trim(),
-																corePrompt: newAgentPrompt,
-																description: newAgentPrompt.slice(0, 60),
-																tools: [],
-																model: "",
-																maxIterations: 10,
-																enabled: true,
-															},
-														]);
-														setNewAgentName("");
-														setNewAgentPrompt("");
-														addToast("success", `Agente "${newAgentName.trim()}" creado`);
-													}
-												}}
+												style={{ alignSelf: "flex-end" }}
+												disabled={!newAgentName.trim()}
+												onClick={handleCreateAgentSubmit}
 											>
-												Crear
+												Crear Agente
 											</button>
 										</div>
 									</div>
+								</div>
+							</div>
+						)}
+						{activeTab === "skills" && (
+							<div className="settings-section-container">
+								<div className="settings-group">
+									<div className="settings-group-title">Habilidades (Skills)</div>
+									<div className="settings-item-desc" style={{ marginBottom: "12px" }}>
+										Habilidades modulares ejecutables por los agentes para tareas complejas o
+										repetitivas.
+									</div>
+									{skills.length === 0 ? (
+										<div className="sidebar-empty">No hay habilidades registradas</div>
+									) : (
+										skills.map((s) => (
+											<div key={s.name} className="settings-row">
+												<div>
+													<div className="settings-item-title">{s.name}</div>
+													<div className="settings-item-desc">{s.description}</div>
+													{s.tags && s.tags.length > 0 && (
+														<div style={{ display: "flex", gap: "4px", marginTop: "4px" }}>
+															{s.tags.map((t) => (
+																<span key={t} className="stat-pill" style={{ fontSize: "10px" }}>
+																	{t}
+																</span>
+															))}
+														</div>
+													)}
+												</div>
+												<button
+													type="button"
+													className="session-action-btn"
+													title="Eliminar habilidad"
+													onClick={() => handleDeleteSkill(s.name)}
+												>
+													<TrashIcon size={14} />
+												</button>
+											</div>
+										))
+									)}
 								</div>
 							</div>
 						)}

@@ -2443,14 +2443,14 @@ button.active-glow {
 /* ==========================================================================
    Settings Modal (Sidebar Tabs + Content)
    ========================================================================== */
-.settings-dialog {
+.dialog-card.settings-dialog {
 	max-width: 760px;
 	width: 90vw;
 	height: 560px;
-	padding: 0 !important;
-	display: flex !important;
-	flex-direction: row !important;
-	overflow: hidden !important;
+	padding: 0;
+	display: flex;
+	flex-direction: row;
+	overflow: hidden;
 }
 
 .settings-sidebar {

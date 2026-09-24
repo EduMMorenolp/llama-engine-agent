@@ -23,6 +23,8 @@ import {
 	ZapIcon,
 } from "../../../components/ui/Icons.tsx";
 
+import { useAppSettings } from "../../../lib/useAppSettings.ts";
+
 export interface ToolCallInfo {
 	id?: string;
 	name: string;
@@ -135,10 +137,11 @@ export function MessageBubble({
 	onFork,
 	onDelete,
 }: MessageBubbleProps) {
+	const appSettings = useAppSettings();
 	const isUser = message.role === "user";
 	const isTool = message.role === "tool";
 	const [copiedMsg, setCopiedMsg] = useState(false);
-	const [thinkingOpen, setThinkingOpen] = useState(false);
+	const [thinkingOpen, setThinkingOpen] = useState(appSettings.expandReasoning);
 
 	if (isTool) return null;
 	const content = message.content ?? "";
@@ -197,22 +200,24 @@ export function MessageBubble({
 
 			<div className="message-body-container">
 				{/* Top Performance Stats for Message */}
-				<div className={`message-stats-header ${isUser ? "user" : "assistant"}`}>
-					<span className="stat-pill">
-						<span style={{ fontFamily: "var(--font-mono)", opacity: 0.7 }}>ab</span>
-						<span>{tokenCount} tokens</span>
-					</span>
-					<span className="stat-pill">
-						<ClockIcon size={11} />
-						<span>{durationSeconds}s</span>
-					</span>
-					<span className="stat-pill">
-						<ZapIcon size={11} />
-						<span>
-							{tokensPerSecond} {isUser ? "tokens/s" : "t/s"}
+				{appSettings.showMetrics && (
+					<div className={`message-stats-header ${isUser ? "user" : "assistant"}`}>
+						<span className="stat-pill">
+							<span style={{ fontFamily: "var(--font-mono)", opacity: 0.7 }}>ab</span>
+							<span>{tokenCount} tokens</span>
 						</span>
-					</span>
-				</div>
+						<span className="stat-pill">
+							<ClockIcon size={11} />
+							<span>{durationSeconds}s</span>
+						</span>
+						<span className="stat-pill">
+							<ZapIcon size={11} />
+							<span>
+								{tokensPerSecond} {isUser ? "tokens/s" : "t/s"}
+							</span>
+						</span>
+					</div>
+				)}
 
 				<div className={`message-bubble ${isUser ? "user" : "assistant"}`}>
 					{/* DeepSeek R1 / Qwen Reasoning Container */}
