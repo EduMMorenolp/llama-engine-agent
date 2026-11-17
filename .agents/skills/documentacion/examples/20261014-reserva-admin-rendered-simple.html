@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingreso automático de reservas a Administración — Plan de trabajo</title>
+<style>
+:root {
+  --portada: #006032;
+  --portada-dark: color-mix(in srgb, var(--portada) 78%, #000);
+  --portada-soft: color-mix(in srgb, var(--portada) 10%, #fff);
+  --ok: var(--portada);
+  --ok-soft: var(--portada-soft);
+  --ink: #1c2733;
+  --ink-soft: #55627a;
+  --line: #dfe4ec;
+  --bg: #eef1f5;
+  --surface: #fff;
+  --surface-2: #f8f9fb;
+}
+[data-theme="dark"] {
+  --portada-dark: color-mix(in srgb, var(--portada) 55%, #fff);
+  --portada-soft: color-mix(in srgb, var(--portada) 22%, #10151c);
+  --ink: #e7ecf4;
+  --ink-soft: #9aa7bd;
+  --line: #2a3546;
+  --bg: #10151c;
+  --surface: #171e28;
+  --surface-2: #1d2632;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+.theme-toggle {
+  position: fixed; top: 18px; right: 18px; z-index: 10;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 999px; padding: 8px 16px; font-size: 14px; cursor: pointer;
+}
+.theme-toggle:hover { border-color: var(--portada); }
+.page { max-width: 860px; margin: 0 auto; background: var(--surface); padding: 0 48px 64px; }
+.cover { background: var(--portada); color: #fff; padding: 74px 48px 58px; }
+.cover .inner { max-width: 860px; margin: 0 auto; }
+.cover .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: 13px; opacity: .85; margin: 0 0 10px; }
+.cover h1 { font-size: 42px; margin: 0 0 8px; line-height: 1.15; }
+.cover h2 { font-size: 22px; font-weight: 500; margin: 0 0 22px; opacity: .95; }
+.cover .meta { font-size: 15px; opacity: .92; margin: 0; }
+.cover .date { margin-top: 26px; font-size: 14px; opacity: .8; }
+h2.section { font-size: 26px; color: var(--portada); margin: 48px 0 14px; padding-bottom: 10px; border-bottom: 3px solid var(--portada); }
+p { margin: 0 0 14px; }
+p.lead { font-size: 17px; }
+.kicker { background: var(--portada-soft); border-left: 4px solid var(--portada); border-radius: 0 8px 8px 0; padding: 14px 18px; font-size: 16px; margin: 0 0 18px; }
+table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 15.5px; }
+th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 10px 12px; }
+thead th { background: var(--portada); color: #fff; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+td.hours, th.hours { text-align: right; white-space: nowrap; }
+tr.total td { font-weight: 700; background: var(--portada); color: #fff; border: none; font-size: 16px; }
+.stepbox { border: 1px solid var(--line); border-radius: 12px; padding: 22px 26px; margin: 0 0 18px; background: var(--surface-2); break-inside: avoid; }
+.stepbox .top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.stepbox .num { background: var(--portada); color: #fff; border-radius: 50%; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex: none; }
+.stepbox h3 { font-size: 20px; margin: 0; flex: 1; min-width: 220px; }
+.stepbox .time { background: var(--ok-soft); color: var(--ok); border-radius: 999px; padding: 4px 14px; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.stepbox .tblabel { margin: 16px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); font-weight: 700; }
+.stepbox table { margin: 8px 0 6px; font-size: 14.5px; }
+.stepbox table tr.subtotal td { font-weight: 700; background: var(--portada-soft); border-top: 2px solid var(--portada); border-bottom: none; }
+.stepbox .who { color: var(--ink-soft); font-size: 14px; margin: 8px 0 0; }
+.pend { display: inline-block; background: var(--surface); border: 1px dashed var(--ink-soft); color: var(--ink-soft); border-radius: 999px; padding: 1px 10px; font-size: 12.5px; font-weight: 700; margin-right: 6px; }
+.bigbox { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 26px 30px; margin-top: 18px; break-inside: avoid; }
+.bigbox .bignum { font-size: 48px; font-weight: 700; color: var(--portada); line-height: 1; margin: 6px 0 12px; }
+.nowbox { border: 1px solid var(--line); border-radius: 12px; padding: 20px 26px; margin: 0 0 14px; background: var(--surface-2); break-inside: avoid; }
+.nowbox h3 { margin: 0 0 10px; font-size: 18px; color: var(--portada); }
+.nowbox ul { margin: 0; padding-left: 22px; }
+.nowbox li { margin-bottom: 6px; }
+footer.doc { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 13px; text-align: center; }
+@media (max-width: 720px) { .page { padding: 0 20px 48px; } .cover { padding: 56px 20px 44px; } .cover h1 { font-size: 32px; } }
+@media print {
+  :root, [data-theme="dark"] {
+    --portada-soft: color-mix(in srgb, var(--portada) 10%, #fff);
+    --ink: #1c2733; --ink-soft: #55627a; --line: #dfe4ec;
+    --bg: #fff; --surface: #fff; --surface-2: #f8f9fb;
+    --portada: #006032;
+  }
+  @page { size: A4; margin: 15mm; }
+  body { background: #fff; }
+  .theme-toggle { display: none; }
+  .cover, thead th, tr.total td, .stepbox .num, .stepbox table tr.subtotal td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  h2.section, .stepbox h3, .nowbox h3 { break-after: avoid; }
+}
+</style>
+</head>
+<body>
+<button id="themeToggle" class="theme-toggle" type="button" aria-label="Cambiar tema">◐ Tema</button>
+<header class="cover">
+  <div class="inner">
+    <p class="eyebrow">Plan de trabajo</p>
+    <h1>Ingreso automático de reservas a Administración</h1>
+    <h2>Qué se va a hacer y cuánto demora</h2>
+    <p class="meta">Eduardo (Backend) · Martín (Frontend) · Daniel (QA)</p>
+    <p class="date">2026-10-14</p>
+  </div>
+</header>
+<div class="page">
+  <h2 class="section" id="tratamos">De qué se trata</h2>
+<p class="lead">Hoy, cuando alguien reserva un lote y paga, una persona tiene que revisar el comprobante a mano y cargar la reserva en el sistema. Con este cambio, cuando el pago llega confirmado desde la pasarela de cobro, la reserva queda activa sola y aparece en Administración lista para trabajar, con el importe y la moneda a la vista. Nadie tiene que revisar ni cargar nada a mano.</p>
+<h2 class="section" id="cambio">Cómo está hoy vs cómo va a quedar</h2>
+<table>
+<thead><tr><th>Situación actual</th><th>Situación nueva</th></tr></thead>
+<tbody>
+<tr><td>Una persona revisa el comprobante de pago a mano antes de dar de alta la reserva.</td><td>La reserva se activa sola cuando la pasarela confirma el dinero.</td></tr>
+<tr><td>La reserva se carga a mano en Administración, a veces con errores de importe o moneda.</td><td>La reserva aparece en Administración con importe y moneda ya visibles.</td></tr>
+<tr><td>No hay un estado claro de reserva recién confirmada.</td><td>Toda reserva empieza como Pendiente de firma.</td></tr>
+</tbody>
+</table>
+<h2 class="section" id="pasos">Los pasos del trabajo</h2>
+<div class="stepbox">
+<div class="top">
+<span class="num">1</span>
+<h3>Que las reservas ingresen solas con el pago verificado</h3>
+<span class="time">≈ 1 semana · 20 h</span>
+</div>
+<p>Cuando la pasarela confirma el dinero, la reserva pasa a estar activa y la operación aparece en Administración pendiente de firma. Se eliminan la revisión manual de comprobantes y la carga manual de reservas.</p>
+<p class="tblabel">Desarrollo — Backend y Frontend</p>
+<table>
+<thead><tr><th>Tarea</th><th>Equipo</th><th class="hours">Horas</th></tr></thead>
+<tbody>
+<tr><td>Recibir la confirmación del pago desde la pasarela y activar la reserva</td><td>Backend</td><td class="hours">5 h</td></tr>
+<tr><td>Exigir motivo obligatorio al inactivar una reserva</td><td>Backend</td><td class="hours">3 h</td></tr>
+<tr><td>Mostrar los estados nuevos en el listado y el detalle de reservas</td><td>Frontend</td><td class="hours">4 h</td></tr>
+<tr><td>Quitar el botón de creación manual y ocultar la carga de comprobantes</td><td>Frontend</td><td class="hours">3 h</td></tr>
+<tr class="subtotal"><td>Subtotal desarrollo</td><td>Backend 8 h · Frontend 7 h</td><td class="hours">15 h</td></tr>
+</tbody>
+</table>
+<p class="tblabel">Pruebas — QA</p>
+<table>
+<thead><tr><th>Tarea</th><th class="hours">Horas</th></tr></thead>
+<tbody>
+<tr><td>Probar los cambios de estado de la reserva</td><td class="hours">3 h</td></tr>
+<tr><td>Probar el ingreso automático a Administración</td><td class="hours">2 h</td></tr>
+<tr class="subtotal"><td>Subtotal pruebas</td><td class="hours">5 h</td></tr>
+</tbody>
+</table>
+<p class="who">Total paso 1: 20 h (desarrollo 15 h + pruebas 5 h)</p>
+</div>
+<div class="stepbox">
+<div class="top">
+<span class="num">2</span>
+<h3>Buscar y ver la reserva</h3>
+<span class="time">≈ 3 días · 15 h</span>
+</div>
+
+<p class="tblabel">Desarrollo — Backend y Frontend</p>
+<table>
+<thead><tr><th>Tarea</th><th>Equipo</th><th class="hours">Horas</th></tr></thead>
+<tbody>
+<tr><td>Listar y buscar reservas por código, DNI, nombre y asesor</td><td>Backend</td><td class="hours">4 h</td></tr>
+<tr><td>Vista de reserva con importe, moneda, comprador, vendedor, asesor y lote</td><td>Frontend</td><td class="hours">5 h</td></tr>
+<tr><td>Estados visibles con su color y etiqueta</td><td>Frontend</td><td class="hours">3 h</td></tr>
+<tr class="subtotal"><td>Subtotal desarrollo</td><td>Backend 4 h · Frontend 8 h</td><td class="hours">12 h</td></tr>
+</tbody>
+</table>
+<p class="tblabel">Pruebas — QA</p>
+<table>
+<thead><tr><th>Tarea</th><th class="hours">Horas</th></tr></thead>
+<tbody>
+<tr><td>Verificar los filtros de búsqueda con datos reales</td><td class="hours">3 h</td></tr>
+<tr class="subtotal"><td>Subtotal pruebas</td><td class="hours">3 h</td></tr>
+</tbody>
+</table>
+<p class="who">Total paso 2: 15 h (desarrollo 12 h + pruebas 3 h)</p>
+</div>
+<div class="stepbox">
+<div class="top">
+<span class="num">3</span>
+<h3>Unir las partes y probar el flujo completo</h3>
+<span class="time">≈ 2 días · 9 h</span>
+</div>
+
+<p class="tblabel">Desarrollo — Backend y Frontend</p>
+<table>
+<thead><tr><th>Tarea</th><th>Equipo</th><th class="hours">Horas</th></tr></thead>
+<tbody>
+<tr><td>Unir el sistema con las pantallas y corregir detalles de conexión</td><td>Backend</td><td class="hours">4 h</td></tr>
+<tr><td>Ajustes finales de conexión en pantallas</td><td>Frontend</td><td class="hours">2 h</td></tr>
+<tr class="subtotal"><td>Subtotal desarrollo</td><td>Backend 4 h · Frontend 2 h</td><td class="hours">6 h</td></tr>
+</tbody>
+</table>
+<p class="tblabel">Pruebas — QA</p>
+<table>
+<thead><tr><th>Tarea</th><th class="hours">Horas</th></tr></thead>
+<tbody>
+<tr><td>Recorrido completo: de la reserva al boleto pendiente de firma</td><td class="hours">3 h</td></tr>
+<tr class="subtotal"><td>Subtotal pruebas</td><td class="hours">3 h</td></tr>
+</tbody>
+</table>
+<p class="who">Total paso 3: 9 h (desarrollo 6 h + pruebas 3 h)</p>
+</div>
+<h2 class="section" id="tiempo">Cuánto demora</h2>
+<p>Estimación en horas de trabajo de cada equipo. Desarrollo y pruebas pueden avanzar <b>en paralelo</b>, así que el calendario real es menor que la suma de horas.</p>
+<table>
+<thead><tr><th>Paso</th><th class="hours">Horas</th></tr></thead>
+<tbody>
+<tr><td>Paso 1 — Que las reservas ingresen solas con el pago verificado</td><td class="hours">20 h</td></tr>
+<tr><td>Paso 2 — Buscar y ver la reserva</td><td class="hours">15 h</td></tr>
+<tr><td>Paso 3 — Unir las partes y probar el flujo completo</td><td class="hours">9 h</td></tr>
+<tr class="total"><td>TOTAL</td><td class="hours">44 h</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th>Rol</th><th>Responsable</th><th class="hours">Horas</th><th class="hours">Semanas (40 h)</th></tr></thead>
+<tbody>
+<tr><td>Backend</td><td>Eduardo</td><td class="hours">16 h</td><td class="hours">0,4</td></tr>
+<tr><td>Frontend</td><td>Martín</td><td class="hours">17 h</td><td class="hours">0,4</td></tr>
+<tr><td>QA</td><td>Daniel</td><td class="hours">11 h</td><td class="hours">0,3</td></tr>
+<tr class="total"><td>TOTAL</td><td></td><td class="hours">44 h</td><td class="hours">—</td></tr>
+</tbody>
+</table>
+<div class="bigbox">
+<p style="margin:0;color:var(--ink-soft)">Estimación total del módulo</p>
+<p class="bignum">44 h</p>
+<p style="margin:0"><b>En calendario: unas 2 semanas</b> — desarrollo y pruebas avanzan en paralelo.</p>
+</div>
+<h2 class="section" id="nota">Nota aclaratoria — qué no incluye este plan</h2>
+<div class="nowbox">
+<h3>Pendiente (no estimado)</h3>
+<ul>
+<li>Agenda de Administración: queda pendiente de backend y no está estimada en este plan.</li>
+<li>Avisos automáticos: también pendiente de backend, para una segunda etapa.</li>
+</ul>
+</div>
+<div class="nowbox">
+<h3>Módulos que todavía no existen</h3>
+<ul>
+<li>Cobranza</li>
+<li>Superadmin</li>
+<li>Portal de propietarios</li>
+</ul>
+<p>Cada uno de estos módulos se estima por separado, fuera de este plan.</p>
+</div>
+  <footer class="doc">Generado con la skill <b>documentacion</b> · 2026-10-14 · para imprimir a PDF: Ctrl+P → Guardar como PDF</footer>
+</div>
+<script>
+(function () {
+  var btn = document.getElementById('themeToggle');
+  var root = document.documentElement;
+  var saved = null;
+  try { saved = localStorage.getItem('doc-theme'); } catch (e) {}
+  if (saved) { root.setAttribute('data-theme', saved); }
+  btn.addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('doc-theme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

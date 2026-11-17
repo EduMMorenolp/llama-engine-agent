@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingreso automático de reservas a Administración — Documento de presentación</title>
+<style>
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #f8f9fb;
+  --ink: #1c2733;
+  --ink-soft: #55627a;
+  --line: #dfe4ec;
+  --brand-base: #006032;
+  --brand: var(--brand-base);
+  --brand-soft: color-mix(in srgb, var(--brand-base) 10%, #fff);
+  --ok: #1e7a46;
+  --ok-soft: #e4f3ea;
+  --warn: #9a6206;
+  --warn-soft: #faf0dc;
+  --stop: #97312f;
+  --stop-soft: #f8e6e5;
+}
+[data-theme="dark"] {
+  --bg: #10151c;
+  --surface: #171e28;
+  --surface-2: #1d2632;
+  --ink: #e7ecf4;
+  --ink-soft: #9aa7bd;
+  --line: #2a3546;
+  --brand: color-mix(in srgb, var(--brand-base) 40%, #a9c4e4);
+  --brand-soft: color-mix(in srgb, var(--brand-base) 22%, #10151c);
+  --ok: #58c48b;
+  --ok-soft: #14301f;
+  --warn: #e0b45a;
+  --warn-soft: #33280f;
+  --stop: #e08a86;
+  --stop-soft: #38191a;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.6 "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 28px 72px; }
+.theme-toggle {
+  position: fixed; top: 18px; right: 18px; z-index: 10;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 999px; padding: 8px 16px; font-size: 14px; cursor: pointer;
+}
+.theme-toggle:hover { border-color: var(--brand); }
+.cover {
+  background: linear-gradient(160deg, var(--brand) 0%, #2f5480 100%);
+  color: #fff; border-radius: 0 0 18px 18px; padding: 72px 28px 56px; margin-bottom: 40px;
+}
+[data-theme="dark"] .cover { background: linear-gradient(160deg, #1c3050 0%, #16202e 100%); }
+.cover .inner { max-width: 920px; margin: 0 auto; }
+.cover .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: 13px; opacity: .85; margin: 0 0 12px; }
+.cover h1 { font-size: 44px; line-height: 1.15; margin: 0 0 18px; font-weight: 700; }
+.cover .badges { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.badge {
+  background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3);
+  border-radius: 999px; padding: 6px 14px; font-size: 14px;
+}
+.badge b { font-weight: 600; }
+nav.toc {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 18px 24px; margin-bottom: 40px;
+}
+nav.toc h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); margin: 0 0 10px; }
+nav.toc ol { margin: 0; padding-left: 20px; }
+nav.toc a { color: var(--brand); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+section.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 30px 34px; margin-bottom: 28px;
+}
+section.card h2 {
+  margin: 0 0 18px; font-size: 24px; color: var(--brand);
+  border-bottom: 2px solid var(--line); padding-bottom: 12px;
+}
+.objective {
+  background: var(--brand-soft); border-left: 4px solid var(--brand);
+  border-radius: 0 8px 8px 0; padding: 14px 18px; font-size: 17px; margin: 0;
+}
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 720px) { .cols { grid-template-columns: 1fr; } .cover h1 { font-size: 32px; } }
+.list-in, .list-out, .list-pending { list-style: none; margin: 0; padding: 0; }
+.list-in li, .list-out li, .list-pending li {
+  padding: 9px 12px 9px 34px; border-radius: 8px; margin-bottom: 8px; position: relative;
+}
+.list-in li { background: var(--ok-soft); }
+.list-in li::before { content: "✓"; position: absolute; left: 12px; color: var(--ok); font-weight: 700; }
+.list-out li { background: var(--stop-soft); }
+.list-out li::before { content: "✕"; position: absolute; left: 12px; color: var(--stop); font-weight: 700; }
+.list-pending li { background: var(--warn-soft); }
+.list-pending li::before { content: "?"; position: absolute; left: 13px; color: var(--warn); font-weight: 700; }
+.subhead { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); margin: 0 0 12px; }
+ol.flow { list-style: none; counter-reset: step; margin: 0; padding: 0; }
+ol.flow li {
+  counter-increment: step; position: relative; padding: 12px 16px 12px 58px;
+  border-radius: 8px; background: var(--surface-2); margin-bottom: 10px;
+}
+ol.flow li::before {
+  content: counter(step); position: absolute; left: 14px; top: 12px;
+  width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;
+}
+ol.flow li b { display: block; margin-bottom: 2px; }
+.story {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 18px; margin-bottom: 12px;
+}
+.story .sid {
+  display: inline-block; background: var(--brand); color: #fff; border-radius: 6px;
+  font-size: 12px; font-weight: 700; padding: 2px 8px; margin-bottom: 8px;
+}
+.story p { margin: 4px 0; }
+.story em { color: var(--ink-soft); }
+table.data { width: 100%; border-collapse: collapse; font-size: 15px; }
+table.data th, table.data td { text-align: left; border-bottom: 1px solid var(--line); padding: 9px 10px; }
+table.data th { color: var(--ink-soft); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+code.method { background: var(--brand-soft); color: var(--brand); border-radius: 5px; padding: 2px 7px; font-size: 13px; font-weight: 700; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.chip { background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 13px; font-size: 14px; }
+ul.notes { margin: 0; padding-left: 20px; }
+ul.notes li { margin-bottom: 8px; }
+footer.doc {
+  margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line);
+  color: var(--ink-soft); font-size: 13px; text-align: center;
+}
+@media print {
+  :root, [data-theme="dark"] {
+    --bg: #fff; --surface: #fff; --surface-2: #f6f7f9; --ink: #111; --ink-soft: #555;
+    --line: #ccc; --brand: var(--brand-base); --brand-soft: color-mix(in srgb, var(--brand-base) 10%, #fff);
+    --ok-soft: #e4f3ea; --warn-soft: #faf0dc; --stop-soft: #f8e6e5;
+  }
+  @page { size: A4; margin: 16mm; }
+  body { background: #fff; }
+  .theme-toggle { display: none; }
+  .cover { border-radius: 0; }
+  section.card, ol.flow li, .story { break-inside: avoid; }
+  nav.toc { break-after: page; }
+}
+</style>
+</head>
+<body>
+<button id="themeToggle" class="theme-toggle" type="button" aria-label="Cambiar tema">◐ Tema</button>
+<header class="cover">
+  <div class="inner">
+    <p class="eyebrow">Documento de presentación de feature</p>
+    <h1>Ingreso automático de reservas a Administración</h1>
+    <div class="badges">
+      <span class="badge"><b>Servicio:</b> gestion-back</span>
+      <span class="badge"><b>Rol:</b> Administración</span>
+      <span class="badge"><b>Estado:</b> Propuesta</span>
+      <span class="badge"><b>Versión:</b> 0.2</span>
+      <span class="badge"><b>Fecha:</b> 2026-10-14</span>
+      <span class="badge"><b>Autor:</b> Equipo de producto</span>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" aria-label="Índice">
+<h2>Índice</h2>
+<ol>
+<li><a href="#contexto">Contexto y objetivo</a></li>
+<li><a href="#alcance">Alcance</a></li>
+<li><a href="#flujo">Flujo paso a paso</a></li>
+<li><a href="#historias">Historias de usuario</a></li>
+<li><a href="#plan">Plan de implementación</a></li>
+<li><a href="#impacto">Impacto técnico</a></li>
+<li><a href="#notas">Notas</a></li>
+</ol>
+</nav>
+  <section class="card" id="contexto">
+<h2>Contexto y objetivo</h2>
+<p>Hoy las reservas confirmadas requieren verificación manual de comprobantes antes de llegar a Administración. Con esta feature, una vez que la pasarela de pago confirma el dinero, la reserva se activa sola y la operación ingresa automáticamente al módulo de Administración, pendiente de generación y firma del boleto.</p>
+<p class="objective"><b>Objetivo:</b> Eliminar la revisión manual de comprobantes y que Administración reciba las operaciones listas para trabajar, con el importe y la moneda ya visibles.</p>
+</section>
+<section class="card" id="alcance">
+<h2>Alcance</h2>
+<div class="cols">
+<div>
+<p class="subhead">Qué entra</p>
+<ul class="list-in"><li>Activación automática de la reserva al confirmarse el pago en la pasarela</li>
+<li>Ingreso automático de la operación al módulo de Administración</li>
+<li>Vista de reserva con importe pagado, moneda, comprador, vendedor, asesor y lote</li>
+<li>Estado inicial de reserva: Pendiente de firma</li>
+<li>Búsqueda por código de publicación, DNI del comprador, nombre y asesor</li></ul>
+</div>
+<div>
+<p class="subhead">Qué queda fuera</p>
+<ul class="list-out"><li>Creación manual de reservas desde Administración (se elimina el botón Nueva reserva)</li>
+<li>Revisión o carga manual de comprobantes de pago</li>
+<li>Generación del boleto (va en una feature posterior)</li>
+<li>Gestión de la escritura, que permanece fuera del sistema</li></ul>
+</div>
+</div>
+<p class="subhead" style="margin-top:20px">Definiciones pendientes</p>
+<ul class="list-pending"><li>Porcentaje definitivo de la reserva (referencia: 10% de la operación)</li>
+<li>Plazo de vencimiento de la reserva y si es editable</li>
+<li>Naturaleza del importe: reembolsable o comisión de plataforma</li></ul>
+</section>
+<section class="card" id="flujo">
+<h2>Flujo paso a paso</h2>
+<ol class="flow">
+<li><b>El asesor genera la reserva</b>Selecciona el terreno o lote y el sistema calcula el monto de la reserva automáticamente.</li>
+<li><b>El comprador paga</b>Recibe los datos de la reserva y el enlace de pago, y abona por Mercado Pago o la pasarela correspondiente.</li>
+<li><b>La pasarela confirma el pago</b>La confirmación del ingreso del dinero proviene de la pasarela; no se verifica ningún comprobante a mano.</li>
+<li><b>La reserva se activa</b>Para el asesor la reserva pasa a estar activa y el lote queda reservado.</li>
+<li><b>Administración recibe la operación</b>La operación aparece con importe, moneda, datos de las partes y el estado Pendiente de firma.</li>
+</ol>
+</section>
+<section class="card" id="historias">
+<h2>Historias de usuario</h2>
+<div class="story">
+<span class="sid">ADM-1</span>
+<p>Como <b>usuario de Administración</b>, quiero recibir automáticamente las reservas confirmadas por la pasarela,</p>
+<p><em>para</em> no tengo que revisar comprobantes ni cargar reservas a mano.</p>
+</div>
+<div class="story">
+<span class="sid">ADM-2</span>
+<p>Como <b>usuario de Administración</b>, quiero ver el importe pagado, la moneda y los datos de comprador, vendedor, asesor y lote en la reserva,</p>
+<p><em>para</em> tengo lo necesario para generar el boleto sin buscar información en otros sistemas.</p>
+</div>
+<div class="story">
+<span class="sid">ADM-3</span>
+<p>Como <b>usuario de Administración</b>, quiero buscar reservas por código de publicación, DNI, nombre o asesor,</p>
+<p><em>para</em> localizo cualquier operación en segundos.</p>
+</div>
+</section>
+<section class="card" id="plan">
+<h2>Plan de implementación</h2>
+<p class="subhead">Equipo</p>
+<div class="chips"><span class="chip"><b>Backend:</b> Eduardo</span><span class="chip"><b>Frontend:</b> Martín</span><span class="chip"><b>QA:</b> Daniel</span></div>
+<p class="subhead">Paso 1 — Que las reservas ingresen solas con el pago verificado <em>(≈ 1 semana · 20 h)</em></p>
+<table class="data">
+<thead><tr><th>Tarea</th><th>Equipo</th><th class="num">Horas</th></tr></thead>
+<tbody><tr><td>Recibir la confirmación del pago desde la pasarela y activar la reserva</td><td>Backend</td><td class="num">5 h</td></tr><tr><td>Exigir motivo obligatorio al inactivar una reserva</td><td>Backend</td><td class="num">3 h</td></tr><tr><td>Mostrar los estados nuevos en el listado y el detalle de reservas</td><td>Frontend</td><td class="num">4 h</td></tr><tr><td>Quitar el botón de creación manual y ocultar la carga de comprobantes</td><td>Frontend</td><td class="num">3 h</td></tr><tr><td>Probar los cambios de estado de la reserva</td><td>QA</td><td class="num">3 h</td></tr><tr><td>Probar el ingreso automático a Administración</td><td>QA</td><td class="num">2 h</td></tr></tbody>
+</table>
+<p class="subhead">Paso 2 — Buscar y ver la reserva <em>(≈ 3 días · 15 h)</em></p>
+<table class="data">
+<thead><tr><th>Tarea</th><th>Equipo</th><th class="num">Horas</th></tr></thead>
+<tbody><tr><td>Listar y buscar reservas por código, DNI, nombre y asesor</td><td>Backend</td><td class="num">4 h</td></tr><tr><td>Vista de reserva con importe, moneda, comprador, vendedor, asesor y lote</td><td>Frontend</td><td class="num">5 h</td></tr><tr><td>Estados visibles con su color y etiqueta</td><td>Frontend</td><td class="num">3 h</td></tr><tr><td>Verificar los filtros de búsqueda con datos reales</td><td>QA</td><td class="num">3 h</td></tr></tbody>
+</table>
+<p class="subhead">Paso 3 — Unir las partes y probar el flujo completo <em>(≈ 2 días · 9 h)</em></p>
+<table class="data">
+<thead><tr><th>Tarea</th><th>Equipo</th><th class="num">Horas</th></tr></thead>
+<tbody><tr><td>Unir el sistema con las pantallas y corregir detalles de conexión</td><td>Backend</td><td class="num">4 h</td></tr><tr><td>Ajustes finales de conexión en pantallas</td><td>Frontend</td><td class="num">2 h</td></tr><tr><td>Recorrido completo: de la reserva al boleto pendiente de firma</td><td>QA</td><td class="num">3 h</td></tr></tbody>
+</table>
+<p class="subhead">Totales por rol</p>
+<table class="data">
+<thead><tr><th>Rol</th><th>Responsable</th><th class="num">Horas</th></tr></thead>
+<tbody><tr><td>Backend</td><td>Eduardo</td><td class="num">16 h</td></tr><tr><td>Frontend</td><td>Martín</td><td class="num">17 h</td></tr><tr><td>QA</td><td>Daniel</td><td class="num">11 h</td></tr><tr><td><b>TOTAL</b></td><td></td><td class="num"><b>44 h</b></td></tr></tbody>
+</table>
+<p><b>Calendario estimado:</b> unas 2 semanas — desarrollo y pruebas avanzan en paralelo.</p>
+</section>
+<section class="card" id="impacto">
+<h2>Impacto técnico</h2>
+<p class="subhead">Servicios</p>
+<div class="chips"><span class="chip">gestion-back</span></div>
+<p class="subhead">Endpoints</p>
+<table class="data">
+<thead><tr><th>Método</th><th>Ruta</th></tr></thead>
+<tbody><tr><td><code class="method">POST</code></td><td>/webhooks/mercadopago</td></tr><tr><td><code class="method">GET</code></td><td>/reservas</td></tr><tr><td><code class="method">GET</code></td><td>/reservas/:id</td></tr></tbody>
+</table>
+<p class="subhead">Tablas</p>
+<div class="chips"><span class="chip">reservas</span><span class="chip">pagos</span><span class="chip">operaciones</span></div>
+<p class="subhead">Archivos</p>
+<div class="chips"><span class="chip">src/modules/reservas/reserva.controller.js</span><span class="chip">src/modules/reservas/reserva.service.js</span></div>
+</section>
+<section class="card" id="notas">
+<h2>Notas</h2>
+<ul class="notes"><li>Los pagos simultáneos sobre el mismo lote se resuelven a favor de la primera confirmación recibida.</li><li>El estado Inactiva de una reserva exige registrar siempre un motivo.</li></ul>
+</section>
+  <footer class="doc">Generado con la skill <b>documentacion</b> · 2026-10-14 · para imprimir a PDF: Ctrl+P → Guardar como PDF</footer>
+</div>
+<script>
+(function () {
+  var btn = document.getElementById('themeToggle');
+  var root = document.documentElement;
+  var saved = null;
+  try { saved = localStorage.getItem('doc-theme'); } catch (e) {}
+  if (saved) { root.setAttribute('data-theme', saved); }
+  btn.addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('doc-theme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

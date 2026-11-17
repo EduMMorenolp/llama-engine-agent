@@ -1,0 +1,348 @@
+{
+  "meta": {
+    "projectName": "Gestor de Pedidos",
+    "slug": "gestor-pedidos",
+    "sponsor": "Direccion General",
+    "author": "Equipo de Producto",
+    "version": "1.0",
+    "date": "2026-10-17",
+    "status": "Borrador",
+    "teamSize": "equipo",
+    "methodology": "Scrum adaptado con entregas semanales"
+  },
+  "inicio": {
+    "justification": "Los pedidos de los comercios se registran hoy en planillas manuales, lo que provoca errores de carga, demoras en la confirmacion y falta de trazabilidad para la direccion.",
+    "objective": "Centralizar la toma y el seguimiento de pedidos en una plataforma unica que reduzca los errores de carga y de visibilidad del estado a la direccion en el primer trimestre.",
+    "team": [
+      { "name": "Ana Torres", "role": "Product Owner" },
+      { "name": "Bruno Diaz", "role": "Backend" },
+      { "name": "Carla Ruiz", "role": "Frontend" },
+      { "name": "Diego Sosa", "role": "QA" }
+    ],
+    "deliverables": [
+      "Modulo de alta y edicion de pedidos",
+      "Tablero de seguimiento por estado",
+      "Exportacion de pedidos a planilla",
+      "Manual de uso para operadores"
+    ],
+    "successCriteria": [
+      "Cero pedidos cargados en planillas manuales al cierre del piloto",
+      "Reduccion medible del tiempo de carga por pedido",
+      "Todos los estados de un pedido quedan auditados con usuario y fecha"
+    ],
+    "stakeholders": [
+      {
+        "name": "Direccion General",
+        "role": "Patrocinador",
+        "power": "Alto",
+        "interest": "Alto",
+        "expectation": "Visibilidad del volumen y del estado de los pedidos"
+      },
+      {
+        "name": "Jefatura de Operaciones",
+        "role": "Usuario clave",
+        "power": "Alto",
+        "interest": "Alto",
+        "expectation": "Carga rapida y sin errores"
+      },
+      {
+        "name": "Operadores",
+        "role": "Usuario final",
+        "power": "Bajo",
+        "interest": "Alto",
+        "expectation": "Una herramienta simple que no agregue trabajo"
+      },
+      {
+        "name": "Area de Sistemas",
+        "role": "Soporte tecnico",
+        "power": "Medio",
+        "interest": "Bajo",
+        "expectation": "Despliegue previsible y con bajo mantenimiento"
+      }
+    ]
+  },
+  "definicion": {
+    "vision": "Que cualquier comercio cargue y siga sus pedidos desde un solo lugar, sin planillas y con el estado siempre a la vista.",
+    "valueProposition": "Menos errores de carga y trazabilidad completa del pedido, con una interfaz que el operador aprende en una sola sesion.",
+    "leanCanvas": {
+      "problem": "Carga manual en planillas, estados perdidos y demoras en la confirmacion",
+      "segments": "Comercios minoristas con operacion diaria de pedidos",
+      "proposition": "Pedidos centralizados, auditados y visibles en tiempo real",
+      "channels": "Venta directa y referidos de comercios existentes",
+      "revenue": "Suscripcion mensual por comercio",
+      "costs": "Desarrollo, infraestructura y soporte",
+      "metrics": "Pedidos por semana, tiempo de carga y tasa de error",
+      "advantage": "Integracion con el proceso operativo ya conocido por los comercios"
+    },
+    "mvpDefinition": "El MVP cubre alta, edicion y seguimiento de pedidos con tablero por estado y exportacion; no cubre facturacion ni cobros.",
+    "scopeIn": [
+      "Alta y edicion de pedidos",
+      "Tablero de seguimiento por estado",
+      "Exportacion a planilla",
+      "Usuarios con roles de operador y supervisor"
+    ],
+    "scopeOut": [
+      "Facturacion electronica",
+      "Cobros y medios de pago",
+      "Aplicacion movil nativa"
+    ],
+    "pending": [
+      "Definir el limite de pedidos por plan",
+      "Confirmar el esquema de soporte post-venta"
+    ],
+    "objectives": [
+      {
+        "id": "O1",
+        "objective": "Reducir los errores de carga de pedidos que hoy se detectan en la planilla manual",
+        "specific": "Eliminar la carga en planilla reemplazandola por el alta en la plataforma",
+        "measurable": "Errores de carga por debajo del 1% de los pedidos cargados",
+        "achievable": "El alta guiada valida los campos obligatorios antes de guardar",
+        "relevant": "Es el problema principal que motiva el proyecto",
+        "time": "Al finalizar la semana 8 del plan"
+      },
+      {
+        "id": "O2",
+        "objective": "Dar visibilidad diaria del estado de los pedidos a la direccion",
+        "specific": "Publicar el tablero de seguimiento por estado para supervisores y direccion",
+        "measurable": "El 100% de los pedidos muestra su estado actualizado el mismo dia",
+        "achievable": "El tablero se alimenta del cambio de estado ya registrado",
+        "relevant": "Sostiene la toma de decisiones de la direccion",
+        "time": "Al finalizar la semana 6 del plan"
+      }
+    ],
+    "requirements": {
+      "functional": [
+        { "id": "RF-1", "description": "El operador puede crear un pedido con cliente, items y observaciones", "priority": "Alta" },
+        { "id": "RF-2", "description": "El supervisor puede cambiar el estado del pedido y queda auditado", "priority": "Alta" },
+        { "id": "RF-3", "description": "El sistema exporta los pedidos filtrados a una planilla", "priority": "Media" }
+      ],
+      "nonFunctional": [
+        { "id": "RNF-1", "description": "El tablero responde en menos de dos segundos con mil pedidos", "category": "Rendimiento" },
+        { "id": "RNF-2", "description": "Toda accion sensible queda registrada con usuario y fecha", "category": "Auditoria" }
+      ],
+      "acceptance": [
+        {
+          "id": "CA-1",
+          "scenario": "Alta de pedido valida campos obligatorios",
+          "given": "un operador autenticado en el alta de pedidos",
+          "when": "intenta guardar sin cliente seleccionado",
+          "then": "el sistema bloquea el guardado y resalta el campo faltante"
+        },
+        {
+          "id": "CA-2",
+          "scenario": "Cambio de estado auditado",
+          "given": "un pedido en estado Pendiente",
+          "when": "el supervisor lo pasa a Confirmado",
+          "then": "el pedido muestra el nuevo estado y el registro de usuario y fecha"
+        }
+      ]
+    },
+    "competencia": {
+      "competitors": [
+        { "name": "Planilla compartida", "strength": "Sin costo inicial y ya conocida", "weakness": "Sin validaciones ni trazabilidad", "price": "0" },
+        { "name": "Suite generica de gestion", "strength": "Modulos amplios", "weakness": "Curva de aprendizaje alta y costo elevado", "price": "Alto" }
+      ],
+      "gaps": [
+        "Nadie resuelve el paso del pedido por estados de forma simple",
+        "El costo de las suites genericas es prohibitivo para comercios chicos"
+      ],
+      "positioning": [
+        "Una herramienta enfocada solo en pedidos, sin modulos que sobren",
+        "Costo proporcional al tamano del comercio"
+      ]
+    }
+  },
+  "planificacion": {
+    "epics": [
+      { "id": "E1", "name": "Gestion de pedidos", "packages": ["Alta de pedidos", "Edicion y baja", "Validaciones de campos"] },
+      { "id": "E2", "name": "Seguimiento y estados", "packages": ["Cambio de estado", "Auditoria de cambios", "Tablero de seguimiento"] },
+      { "id": "E3", "name": "Salida de datos", "packages": ["Exportacion a planilla", "Filtros de busqueda"] }
+    ],
+    "milestones": [
+      { "name": "Kickoff y alcance", "startWeek": 1, "durationWeeks": 1, "deliverable": "Acta y alcance acordados" },
+      { "name": "Alta de pedidos", "startWeek": 2, "durationWeeks": 3, "deliverable": "Modulo de alta funcionando" },
+      { "name": "Seguimiento y estados", "startWeek": 5, "durationWeeks": 2, "deliverable": "Tablero por estado disponible" },
+      { "name": "Piloto con comercios", "startWeek": 7, "durationWeeks": 2, "deliverable": "Retroalimentacion del piloto" }
+    ],
+    "dependencies": [
+      "El tablero depende del registro de cambio de estado",
+      "La exportacion depende de los filtros de busqueda"
+    ],
+    "raci": [
+      { "activity": "Definir el alcance del MVP", "responsible": "Ana Torres", "accountable": "Direccion General", "consulted": "Jefatura de Operaciones", "informed": "Area de Sistemas" },
+      { "activity": "Implementar alta de pedidos", "responsible": "Bruno Diaz", "accountable": "Ana Torres", "consulted": "Carla Ruiz", "informed": "Jefatura de Operaciones" },
+      { "activity": "Probar el flujo de pedidos", "responsible": "Diego Sosa", "accountable": "Ana Torres", "consulted": "Bruno Diaz", "informed": "Direccion General" }
+    ],
+    "risks": [
+      { "id": "R1", "description": "Resistencia de los operadores al cambio de herramienta", "probability": "Alta", "impact": "Alto", "mitigation": "Capacitacion temprana y periodo de acompanamiento en el piloto", "owner": "Ana Torres" },
+      { "id": "R2", "description": "Crecimiento del alcance durante el desarrollo", "probability": "Media", "impact": "Medio", "mitigation": "Control de cambios con aprobacion de la direccion", "owner": "Direccion General" },
+      { "id": "R3", "description": "Disponibilidad de la infraestructura durante el piloto", "probability": "Baja", "impact": "Medio", "mitigation": "Monitoreo y health checks desde el primer despliegue", "owner": "Area de Sistemas" }
+    ],
+    "changeControl": {
+      "process": [
+        "Toda solicitud de cambio se registra en este documento antes de estimarse",
+        "La direccion aprueba solo los cambios que mueven alcance, tiempo o costo",
+        "Los cambios aprobados se estiman y se agregan al plan de sprints"
+      ],
+      "approvers": ["Direccion General", "Ana Torres"],
+      "log": [
+        { "date": "2026-10-17", "change": "Se acuerda excluir facturacion del MVP", "status": "Aprobado" }
+      ]
+    },
+    "communications": {
+      "items": [
+        { "audience": "Direccion General", "frequency": "Semanal", "channel": "Reunion", "format": "Estado de avance de una pagina" },
+        { "audience": "Jefatura de Operaciones", "frequency": "Quincenal", "channel": "Correo", "format": "Demostracion de la funcionalidad lista" },
+        { "audience": "Equipo de desarrollo", "frequency": "Diaria", "channel": "Reunion corta", "format": "Sincronizacion de bloqueos" }
+      ]
+    }
+  },
+  "tecnico": {
+    "architecture": {
+      "stack": ["TypeScript", "Node.js", "PostgreSQL", "React"],
+      "modules": [
+        { "name": "API de pedidos", "responsibility": "Expone el alta, la edicion y el cambio de estado" },
+        { "name": "Tablero", "responsibility": "Consume los pedidos y muestra el estado por columna" },
+        { "name": "Exportador", "responsibility": "Genera la planilla a partir de los pedidos filtrados" }
+      ],
+      "integrations": ["Autenticacion corporativa", "Almacenamiento de archivos exportados"],
+      "deployment": ["Contenedor unico", "Base de datos gestionada", "Despliegue automatizado por rama"]
+    },
+    "dataModel": {
+      "entities": [
+        { "name": "Pedido", "fields": ["id", "cliente", "estado", "creado_en"] },
+        { "name": "ItemPedido", "fields": ["id", "pedido_id", "producto", "cantidad"] },
+        { "name": "Usuario", "fields": ["id", "nombre", "rol"] },
+        { "name": "CambioEstado", "fields": ["id", "pedido_id", "usuario_id", "estado", "fecha"] }
+      ],
+      "relations": [
+        { "from": "Pedido", "to": "ItemPedido", "kind": "1-N", "description": "un pedido tiene varios items" },
+        { "from": "Pedido", "to": "CambioEstado", "kind": "1-N", "description": "un pedido acumula cambios de estado" },
+        { "from": "Usuario", "to": "CambioEstado", "kind": "1-N", "description": "un usuario registra muchos cambios" }
+      ]
+    },
+    "api": {
+      "endpoints": [
+        { "method": "GET", "path": "/pedidos", "description": "Lista pedidos con filtros de estado y fecha" },
+        { "method": "POST", "path": "/pedidos", "description": "Crea un pedido con sus items" },
+        { "method": "PATCH", "path": "/pedidos/{id}/estado", "description": "Cambia el estado y registra la auditoria" },
+        { "method": "GET", "path": "/pedidos/export", "description": "Devuelve la planilla de los pedidos filtrados" }
+      ]
+    },
+    "security": {
+      "authentication": "Sesion con token firmado y expiracion corta sobre la autenticacion corporativa",
+      "authorization": "Roles de operador y supervisor; el estado solo lo cambia un supervisor",
+      "privacy": "Datos de cliente minimos y sin informacion sensible fuera de la operacion",
+      "dataRetention": "Los pedidos se conservan mientras el comercio tenga cuenta activa",
+      "jurisdiction": "Segun la jurisdiccion donde opere el proyecto"
+    },
+    "ux": {
+      "views": [
+        { "name": "Alta de pedido", "purpose": "Cargar un pedido validando los campos obligatorios", "flow": ["Elegir cliente", "Agregar items", "Revisar total", "Guardar"] },
+        { "name": "Tablero de seguimiento", "purpose": "Mover pedidos entre estados y ver la carga por columna", "flow": ["Ver columnas por estado", "Abrir un pedido", "Cambiar estado"] }
+      ]
+    },
+    "adrs": [
+      {
+        "id": "0001",
+        "title": "Stack de una sola aplicacion web",
+        "status": "Aceptado",
+        "context": "El equipo es chico y necesita desplegar rapido sin sostener microservicios.",
+        "decision": "Una sola aplicacion web con su base de datos, desplegada como un contenedor.",
+        "consequences": "Menos superficie operativa; si crece la escala habra que separar modulos mas adelante."
+      },
+      {
+        "id": "0002",
+        "title": "Auditoria de estados en base de datos",
+        "status": "Aceptado",
+        "context": "La direccion exige trazabilidad completa del estado de cada pedido.",
+        "decision": "Registrar cada cambio de estado en una tabla de auditoria con usuario y fecha.",
+        "consequences": "Consultas de trazabilidad inmediatas; la tabla crece con cada cambio."
+      }
+    ]
+  },
+  "negocio": {
+    "pricing": {
+      "plans": [
+        { "name": "Basico", "price": "Valor mensual bajo", "billing": "Mensual", "features": ["Un usuario operador", "Hasta mil pedidos por mes", "Exportacion"] },
+        { "name": "Profesional", "price": "Valor mensual medio", "billing": "Mensual", "features": ["Usuarios ilimitados", "Pedidos ilimitados", "Soporte prioritario"] }
+      ],
+      "benchmark": [
+        { "competitor": "Suite generica de gestion", "price": "Alto", "notes": "Costo por usuario y modulos que no se usan" },
+        { "competitor": "Planilla compartida", "price": "Sin costo", "notes": "Sin soporte ni trazabilidad" }
+      ]
+    },
+    "unitEconomics": {
+      "metrics": [
+        { "metric": "Costo de adquisicion (CAC)", "value": "A definir", "notes": "Se mide con los primeros comercios del piloto" },
+        { "metric": "Valor de vida (LTV)", "value": "A definir", "notes": "Depende de la retencion observada" },
+        { "metric": "Margen por comercio", "value": "A definir", "notes": "Ingreso menos costo de infraestructura y soporte" }
+      ],
+      "assumptions": [
+        "El costo de infraestructura crece de forma lineal con los comercios activos",
+        "La retencion se sostiene si la carga de pedidos es mas rapida que la planilla"
+      ],
+      "breakeven": "Se alcanza cuando los comercios activos cubren el costo fijo mensual del equipo y la infraestructura."
+    },
+    "gtm": {
+      "segments": ["Comercios minoristas con operacion diaria de pedidos", "Distribuidores con vendedores en la calle"],
+      "channels": ["Venta directa", "Referidos de comercios existentes", "Capacitacion en el local"],
+      "phases": [
+        { "name": "Piloto", "weeks": "7-8", "goal": "Validar el flujo con tres comercios reales" },
+        { "name": "Lanzamiento barrial", "weeks": "9-12", "goal": "Sumar diez comercios de la misma zona" }
+      ]
+    }
+  },
+  "ejecucion": {
+    "sprints": [
+      { "name": "Sprint 1", "goal": "Dejar lista el alta de pedidos con validaciones", "scope": ["Modelo de datos", "Alta de pedidos", "Validacion de campos"], "weeks": "1-3" },
+      { "name": "Sprint 2", "goal": "Completar el seguimiento por estado y la auditoria", "scope": ["Cambio de estado", "Auditoria", "Tablero"], "weeks": "4-6" },
+      { "name": "Sprint 3", "goal": "Cerrar la exportacion y preparar el piloto", "scope": ["Exportacion", "Filtros", "Capacitacion"], "weeks": "7-8" }
+    ],
+    "quality": {
+      "strategy": [
+        "Cada funcionalidad se prueba antes de darla por terminada",
+        "Los bugs se reproducen en una prueba antes de corregirlos",
+        "El rol de QA revisa el flujo completo antes del piloto"
+      ],
+      "testTypes": ["Unitarias de la logica de pedidos", "Integracion de la API", "Revision manual del flujo en el navegador"],
+      "ci": ["Lint y typecheck en cada cambio", "Suite de pruebas en cada rama", "Sin merge si la suite esta en rojo"]
+    },
+    "runbook": {
+      "deploy": ["Despliegue automatizado desde la rama principal", "Verificacion post-despliegue del alta de pedidos"],
+      "monitoring": ["Trazas de errores de la API", "Alerta por latencia del tablero"],
+      "healthChecks": ["Endpoint de salud de la API", "Chequeo de conexion a la base"],
+      "incidents": ["Registrar el incidente con hora y alcance", "Rollback al despliegue anterior si afecta el alta de pedidos"]
+    }
+  },
+  "cierre": {
+    "closureCriteria": [
+      "El alta, el seguimiento y la exportacion de pedidos funcionan en el piloto",
+      "La direccion acepta los entregables del MVP",
+      "El manual de uso quedo entregado a los operadores"
+    ],
+    "acceptance": [
+      { "item": "Modulo de alta de pedidos", "criteria": "Carga validada con cero planillas manuales en el piloto" },
+      { "item": "Tablero de seguimiento", "criteria": "El estado de cada pedido se ve el mismo dia" }
+    ],
+    "signOff": [
+      { "role": "Patrocinador", "name": "Direccion General" },
+      { "role": "Product Owner", "name": "Ana Torres" }
+    ],
+    "retrospective": {
+      "wentWell": ["El alcance acotado del MVP mantuvo el foco en pedidos"],
+      "toImprove": ["Anticipar antes la capacitacion de los operadores"],
+      "actions": ["Incluir una sesion de capacitacion en el primer sprint del proximo modulo"]
+    },
+    "lessons": [
+      {
+        "title": "Definir el alcance temprano",
+        "detail": "Acotar el MVP a pedidos evito discusiones sobre facturacion durante el desarrollo."
+      },
+      {
+        "title": "Medir antes de prometer",
+        "detail": "Los valores de unit economics quedan a definir hasta observar el piloto."
+      }
+    ]
+  }
+}

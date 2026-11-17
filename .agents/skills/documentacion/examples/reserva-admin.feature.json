@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Ingreso automático de reservas a Administración",
+    "subtitle": "Qué se va a hacer y cuánto demora",
+    "service": "gestion-back",
+    "role": "Administración",
+    "status": "Propuesta",
+    "version": "0.2",
+    "date": "2026-10-14",
+    "author": "Equipo de producto",
+    "brandColor": "#006032"
+  },
+  "context": {
+    "summary": "Hoy las reservas confirmadas requieren verificación manual de comprobantes antes de llegar a Administración. Con esta feature, una vez que la pasarela de pago confirma el dinero, la reserva se activa sola y la operación ingresa automáticamente al módulo de Administración, pendiente de generación y firma del boleto.",
+    "objective": "Eliminar la revisión manual de comprobantes y que Administración reciba las operaciones listas para trabajar, con el importe y la moneda ya visibles.",
+    "plain": "Hoy, cuando alguien reserva un lote y paga, una persona tiene que revisar el comprobante a mano y cargar la reserva en el sistema. Con este cambio, cuando el pago llega confirmado desde la pasarela de cobro, la reserva queda activa sola y aparece en Administración lista para trabajar, con el importe y la moneda a la vista. Nadie tiene que revisar ni cargar nada a mano."
+  },
+  "scope": {
+    "in": [
+      "Activación automática de la reserva al confirmarse el pago en la pasarela",
+      "Ingreso automático de la operación al módulo de Administración",
+      "Vista de reserva con importe pagado, moneda, comprador, vendedor, asesor y lote",
+      "Estado inicial de reserva: Pendiente de firma",
+      "Búsqueda por código de publicación, DNI del comprador, nombre y asesor"
+    ],
+    "out": [
+      "Creación manual de reservas desde Administración (se elimina el botón Nueva reserva)",
+      "Revisión o carga manual de comprobantes de pago",
+      "Generación del boleto (va en una feature posterior)",
+      "Gestión de la escritura, que permanece fuera del sistema"
+    ],
+    "pending": [
+      "Porcentaje definitivo de la reserva (referencia: 10% de la operación)",
+      "Plazo de vencimiento de la reserva y si es editable",
+      "Naturaleza del importe: reembolsable o comisión de plataforma"
+    ]
+  },
+  "flow": {
+    "steps": [
+      {
+        "title": "El asesor genera la reserva",
+        "detail": "Selecciona el terreno o lote y el sistema calcula el monto de la reserva automáticamente."
+      },
+      {
+        "title": "El comprador paga",
+        "detail": "Recibe los datos de la reserva y el enlace de pago, y abona por Mercado Pago o la pasarela correspondiente."
+      },
+      {
+        "title": "La pasarela confirma el pago",
+        "detail": "La confirmación del ingreso del dinero proviene de la pasarela; no se verifica ningún comprobante a mano."
+      },
+      {
+        "title": "La reserva se activa",
+        "detail": "Para el asesor la reserva pasa a estar activa y el lote queda reservado."
+      },
+      {
+        "title": "Administración recibe la operación",
+        "detail": "La operación aparece con importe, moneda, datos de las partes y el estado Pendiente de firma."
+      }
+    ]
+  },
+  "stories": [
+    {
+      "id": "ADM-1",
+      "as": "usuario de Administración",
+      "want": "recibir automáticamente las reservas confirmadas por la pasarela",
+      "so": "no tengo que revisar comprobantes ni cargar reservas a mano"
+    },
+    {
+      "id": "ADM-2",
+      "as": "usuario de Administración",
+      "want": "ver el importe pagado, la moneda y los datos de comprador, vendedor, asesor y lote en la reserva",
+      "so": "tengo lo necesario para generar el boleto sin buscar información en otros sistemas"
+    },
+    {
+      "id": "ADM-3",
+      "as": "usuario de Administración",
+      "want": "buscar reservas por código de publicación, DNI, nombre o asesor",
+      "so": "localizo cualquier operación en segundos"
+    }
+  ],
+  "techImpact": {
+    "services": ["gestion-back"],
+    "endpoints": [
+      { "method": "POST", "path": "/webhooks/mercadopago" },
+      { "method": "GET", "path": "/reservas" },
+      { "method": "GET", "path": "/reservas/:id" }
+    ],
+    "tables": ["reservas", "pagos", "operaciones"],
+    "files": ["src/modules/reservas/reserva.controller.js", "src/modules/reservas/reserva.service.js"]
+  },
+  "comparison": [
+    {
+      "now": "Una persona revisa el comprobante de pago a mano antes de dar de alta la reserva.",
+      "next": "La reserva se activa sola cuando la pasarela confirma el dinero."
+    },
+    {
+      "now": "La reserva se carga a mano en Administración, a veces con errores de importe o moneda.",
+      "next": "La reserva aparece en Administración con importe y moneda ya visibles."
+    },
+    {
+      "now": "No hay un estado claro de reserva recién confirmada.",
+      "next": "Toda reserva empieza como Pendiente de firma."
+    }
+  ],
+  "plan": {
+    "team": [
+      { "role": "Backend", "name": "Eduardo" },
+      { "role": "Frontend", "name": "Martín" },
+      { "role": "QA", "name": "Daniel" }
+    ],
+    "steps": [
+      {
+        "title": "Que las reservas ingresen solas con el pago verificado",
+        "timeEstimate": "≈ 1 semana",
+        "intro": "Cuando la pasarela confirma el dinero, la reserva pasa a estar activa y la operación aparece en Administración pendiente de firma. Se eliminan la revisión manual de comprobantes y la carga manual de reservas.",
+        "devTasks": [
+          { "task": "Recibir la confirmación del pago desde la pasarela y activar la reserva", "role": "Backend", "hours": 5 },
+          { "task": "Exigir motivo obligatorio al inactivar una reserva", "role": "Backend", "hours": 3 },
+          { "task": "Mostrar los estados nuevos en el listado y el detalle de reservas", "role": "Frontend", "hours": 4 },
+          { "task": "Quitar el botón de creación manual y ocultar la carga de comprobantes", "role": "Frontend", "hours": 3 }
+        ],
+        "qaTasks": [
+          { "task": "Probar los cambios de estado de la reserva", "hours": 3 },
+          { "task": "Probar el ingreso automático a Administración", "hours": 2 }
+        ]
+      },
+      {
+        "title": "Buscar y ver la reserva",
+        "timeEstimate": "≈ 3 días",
+        "devTasks": [
+          { "task": "Listar y buscar reservas por código, DNI, nombre y asesor", "role": "Backend", "hours": 4 },
+          { "task": "Vista de reserva con importe, moneda, comprador, vendedor, asesor y lote", "role": "Frontend", "hours": 5 },
+          { "task": "Estados visibles con su color y etiqueta", "role": "Frontend", "hours": 3 }
+        ],
+        "qaTasks": [
+          { "task": "Verificar los filtros de búsqueda con datos reales", "hours": 3 }
+        ]
+      },
+      {
+        "title": "Unir las partes y probar el flujo completo",
+        "timeEstimate": "≈ 2 días",
+        "devTasks": [
+          { "task": "Unir el sistema con las pantallas y corregir detalles de conexión", "role": "Backend", "hours": 4 },
+          { "task": "Ajustes finales de conexión en pantallas", "role": "Frontend", "hours": 2 }
+        ],
+        "qaTasks": [
+          { "task": "Recorrido completo: de la reserva al boleto pendiente de firma", "hours": 3 }
+        ]
+      }
+    ],
+    "calendar": "unas 2 semanas",
+    "calendarNote": "desarrollo y pruebas avanzan en paralelo"
+  },
+  "clarification": {
+    "pending": [
+      "Agenda de Administración: queda pendiente de backend y no está estimada en este plan.",
+      "Avisos automáticos: también pendiente de backend, para una segunda etapa."
+    ],
+    "outOfScope": [
+      {
+        "title": "Módulos que todavía no existen",
+        "items": ["Cobranza", "Superadmin", "Portal de propietarios"],
+        "detail": "Cada uno de estos módulos se estima por separado, fuera de este plan."
+      }
+    ]
+  },
+  "notes": [
+    "Los pagos simultáneos sobre el mismo lote se resuelven a favor de la primera confirmación recibida.",
+    "El estado Inactiva de una reserva exige registrar siempre un motivo."
+  ]
+}

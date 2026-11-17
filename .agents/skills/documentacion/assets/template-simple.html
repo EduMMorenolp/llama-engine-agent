@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}} — Plan de trabajo</title>
+<style>
+:root {
+  --portada: {{BRAND}};
+  --portada-dark: color-mix(in srgb, var(--portada) 78%, #000);
+  --portada-soft: color-mix(in srgb, var(--portada) 10%, #fff);
+  --ok: var(--portada);
+  --ok-soft: var(--portada-soft);
+  --ink: #1c2733;
+  --ink-soft: #55627a;
+  --line: #dfe4ec;
+  --bg: #eef1f5;
+  --surface: #fff;
+  --surface-2: #f8f9fb;
+}
+[data-theme="dark"] {
+  --portada-dark: color-mix(in srgb, var(--portada) 55%, #fff);
+  --portada-soft: color-mix(in srgb, var(--portada) 22%, #10151c);
+  --ink: #e7ecf4;
+  --ink-soft: #9aa7bd;
+  --line: #2a3546;
+  --bg: #10151c;
+  --surface: #171e28;
+  --surface-2: #1d2632;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+.theme-toggle {
+  position: fixed; top: 18px; right: 18px; z-index: 10;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 999px; padding: 8px 16px; font-size: 14px; cursor: pointer;
+}
+.theme-toggle:hover { border-color: var(--portada); }
+.page { max-width: 860px; margin: 0 auto; background: var(--surface); padding: 0 48px 64px; }
+.cover { background: var(--portada); color: #fff; padding: 74px 48px 58px; }
+.cover .inner { max-width: 860px; margin: 0 auto; }
+.cover .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: 13px; opacity: .85; margin: 0 0 10px; }
+.cover h1 { font-size: 42px; margin: 0 0 8px; line-height: 1.15; }
+.cover h2 { font-size: 22px; font-weight: 500; margin: 0 0 22px; opacity: .95; }
+.cover .meta { font-size: 15px; opacity: .92; margin: 0; }
+.cover .date { margin-top: 26px; font-size: 14px; opacity: .8; }
+h2.section { font-size: 26px; color: var(--portada); margin: 48px 0 14px; padding-bottom: 10px; border-bottom: 3px solid var(--portada); }
+p { margin: 0 0 14px; }
+p.lead { font-size: 17px; }
+.kicker { background: var(--portada-soft); border-left: 4px solid var(--portada); border-radius: 0 8px 8px 0; padding: 14px 18px; font-size: 16px; margin: 0 0 18px; }
+table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 15.5px; }
+th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 10px 12px; }
+thead th { background: var(--portada); color: #fff; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+td.hours, th.hours { text-align: right; white-space: nowrap; }
+tr.total td { font-weight: 700; background: var(--portada); color: #fff; border: none; font-size: 16px; }
+.stepbox { border: 1px solid var(--line); border-radius: 12px; padding: 22px 26px; margin: 0 0 18px; background: var(--surface-2); break-inside: avoid; }
+.stepbox .top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.stepbox .num { background: var(--portada); color: #fff; border-radius: 50%; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex: none; }
+.stepbox h3 { font-size: 20px; margin: 0; flex: 1; min-width: 220px; }
+.stepbox .time { background: var(--ok-soft); color: var(--ok); border-radius: 999px; padding: 4px 14px; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.stepbox .tblabel { margin: 16px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); font-weight: 700; }
+.stepbox table { margin: 8px 0 6px; font-size: 14.5px; }
+.stepbox table tr.subtotal td { font-weight: 700; background: var(--portada-soft); border-top: 2px solid var(--portada); border-bottom: none; }
+.stepbox .who { color: var(--ink-soft); font-size: 14px; margin: 8px 0 0; }
+.pend { display: inline-block; background: var(--surface); border: 1px dashed var(--ink-soft); color: var(--ink-soft); border-radius: 999px; padding: 1px 10px; font-size: 12.5px; font-weight: 700; margin-right: 6px; }
+.bigbox { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 26px 30px; margin-top: 18px; break-inside: avoid; }
+.bigbox .bignum { font-size: 48px; font-weight: 700; color: var(--portada); line-height: 1; margin: 6px 0 12px; }
+.nowbox { border: 1px solid var(--line); border-radius: 12px; padding: 20px 26px; margin: 0 0 14px; background: var(--surface-2); break-inside: avoid; }
+.nowbox h3 { margin: 0 0 10px; font-size: 18px; color: var(--portada); }
+.nowbox ul { margin: 0; padding-left: 22px; }
+.nowbox li { margin-bottom: 6px; }
+footer.doc { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 13px; text-align: center; }
+@media (max-width: 720px) { .page { padding: 0 20px 48px; } .cover { padding: 56px 20px 44px; } .cover h1 { font-size: 32px; } }
+@media print {
+  :root, [data-theme="dark"] {
+    --portada-soft: color-mix(in srgb, var(--portada) 10%, #fff);
+    --ink: #1c2733; --ink-soft: #55627a; --line: #dfe4ec;
+    --bg: #fff; --surface: #fff; --surface-2: #f8f9fb;
+    --portada: {{BRAND}};
+  }
+  @page { size: A4; margin: 15mm; }
+  body { background: #fff; }
+  .theme-toggle { display: none; }
+  .cover, thead th, tr.total td, .stepbox .num, .stepbox table tr.subtotal td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  h2.section, .stepbox h3, .nowbox h3 { break-after: avoid; }
+}
+</style>
+</head>
+<body>
+<button id="themeToggle" class="theme-toggle" type="button" aria-label="Cambiar tema">◐ Tema</button>
+<header class="cover">
+  <div class="inner">
+    <p class="eyebrow">Plan de trabajo</p>
+    <h1>{{TITLE}}</h1>
+    <h2>{{SUBTITLE}}</h2>
+    <p class="meta">{{TEAM_LINE}}</p>
+    <p class="date">{{DATE}}</p>
+  </div>
+</header>
+<div class="page">
+  {{SECTIONS}}
+  <footer class="doc">Generado con la skill <b>documentacion</b> · {{DATE}} · para imprimir a PDF: Ctrl+P → Guardar como PDF</footer>
+</div>
+<script>
+(function () {
+  var btn = document.getElementById('themeToggle');
+  var root = document.documentElement;
+  var saved = null;
+  try { saved = localStorage.getItem('doc-theme'); } catch (e) {}
+  if (saved) { root.setAttribute('data-theme', saved); }
+  btn.addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('doc-theme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,645 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Candidato de documentacion de proyecto (PMBOK adaptado)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "meta",
+    "inicio",
+    "definicion",
+    "planificacion",
+    "tecnico",
+    "negocio",
+    "ejecucion",
+    "cierre"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectName", "slug", "sponsor", "author", "version", "date", "status", "teamSize"],
+      "properties": {
+        "projectName": { "type": "string", "minLength": 3 },
+        "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "sponsor": { "type": "string", "minLength": 2 },
+        "author": { "type": "string", "minLength": 2 },
+        "version": { "type": "string", "minLength": 1 },
+        "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "status": { "type": "string", "enum": ["Borrador", "En revision", "Aprobado"] },
+        "teamSize": { "type": "string", "enum": ["solo", "equipo"] },
+        "methodology": { "type": "string", "minLength": 2 }
+      }
+    },
+    "inicio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["justification", "objective", "team", "deliverables", "successCriteria", "stakeholders"],
+      "properties": {
+        "justification": { "type": "string", "minLength": 20 },
+        "objective": { "type": "string", "minLength": 20 },
+        "team": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "role"],
+            "properties": {
+              "name": { "type": "string", "minLength": 2 },
+              "role": { "type": "string", "minLength": 2 }
+            }
+          }
+        },
+        "deliverables": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+        "successCriteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+        "stakeholders": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "role", "power", "interest", "expectation"],
+            "properties": {
+              "name": { "type": "string", "minLength": 2 },
+              "role": { "type": "string", "minLength": 2 },
+              "power": { "type": "string", "enum": ["Alto", "Medio", "Bajo"] },
+              "interest": { "type": "string", "enum": ["Alto", "Medio", "Bajo"] },
+              "expectation": { "type": "string", "minLength": 3 }
+            }
+          }
+        }
+      }
+    },
+    "definicion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vision",
+        "valueProposition",
+        "leanCanvas",
+        "mvpDefinition",
+        "scopeIn",
+        "scopeOut",
+        "pending",
+        "objectives",
+        "requirements"
+      ],
+      "properties": {
+        "vision": { "type": "string", "minLength": 20 },
+        "valueProposition": { "type": "string", "minLength": 20 },
+        "leanCanvas": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["problem", "segments", "proposition", "channels", "revenue", "costs", "metrics", "advantage"],
+          "properties": {
+            "problem": { "type": "string", "minLength": 3 },
+            "segments": { "type": "string", "minLength": 3 },
+            "proposition": { "type": "string", "minLength": 3 },
+            "channels": { "type": "string", "minLength": 3 },
+            "revenue": { "type": "string", "minLength": 3 },
+            "costs": { "type": "string", "minLength": 3 },
+            "metrics": { "type": "string", "minLength": 3 },
+            "advantage": { "type": "string", "minLength": 3 }
+          }
+        },
+        "mvpDefinition": { "type": "string", "minLength": 10 },
+        "scopeIn": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+        "scopeOut": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+        "pending": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+        "objectives": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "objective", "specific", "measurable", "achievable", "relevant", "time"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "objective": { "type": "string", "minLength": 5 },
+              "specific": { "type": "string", "minLength": 3 },
+              "measurable": { "type": "string", "minLength": 3 },
+              "achievable": { "type": "string", "minLength": 3 },
+              "relevant": { "type": "string", "minLength": 3 },
+              "time": { "type": "string", "minLength": 3 }
+            }
+          }
+        },
+        "requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["functional", "nonFunctional", "acceptance"],
+          "properties": {
+            "functional": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "description", "priority"],
+                "properties": {
+                  "id": { "type": "string", "minLength": 1 },
+                  "description": { "type": "string", "minLength": 5 },
+                  "priority": { "type": "string", "enum": ["Alta", "Media", "Baja"] }
+                }
+              }
+            },
+            "nonFunctional": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "description", "category"],
+                "properties": {
+                  "id": { "type": "string", "minLength": 1 },
+                  "description": { "type": "string", "minLength": 5 },
+                  "category": { "type": "string", "minLength": 2 }
+                }
+              }
+            },
+            "acceptance": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "scenario", "given", "when", "then"],
+                "properties": {
+                  "id": { "type": "string", "minLength": 1 },
+                  "scenario": { "type": "string", "minLength": 5 },
+                  "given": { "type": "string", "minLength": 3 },
+                  "when": { "type": "string", "minLength": 3 },
+                  "then": { "type": "string", "minLength": 3 }
+                }
+              }
+            }
+          }
+        },
+        "competencia": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["competitors", "gaps", "positioning"],
+          "properties": {
+            "competitors": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "strength", "weakness", "price"],
+                "properties": {
+                  "name": { "type": "string", "minLength": 2 },
+                  "strength": { "type": "string", "minLength": 3 },
+                  "weakness": { "type": "string", "minLength": 3 },
+                  "price": { "type": "string", "minLength": 1 }
+                }
+              }
+            },
+            "gaps": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "positioning": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } }
+          }
+        }
+      }
+    },
+    "planificacion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["epics", "milestones", "raci", "risks"],
+      "properties": {
+        "epics": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name", "packages"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 3 },
+              "packages": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } }
+            }
+          }
+        },
+        "milestones": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "startWeek", "durationWeeks", "deliverable"],
+            "properties": {
+              "name": { "type": "string", "minLength": 3 },
+              "startWeek": { "type": "number", "minimum": 1 },
+              "durationWeeks": { "type": "number", "minimum": 1 },
+              "deliverable": { "type": "string", "minLength": 3 }
+            }
+          }
+        },
+        "dependencies": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+        "raci": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["activity", "responsible", "accountable", "consulted", "informed"],
+            "properties": {
+              "activity": { "type": "string", "minLength": 3 },
+              "responsible": { "type": "string", "minLength": 2 },
+              "accountable": { "type": "string", "minLength": 2 },
+              "consulted": { "type": "string", "minLength": 2 },
+              "informed": { "type": "string", "minLength": 2 }
+            }
+          }
+        },
+        "risks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "description", "probability", "impact", "mitigation", "owner"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "description": { "type": "string", "minLength": 5 },
+              "probability": { "type": "string", "enum": ["Alta", "Media", "Baja"] },
+              "impact": { "type": "string", "enum": ["Alto", "Medio", "Bajo"] },
+              "mitigation": { "type": "string", "minLength": 5 },
+              "owner": { "type": "string", "minLength": 2 }
+            }
+          }
+        },
+        "changeControl": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["process", "approvers", "log"],
+          "properties": {
+            "process": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "approvers": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 2 } },
+            "log": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["date", "change", "status"],
+                "properties": {
+                  "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+                  "change": { "type": "string", "minLength": 5 },
+                  "status": { "type": "string", "enum": ["Aprobado", "Rechazado", "En evaluacion"] }
+                }
+              }
+            }
+          }
+        },
+        "communications": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items"],
+          "properties": {
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["audience", "frequency", "channel", "format"],
+                "properties": {
+                  "audience": { "type": "string", "minLength": 2 },
+                  "frequency": { "type": "string", "minLength": 2 },
+                  "channel": { "type": "string", "minLength": 2 },
+                  "format": { "type": "string", "minLength": 2 }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tecnico": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["architecture", "dataModel", "api", "security"],
+      "properties": {
+        "architecture": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stack", "modules", "integrations", "deployment"],
+          "properties": {
+            "stack": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 2 } },
+            "modules": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "responsibility"],
+                "properties": {
+                  "name": { "type": "string", "minLength": 2 },
+                  "responsibility": { "type": "string", "minLength": 5 }
+                }
+              }
+            },
+            "integrations": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 2 } },
+            "deployment": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 2 } }
+          }
+        },
+        "dataModel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entities", "relations"],
+          "properties": {
+            "entities": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "fields"],
+                "properties": {
+                  "name": { "type": "string", "minLength": 2 },
+                  "fields": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+                }
+              }
+            },
+            "relations": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["from", "to", "kind", "description"],
+                "properties": {
+                  "from": { "type": "string", "minLength": 2 },
+                  "to": { "type": "string", "minLength": 2 },
+                  "kind": { "type": "string", "enum": ["1-1", "1-N", "N-N"] },
+                  "description": { "type": "string", "minLength": 3 }
+                }
+              }
+            }
+          }
+        },
+        "api": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["endpoints"],
+          "properties": {
+            "endpoints": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["method", "path", "description"],
+                "properties": {
+                  "method": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+                  "path": { "type": "string", "minLength": 2 },
+                  "description": { "type": "string", "minLength": 5 }
+                }
+              }
+            }
+          }
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["authentication", "authorization", "privacy", "dataRetention", "jurisdiction"],
+          "properties": {
+            "authentication": { "type": "string", "minLength": 5 },
+            "authorization": { "type": "string", "minLength": 5 },
+            "privacy": { "type": "string", "minLength": 5 },
+            "dataRetention": { "type": "string", "minLength": 5 },
+            "jurisdiction": { "type": "string", "minLength": 3 }
+          }
+        },
+        "ux": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["views"],
+          "properties": {
+            "views": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "purpose", "flow"],
+                "properties": {
+                  "name": { "type": "string", "minLength": 2 },
+                  "purpose": { "type": "string", "minLength": 5 },
+                  "flow": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } }
+                }
+              }
+            }
+          }
+        },
+        "adrs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "title", "status", "context", "decision", "consequences"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^\\d{3,4}$" },
+              "title": { "type": "string", "minLength": 5 },
+              "status": { "type": "string", "enum": ["Propuesto", "Aceptado", "Reemplazado", "Obsoleto"] },
+              "context": { "type": "string", "minLength": 10 },
+              "decision": { "type": "string", "minLength": 10 },
+              "consequences": { "type": "string", "minLength": 10 }
+            }
+          }
+        }
+      }
+    },
+    "negocio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pricing", "unitEconomics"],
+      "properties": {
+        "pricing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["plans", "benchmark"],
+          "properties": {
+            "plans": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "price", "billing", "features"],
+                "properties": {
+                  "name": { "type": "string", "minLength": 2 },
+                  "price": { "type": "string", "minLength": 1 },
+                  "billing": { "type": "string", "minLength": 2 },
+                  "features": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } }
+                }
+              }
+            },
+            "benchmark": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["competitor", "price", "notes"],
+                "properties": {
+                  "competitor": { "type": "string", "minLength": 2 },
+                  "price": { "type": "string", "minLength": 1 },
+                  "notes": { "type": "string", "minLength": 3 }
+                }
+              }
+            }
+          }
+        },
+        "unitEconomics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["metrics", "assumptions", "breakeven"],
+          "properties": {
+            "metrics": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["metric", "value", "notes"],
+                "properties": {
+                  "metric": { "type": "string", "minLength": 2 },
+                  "value": { "type": "string", "minLength": 1 },
+                  "notes": { "type": "string", "minLength": 3 }
+                }
+              }
+            },
+            "assumptions": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "breakeven": { "type": "string", "minLength": 5 }
+          }
+        },
+        "gtm": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["segments", "channels", "phases"],
+          "properties": {
+            "segments": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "channels": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "phases": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "weeks", "goal"],
+                "properties": {
+                  "name": { "type": "string", "minLength": 2 },
+                  "weeks": { "type": "string", "minLength": 1 },
+                  "goal": { "type": "string", "minLength": 5 }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ejecucion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sprints", "quality"],
+      "properties": {
+        "sprints": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "goal", "scope", "weeks"],
+            "properties": {
+              "name": { "type": "string", "minLength": 2 },
+              "goal": { "type": "string", "minLength": 5 },
+              "scope": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+              "weeks": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "quality": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strategy", "testTypes", "ci"],
+          "properties": {
+            "strategy": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "testTypes": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "ci": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } }
+          }
+        },
+        "runbook": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["deploy", "monitoring", "healthChecks", "incidents"],
+          "properties": {
+            "deploy": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "monitoring": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "healthChecks": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "incidents": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } }
+          }
+        }
+      }
+    },
+    "cierre": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["closureCriteria", "acceptance", "signOff", "retrospective", "lessons"],
+      "properties": {
+        "closureCriteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+        "acceptance": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["item", "criteria"],
+            "properties": {
+              "item": { "type": "string", "minLength": 3 },
+              "criteria": { "type": "string", "minLength": 3 }
+            }
+          }
+        },
+        "signOff": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role", "name"],
+            "properties": {
+              "role": { "type": "string", "minLength": 2 },
+              "name": { "type": "string", "minLength": 2 }
+            }
+          }
+        },
+        "retrospective": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["wentWell", "toImprove", "actions"],
+          "properties": {
+            "wentWell": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "toImprove": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+            "actions": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } }
+          }
+        },
+        "lessons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["title", "detail"],
+            "properties": {
+              "title": { "type": "string", "minLength": 3 },
+              "detail": { "type": "string", "minLength": 5 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
