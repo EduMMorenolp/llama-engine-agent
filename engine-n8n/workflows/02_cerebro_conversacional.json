@@ -1,0 +1,342 @@
+{
+  "name": "02 - Cerebro Conversacional y Tool Calling",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [160, 360],
+      "credentials": {
+        "telegramApi": {
+          "id": "agent-telegram-cred",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-voice",
+              "leftValue": "={{ $json.message.voice ? true : false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-is-voice",
+      "name": "¿Es Audio de Voz?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [380, 360]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "fileId": "={{ $json.message.voice.file_id }}"
+      },
+      "id": "download-voice",
+      "name": "Descargar Audio Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [600, 260],
+      "credentials": {
+        "telegramApi": {
+          "id": "agent-telegram-cred",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://whisper-server:8000/v1/audio/transcriptions",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "id": "transcribe-whisper",
+      "name": "Transcribir con Faster-Whisper",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [820, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalizar el texto de entrada y el chat ID\nconst isVoice = $items('¿Es Audio de Voz?')[0].json.message.voice ? true : false;\nlet userText = '';\nlet chatId = '';\n\nif (isVoice) {\n  userText = $json.text || '';\n  chatId = $items('¿Es Audio de Voz?')[0].json.message.chat.id;\n} else {\n  userText = $json.message.text || '';\n  chatId = $json.message.chat.id;\n}\n\nreturn [{\n  json: {\n    chatId,\n    userText,\n    fechaActual: new Date().toISOString().split('T')[0],\n    horaActual: new Date().toTimeString().slice(0, 5)\n  }\n}];"
+      },
+      "id": "normalize-input",
+      "name": "Normalizar Entrada (Texto y ChatID)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 360]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT slug, nombre, system_prompt FROM personalidades WHERE activa = true LIMIT 1;"
+      },
+      "id": "get-active-persona",
+      "name": "Cargar Personalidad Activa",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1260, 360],
+      "credentials": {
+        "postgres": {
+          "id": "agent-postgres-cred",
+          "name": "Agent PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3050/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer llama-engine-dev"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"qwen3.5-4b\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Hoy es {{ $items('Normalizar Entrada (Texto y ChatID)')[0].json.fechaActual }} y la hora actual es {{ $items('Normalizar Entrada (Texto y ChatID)')[0].json.horaActual }}.\\nPersonalidad activa: {{ $json.nombre }}. {{ $json.system_prompt }}.\\nUsa siempre las herramientas disponibles para agendar actividades, consultar agenda o registrar hábitos si el usuario lo solicita.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($items('Normalizar Entrada (Texto y ChatID)')[0].json.userText) }}\n    }\n  ],\n  \"tools\": [\n    {\n      \"type\": \"function\",\n      \"function\": {\n        \"name\": \"agendar_actividad\",\n        \"description\": \"Agendar una actividad para hoy u otra fecha\",\n        \"parameters\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"fecha\": { \"type\": \"string\", \"description\": \"Fecha en formato YYYY-MM-DD\" },\n            \"hora\": { \"type\": \"string\", \"description\": \"Hora en formato HH:mm (24h)\" },\n            \"actividad\": { \"type\": \"string\", \"description\": \"Descripción de la tarea o evento\" }\n          },\n          \"required\": [\"hora\", \"actividad\"]\n        }\n      }\n    },\n    {\n      \"type\": \"function\",\n      \"function\": {\n        \"name\": \"consultar_agenda\",\n        \"description\": \"Consultar las actividades agendadas para una fecha dada\",\n        \"parameters\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"fecha\": { \"type\": \"string\", \"description\": \"Fecha YYYY-MM-DD (por defecto hoy)\" }\n          }\n        }\n      }\n    },\n    {\n      \"type\": \"function\",\n      \"function\": {\n        \"name\": \"crear_habito\",\n        \"description\": \"Crear un nuevo hábito o recordatorio recurrente\",\n        \"parameters\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"nombre\": { \"type\": \"string\", \"description\": \"Nombre del hábito (ej: Agua, Ejercicio)\" },\n            \"hora_disparo\": { \"type\": \"string\", \"description\": \"Hora en formato HH:mm\" },\n            \"pregunta\": { \"type\": \"string\", \"description\": \"Pregunta a hacer al usuario\" }\n          },\n          \"required\": [\"nombre\", \"hora_disparo\", \"pregunta\"]\n        }\n      }\n    },\n    {\n      \"type\": \"function\",\n      \"function\": {\n        \"name\": \"registrar_habito\",\n        \"description\": \"Registrar el cumplimiento de un hábito\",\n        \"parameters\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"habito_nombre\": { \"type\": \"string\", \"description\": \"Nombre o slug del hábito\" },\n            \"respuesta\": { \"type\": \"string\", \"description\": \"Detalle respondido por el usuario\" }\n          },\n          \"required\": [\"habito_nombre\", \"respuesta\"]\n        }\n      }\n    }\n  ],\n  \"temperature\": 0.6\n}"
+      },
+      "id": "call-qwen-agent",
+      "name": "Ejecutar Qwen 3.5 con Tools",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1480, 360]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-tool-calls",
+              "leftValue": "={{ $json.choices[0].message.tool_calls ? true : false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-tool-calls",
+      "name": "¿Hay Tool Calls?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1700, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer y formatear las herramientas a ejecutar en Postgres\nconst toolCalls = $json.choices[0].message.tool_calls || [];\nconst chatId = $items('Normalizar Entrada (Texto y ChatID)')[0].json.chatId;\nconst queries = [];\n\nfor (const tool of toolCalls) {\n  const name = tool.function.name;\n  const args = JSON.parse(tool.function.arguments || '{}');\n  \n  if (name === 'agendar_actividad') {\n    const fecha = args.fecha || new Date().toISOString().split('T')[0];\n    queries.push({\n      action: 'agendar',\n      query: `INSERT INTO agenda_diaria (fecha, hora, actividad) VALUES ('${fecha}', '${args.hora}', '${args.actividad.replace(/'/g, \"''\")}') RETURNING *;`\n    });\n  } else if (name === 'crear_habito') {\n    const slug = args.nombre.toLowerCase().replace(/\\s+/g, '-');\n    queries.push({\n      action: 'habito',\n      query: `INSERT INTO habitos_config (slug, nombre, hora_disparo, pregunta_prompt) VALUES ('${slug}', '${args.nombre.replace(/'/g, \"''\")}', '${args.hora_disparo}', '${args.pregunta.replace(/'/g, \"''\")}') ON CONFLICT (slug) DO UPDATE SET hora_disparo = EXCLUDED.hora_disparo, pregunta_prompt = EXCLUDED.pregunta_prompt RETURNING *;`\n    });\n  }\n}\n\nreturn queries.map(q => ({ json: { ...q, chatId } }));"
+      },
+      "id": "format-tool-queries",
+      "name": "Preparar Queries Postgres",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1920, 260]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.query }}"
+      },
+      "id": "execute-tools-postgres",
+      "name": "Ejecutar Tool en Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [2140, 260],
+      "credentials": {
+        "postgres": {
+          "id": "agent-postgres-cred",
+          "name": "Agent PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $items('Normalizar Entrada (Texto y ChatID)')[0].json.chatId }}",
+        "text": "={{ $items('Ejecutar Qwen 3.5 con Tools')[0].json.choices[0].message.content || '✅ Acción registrada con éxito en tu agenda/hábitos.' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-response-telegram",
+      "name": "Responder por Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2360, 360],
+      "credentials": {
+        "telegramApi": {
+          "id": "agent-telegram-cred",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "¿Es Audio de Voz?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es Audio de Voz?": {
+      "main": [
+        [
+          {
+            "node": "Descargar Audio Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalizar Entrada (Texto y ChatID)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar Audio Telegram": {
+      "main": [
+        [
+          {
+            "node": "Transcribir con Faster-Whisper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribir con Faster-Whisper": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Entrada (Texto y ChatID)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Entrada (Texto y ChatID)": {
+      "main": [
+        [
+          {
+            "node": "Cargar Personalidad Activa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cargar Personalidad Activa": {
+      "main": [
+        [
+          {
+            "node": "Ejecutar Qwen 3.5 con Tools",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar Qwen 3.5 con Tools": {
+      "main": [
+        [
+          {
+            "node": "¿Hay Tool Calls?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay Tool Calls?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Queries Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Queries Postgres": {
+      "main": [
+        [
+          {
+            "node": "Ejecutar Tool en Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar Tool en Postgres": {
+      "main": [
+        [
+          {
+            "node": "Responder por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

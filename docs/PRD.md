@@ -1,115 +1,54 @@
-# PRD — llama-engine-agent
+# PRD — Asistente Personal Proactivo (llama-engine-agent)
 
-## Visión general
+## 1. Visión General
 
-Plataforma de agente AI autónomo que interactúa con un servidor llama.cpp local. Consta de dos paquetes independientes: un backend que ejecuta el loop del agente con herramientas, y un frontend de chat en tiempo real.
+Plataforma de asistente personal proactivo auto-alojado impulsado por el modelo local **Qwen 3.5 4B** corriendo en `llama.cpp` con aceleración GPU (NVIDIA RTX 5050 8GB).
+La arquitectura orquestada por **n8n** y respaldada por **PostgreSQL 16** coordina la interacción por **Telegram** (con soporte de voz vía **Faster-Whisper**) y una **Web UI** interactiva con **Web Speech API**.
 
-**Versión actual:** 0.1.0
-**Stack:** Express + TypeScript + SQLite (backend) / React 19 + Vite 6 (frontend)
-**Dependencia externa:** llama.cpp en `localhost:3050` (API compatible OpenAI)
-
----
-
-## Objetivos
-
-1. Proveer una interfaz de chat conversacional con streaming en tiempo real.
-2. Ejecutar un agente autónomo con capacidad de usar herramientas (bash, archivos, búsqueda, memorias).
-3. Persistir sesiones, mensajes y memorias del agente en SQLite.
-4. Permitir herramientas custom registradas por el usuario.
-5. Soportar integración opcional con Telegram.
+**Versión actual:** 0.2.0  
+**Stack Principal:** n8n + PostgreSQL 16 + Faster-Whisper (CUDA) + React 19 / Vite + llama.cpp (OpenAI Compatible API).
 
 ---
 
-## Usuarios
+## 2. Objetivos del Producto
 
-| Tipo | Descripción |
-|------|-------------|
-| Usuario final | Interactúa con el agente via UI web o Telegram |
-| Desarrollador | Configura herramientas custom, gestiona el agente |
-
----
-
-## Funcionalidades
-
-### F1 — Chat con streaming (SSE + WebSocket)
-
-- Enviar mensajes y recibir respuesta en chunks via SSE o WebSocket.
-- Eventos: `message`, `tool_start`, `tool_end`, `done`, `error`.
-- El frontend renderiza Markdown con GFM y syntax highlighting.
-
-### F2 — Gestión de sesiones
-
-- Crear, listar, obtener y eliminar sesiones.
-- Cada sesión tiene: id, nombre, modelo, timestamps.
-- Las sesiones agrupan conversaciones y sus mensajes.
-
-### F3 — Loop del agente con herramientas
-
-- El agente recibe el historial de la sesión + system prompt + memorias.
-- Itera hasta 10 veces por mensaje del usuario.
-- En cada iteración: envía al LLM → si hay tool calls, ejecuta y repite → si solo texto, responde.
-- Tools disponibles: `bash`, `read_file`, `write_file`, `edit_file`, `glob_search`, `grep_search`, `memorize`, `search_memories`, `update_memory`.
-
-### F4 — Memoria persistente
-
-- CRUD de memorias (key, content, tags).
-- Las memorias se inyectan en el system prompt del agente.
-- El agente puede crear/actualizar memorias via tool `memorize`/`update_memory`.
-
-### F5 — Herramientas custom
-
-- Registrar herramientas con handler: `bash` (ejecutar comando), `http` (llamada HTTP), `prompt` (prompt template).
-- Las herramientas custom se integran al loop del agente igual que las built-in.
-
-### F6 — Proxy de modelos
-
-- Endpoint `GET /api/models` que proxea a llama.cpp.
-- Retorna la lista de modelos disponibles en el servidor local.
-
-### F7 — Gestión MCP (Model Context Protocol)
-
-- Endpoints para registrar y gestionar servidores MCP.
-- Permite conectar el agente a fuentes de datos externas.
-
-### F8 — Integración Telegram (opcional)
-
-- Bot de Telegram que recibe mensajes y responde via el agente.
-- Control de usuarios permitidos via env var.
+1. **Proactividad matutina**: El asistente inicia la conversación diariamente a las 08:00 AM recordando actividades previas y solicitando las actividades del día para confeccionar la agenda.
+2. **Seguimiento automatizado de hábitos**: Pregunta en horarios configurados (ej: almuerzo a las 14:00, cena a las 21:30) y registra de forma estructurada las respuestas del usuario.
+3. **Recordatorios preventivos (Reloj vigilante)**: Cron cada 5 minutos que notifica al usuario con 15 minutos de anticipación antes de cualquier actividad programada.
+4. **Interacción multicanal fluida**:
+   - Celular vía Telegram: soporte para texto y notas de voz transcritas por Faster-Whisper local.
+   - PC vía Web UI: interfaz moderna con dictado de voz nativo (Web Speech API).
+5. **Personalidades configurables**: Capacidad de alternar el tono del asistente (Asistente Proactivo, Coach Disciplinado, Creativo/Reflexivo).
 
 ---
 
-## User Stories
+## 3. Modelo de Datos (PostgreSQL 16)
 
-| ID | Story | Prioridad |
-|----|-------|-----------|
-| US-01 | Como usuario, quiero enviar un mensaje y ver la respuesta en streaming | Alta |
-| US-02 | Como usuario, quiero crear y gestionar sesiones de chat | Alta |
-| US-03 | Como usuario, quiero que el agente pueda ejecutar comandos bash | Alta |
-| US-04 | Como usuario, quiero que el agente lea/escriba archivos | Alta |
-| US-05 | Como usuario, quiero que el agente recuerde contexto entre sesiones | Alta |
-| US-06 | Como desarrollador, quiero registrar herramientas custom | Media |
-| US-07 | Como usuario, quiero ver el estado de ejecución de herramientas | Media |
-| US-08 | Como usuario, quiero conectarme via WebSocket para tiempo real | Media |
-| US-09 | Como usuario, quiero interactuar via Telegram | Baja |
+- **`personalidades`**: Perfiles de tono y prompt de sistema.
+- **`agenda_diaria`**: Eventos y tareas con fecha, hora, estado de completado y recordatorio.
+- **`habitos_config`**: Catálogo de hábitos activos con hora de disparo y pregunta asociada.
+- **`registro_habitos`**: Historial de respuestas y resúmenes estructurados de cada hábito.
+- **`memorias`**: Base de conocimiento y preferencias del usuario a largo plazo.
 
 ---
 
-## Criterios de aceptación
+## 4. Requisitos Funcionales (RF)
 
-- [ ] El backend responde en menos de 200ms al health check.
-- [ ] El streaming SSE entrega chunks de texto en menos de 500ms desde la primera respuesta del LLM.
-- [ ] El agente ejecuta un máximo de 10 iteraciones por mensaje.
-- [ ] Las sesiones y mensajes persisten en SQLite correctamente.
-- [ ] Las memorias se inyectan en el system prompt del agente.
-- [ ] Los errores se retornan como eventos SSE/WS tipo `error`.
-- [ ] La UI muestra bloques de código con syntax highlighting.
-- [ ] Los tests cubren: agent loop, tools, sessions, memories, middleware.
+| ID | Requisito | Canal | Prioridad |
+|---|---|---|---|
+| **RF-01** | Disparo automático del saludo matutino a las 08:00 AM | Telegram | Alta |
+| **RF-02** | Reconocimiento y transcripción de notas de voz de Telegram con Faster-Whisper | Telegram | Alta |
+| **RF-03** | Tool Calling de Qwen 3.5 4B para `agendar_actividad` convirtiendo horas relativas | Telegram / Web | Alta |
+| **RF-04** | Disparo automático de preguntas de hábitos según `hora_disparo` | Telegram | Alta |
+| **RF-05** | Alertas preventivas 15 minutos antes de actividades pendientes | Telegram | Alta |
+| **RF-06** | Dashboard web con agenda del día, hábitos activos y chat interactivo | Web UI | Media |
+| **RF-07** | Dictado por voz en el navegador mediante Web Speech API | Web UI | Media |
+| **RF-08** | Cambio de personalidad activa mediante comando o tool | Telegram / Web | Media |
 
 ---
 
-## Restricciones
+## 5. Requisitos No Funcionales (RNF)
 
-- Requiere un servidor llama.cpp corriendo en `localhost:3050`.
-- No hay autenticación de usuarios (solo API key estática).
-- SQLite como única base de datos (sin soporte multi-usuario).
-- Sin workspace configurado entre los dos paquetes (cada uno es independiente).
+- **Consumo de VRAM**: La combinación de Qwen 3.5 4B (~3.5 GB) y Faster-Whisper small (~1.0 GB) no debe exceder los 5.5 GB de VRAM para mantener holgura en los 8 GB de la RTX 5050.
+- **Privacidad Local**: Todo el procesamiento (inferencia LLM, transcripción de audio, base de datos) corre 100% localmente.
+- **Latencia de Transcripción**: Notas de voz de hasta 30 segundos deben transcribirse en menos de 1 segundo en GPU.

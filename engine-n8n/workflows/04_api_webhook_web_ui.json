@@ -1,0 +1,177 @@
+{
+  "name": "04 - Webhooks para Web UI y Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-chat",
+      "name": "Webhook Chat (POST /agent-chat)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [160, 240]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT slug, nombre, system_prompt FROM personalidades WHERE activa = true LIMIT 1;"
+      },
+      "id": "get-active-persona-web",
+      "name": "Consultar Personalidad Activa",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [400, 240],
+      "credentials": {
+        "postgres": {
+          "id": "agent-postgres-cred",
+          "name": "Agent PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3050/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer llama-engine-dev"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"qwen3.5-4b\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Hoy es {{ $now.format('YYYY-MM-DD') }} y la hora actual es {{ $now.format('HH:mm') }}.\\nPersonalidad: {{ $json.nombre }}. {{ $json.system_prompt }}.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($items('Webhook Chat (POST /agent-chat)')[0].json.body.message) }}\n    }\n  ],\n  \"temperature\": 0.6\n}"
+      },
+      "id": "call-qwen-web",
+      "name": "Llamar Qwen 3.5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 240]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"text\": {{ JSON.stringify($json.choices[0].message.content) }}\n}",
+        "options": {}
+      },
+      "id": "respond-webhook-chat",
+      "name": "Responder a Web UI",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, 240]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "agent-dashboard",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-dashboard",
+      "name": "Webhook Dashboard (GET /agent-dashboard)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [160, 480]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'agenda_hoy', COALESCE((SELECT json_agg(a) FROM (SELECT id, to_char(hora, 'HH24:MI') as hora, actividad, completada, recordado FROM agenda_diaria WHERE fecha = CURRENT_DATE ORDER BY hora ASC) a), '[]'::json),\n  'habitos', COALESCE((SELECT json_agg(h) FROM (SELECT id, slug, nombre, to_char(hora_disparo, 'HH24:MI') as hora, pregunta_prompt, activa FROM habitos_config ORDER BY hora_disparo ASC) h), '[]'::json),\n  'personalidades', COALESCE((SELECT json_agg(p) FROM (SELECT id, slug, nombre, descripcion, activa FROM personalidades ORDER BY nombre ASC) p), '[]'::json)\n) AS dashboard_data;"
+      },
+      "id": "query-dashboard-data",
+      "name": "Consultar Datos Dashboard",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [400, 480],
+      "credentials": {
+        "postgres": {
+          "id": "agent-postgres-cred",
+          "name": "Agent PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.dashboard_data }}",
+        "options": {}
+      },
+      "id": "respond-webhook-dashboard",
+      "name": "Responder Datos Dashboard",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [640, 480]
+    }
+  ],
+  "connections": {
+    "Webhook Chat (POST /agent-chat)": {
+      "main": [
+        [
+          {
+            "node": "Consultar Personalidad Activa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Personalidad Activa": {
+      "main": [
+        [
+          {
+            "node": "Llamar Qwen 3.5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar Qwen 3.5": {
+      "main": [
+        [
+          {
+            "node": "Responder a Web UI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Dashboard (GET /agent-dashboard)": {
+      "main": [
+        [
+          {
+            "node": "Consultar Datos Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Datos Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Responder Datos Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

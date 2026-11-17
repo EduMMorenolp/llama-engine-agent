@@ -1,81 +1,29 @@
-# Tasks — llama-engine-agent
+# Tareas del Proyecto — llama-engine-agent
 
-## Roadmap
+## Estado: Fase 1 (Infraestructura y Flujos Base Completados)
 
-### v0.1.0 — MVP funcional
+### ✅ Tareas Completadas
 
-- [x] Backend: Express + TypeScript + SQLite
-- [x] Backend: Agent loop con tools (max 10 iteraciones)
-- [x] Backend: 9 herramientas built-in
-- [x] Backend: Streaming SSE
-- [x] Backend: WebSocket server
-- [x] Backend: CRUD sesiones + mensajes
-- [x] Backend: CRUD memorias
-- [x] Backend: Herramientas custom
-- [x] Backend: Proxy de modelos
-- [x] Backend: Gestión MCP
-- [x] Frontend: React 19 + Vite 6
-- [x] Frontend: Chat con streaming
-- [x] Frontend: Gestión de sesiones
-- [x] Frontend: Markdown rendering + syntax highlighting
-- [x] Frontend: WebSocket client
-- [x] Tests: agent loop, tools, sessions, memories, middleware
+- [x] **Infraestructura Docker**: `docker/docker-compose.yml` con PostgreSQL 16 y Faster-Whisper (CUDA).
+- [x] **Esquema de Base de Datos**: `sql/01_schema.sql` y `sql/02_seed.sql` con personalidades, agenda diaria, configuración de hábitos, registro y memorias según `supabase-postgres-best-practices`.
+- [x] **Flujos de n8n**:
+  - `01_saludo_matutino.json`: Disparador 08:00 AM con Qwen 3.5 4B y Telegram.
+  - `02_cerebro_conversacional.json`: Telegram (audio/texto) + Faster-Whisper + Tool Calling en Postgres.
+  - `03_reloj_vigilante.json`: Cron cada 5 minutos para alertas preventivas y preguntas de hábitos.
+  - `04_api_webhook_web_ui.json`: Webhooks para chat y consulta de dashboard web.
+- [x] **Frontend Web**: Adaptación de `engine-ui-agent/src/api.ts` para interactuar con los Webhooks de n8n y soporte para Web Speech API.
+- [x] **Tareas de VS Code**: `.vscode/tasks.json` con tareas para levantar Docker y la UI web.
+- [x] **Documentación**: Actualización de `PRD.md`, `ARCHITECTURE.md`, `AGENTS.md` y `CHANGELOG.md`.
 
-### v0.2.0 — Mejoras
+### 🔄 Próximos Pasos (Validación y Puesta en Marcha)
 
-- [ ] Integración Telegram
-- [ ] Autenticación de usuarios (no solo API key)
-- [ ] Búsqueda en historial de聊天
-- [ ] Export de sesiones (markdown/JSON)
-- [ ] Theme switching (light/dark)
-- [ ] Mermaid rendering en chat
-
-### v0.3.0 — Escalabilidad
-
-- [ ] Migración a PostgreSQL (opcional)
-- [ ] Multi-usuario
-- [ ] Rate limiting
-- [ ] Logging estructurado
-- [ ] Health check mejorado (DB status, LLM status)
-- [ ] Dashboard de métricas
-
----
-
-## Backlog
-
-- [ ] Configuración de system prompt via UI
-- [ ] Selector de modelo via UI
-- [ ] Drag & drop de archivos
-- [ ] Soporte de imágenes (multimodal)
-- [ ] Plugin system para herramientas
-- [ ] Webhooks para eventos del agente
-- [ ] Rate limiting por usuario
-- [ ] Compresión de historial (context window management)
-
----
-
-## En progreso
-
-_Ninguna tarea en progreso actualmente._
-
----
-
-## Completado
-
-| Fecha | Tarea | Notas |
-|-------|-------|-------|
-| 2026-09-19 | Setup proyecto | Express + React + Vite |
-| 2026-09-19 | Agent loop | Loop con tools, max 10 iteraciones |
-| 2026-09-19 | 9 herramientas built-in | bash, file ops, search, memories |
-| 2026-09-19 | Streaming SSE + WS | Tiempo real |
-| 2026-09-19 | CRUD sesiones | SQLite persistence |
-| 2026-09-19 | CRUD memorias | Memoria persistente del agente |
-| 2026-09-19 | Herramientas custom | bash, http, prompt handlers |
-| 2026-09-19 | Frontend chat UI | React 19, glassmorphism |
-| 2026-09-19 | Documentación | PRD, Architecture, Rules, Design, Tasks, Memory |
-
----
-
-## Blockeros
-
-_Ningún bloqueo activo._
+1. **Levantar el contenedor de Docker**:
+   - Ejecutar `docker compose -f docker/docker-compose.yml up -d` para inicializar PostgreSQL y Faster-Whisper.
+2. **Importar y Conectar en n8n**:
+   - Conectar credenciales de PostgreSQL (`localhost:5434`, DB `agent_db`).
+   - Conectar credencial de Telegram Bot (Token de `@BotFather`).
+   - Importar los 4 flujos de `n8n-workflows/`.
+3. **Prueba End-to-End**:
+   - Enviar un mensaje de voz o texto por Telegram ("Hoy a las 17:00 tengo dentista").
+   - Comprobar que Qwen ejecuta el Tool Calling y se guarda en `agenda_diaria`.
+   - Verificar la alerta 15 minutos antes.

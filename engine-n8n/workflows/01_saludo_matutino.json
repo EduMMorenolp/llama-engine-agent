@@ -1,0 +1,129 @@
+{
+  "name": "01 - Asistente Proactivo: Saludo Matutino",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger (08:00 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT p.system_prompt, p.nombre AS personalidad, COALESCE((SELECT json_agg(json_build_object('hora', hora, 'actividad', actividad)) FROM agenda_diaria WHERE fecha = CURRENT_DATE), '[]'::json) AS agenda_hoy FROM personalidades p WHERE p.activa = true LIMIT 1;"
+      },
+      "id": "query-postgres",
+      "name": "Consultar Personalidad y Agenda",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 300],
+      "credentials": {
+        "postgres": {
+          "id": "agent-postgres-cred",
+          "name": "Agent PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "qwen3.5-4b",
+        "prompt": "=Instrucción del sistema: Eres el asistente personal del usuario con la siguiente personalidad: {{ $json.personalidad }}. {{ $json.system_prompt }}.\nHoy es {{ $now.format('dddd, DD/MM/YYYY') }}.\nActividades ya agendadas para hoy: {{ JSON.stringify($json.agenda_hoy) }}.\n\nTarea: Genera un saludo matutino cercano, breve y proactivo en español. Si ya hay actividades agendadas, recuérdaselas brevemente. Al final, pregúntale amablemente qué otras actividades u horarios tiene planeados para hoy para organizar su agenda."
+      },
+      "id": "generate-saludo-llm",
+      "name": "Generar Saludo con Qwen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3050/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer llama-engine-dev"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"qwen3.5-4b\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Eres un asistente personal proactivo y cordial.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Genera el saludo matutino para hoy {{ $now.format('dddd DD/MM') }}. Actividades previas: {{ JSON.stringify($json.agenda_hoy) }}. Personalidad: {{ $json.personalidad }}. Pregunta qué actividades tiene hoy para agendar.\"\n    }\n  ],\n  \"temperature\": 0.7\n}"
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.choices[0].message.content }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-telegram",
+      "name": "Enviar a Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [920, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "agent-telegram-cred",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (08:00 AM)": {
+      "main": [
+        [
+          {
+            "node": "Consultar Personalidad y Agenda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Personalidad y Agenda": {
+      "main": [
+        [
+          {
+            "node": "Generar Saludo con Qwen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Saludo con Qwen": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

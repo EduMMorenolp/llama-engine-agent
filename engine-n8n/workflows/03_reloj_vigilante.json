@@ -1,0 +1,168 @@
+{
+  "name": "03 - Reloj Vigilante: Recordatorios y Hábitos",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-every-5m",
+      "name": "Cron cada 5 Minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [160, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, actividad, to_char(hora, 'HH24:MI') as hora FROM agenda_diaria WHERE fecha = CURRENT_DATE AND hora >= CURRENT_TIME AND hora <= (CURRENT_TIME + interval '15 minutes') AND recordado = false AND completada = false;"
+      },
+      "id": "check-agenda-due",
+      "name": "Buscar Actividades Próximas (15 min)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [420, 200],
+      "credentials": {
+        "postgres": {
+          "id": "agent-postgres-cred",
+          "name": "Agent PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=⏰ *Recordatorio de Agenda*\n\nTienes programado: *{{ $json.actividad }}* a las *{{ $json.hora }}*.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-reminder-telegram",
+      "name": "Enviar Alerta Agenda a Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [660, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "agent-telegram-cred",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE agenda_diaria SET recordado = true, updated_at = now() WHERE id = '{{ $json.id }}';"
+      },
+      "id": "mark-reminded",
+      "name": "Marcar como Recordado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [900, 200],
+      "credentials": {
+        "postgres": {
+          "id": "agent-postgres-cred",
+          "name": "Agent PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, nombre, pregunta_prompt FROM habitos_config WHERE activa = true AND hora_disparo >= (CURRENT_TIME - interval '2 minutes') AND hora_disparo <= (CURRENT_TIME + interval '3 minutes');"
+      },
+      "id": "check-habits-due",
+      "name": "Buscar Hábitos por Horario",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [420, 420],
+      "credentials": {
+        "postgres": {
+          "id": "agent-postgres-cred",
+          "name": "Agent PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=📌 *Seguimiento de Hábito: {{ $json.nombre }}*\n\n{{ $json.pregunta_prompt }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-habit-telegram",
+      "name": "Disparar Pregunta de Hábito a Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [660, 420],
+      "credentials": {
+        "telegramApi": {
+          "id": "agent-telegram-cred",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cron cada 5 Minutos": {
+      "main": [
+        [
+          {
+            "node": "Buscar Actividades Próximas (15 min)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Buscar Hábitos por Horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Actividades Próximas (15 min)": {
+      "main": [
+        [
+          {
+            "node": "Enviar Alerta Agenda a Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Alerta Agenda a Telegram": {
+      "main": [
+        [
+          {
+            "node": "Marcar como Recordado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Hábitos por Horario": {
+      "main": [
+        [
+          {
+            "node": "Disparar Pregunta de Hábito a Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

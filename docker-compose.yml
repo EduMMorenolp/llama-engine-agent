@@ -1,0 +1,120 @@
+name: "llama-engine-agent"
+
+services:
+  engine-postgres:
+    build:
+      context: ./engine-postgres
+      dockerfile: Dockerfile
+    container_name: agent-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agent_db}
+      POSTGRES_USER: ${POSTGRES_USER:-agent_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agent_secret_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./engine-postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - agent-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agent_user} -d ${POSTGRES_DB:-agent_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  engine-whisper:
+    build:
+      context: ./engine-whisper
+      dockerfile: Dockerfile
+    container_name: agent-whisper
+    restart: unless-stopped
+    runtime: nvidia
+    ports:
+      - "${WHISPER_PORT:-8000}:8000"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${WHISPER_GPU_DEVICE:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - WHISPER_MODEL=${WHISPER_MODEL:-Systran/faster-whisper-small}
+      - WHISPER_DEVICE=cuda
+      - WHISPER_COMPUTE_TYPE=float16
+    volumes:
+      - whisper_cache:/root/.cache/huggingface
+    networks:
+      - agent-network
+
+  engine-n8n:
+    build:
+      context: ./engine-n8n
+      dockerfile: Dockerfile
+    container_name: agent-n8n
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      - GENERIC_TIMEZONE=${TIMEZONE:-America/Argentina/Buenos_Aires}
+      - TZ=${TIMEZONE:-America/Argentina/Buenos_Aires}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678}
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=engine-postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-agent_db}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-agent_user}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-agent_secret_password}
+      - DB_POSTGRESDB_SCHEMA=public
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./engine-n8n/workflows:/workflows:ro
+    networks:
+      - agent-network
+    depends_on:
+      engine-postgres:
+        condition: service_healthy
+
+  engine-agent-api:
+    build:
+      context: ./engine-agent/engine-agent-api
+      dockerfile: Dockerfile
+    container_name: agent-api
+    restart: unless-stopped
+    ports:
+      - "${AGENT_API_PORT:-3060}:3060"
+    environment:
+      - PORT=${AGENT_API_PORT:-3060}
+      - LLAMA_API_URL=${LLAMA_API_URL:-http://host.docker.internal:3050/v1}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-agent_user}:${POSTGRES_PASSWORD:-agent_secret_password}@engine-postgres:5432/${POSTGRES_DB:-agent_db}
+    networks:
+      - agent-network
+    depends_on:
+      engine-postgres:
+        condition: service_healthy
+
+  engine-agent-ui:
+    build:
+      context: ./engine-agent/engine-agent-ui
+      dockerfile: Dockerfile
+      args:
+        - VITE_AGENT_URL=${VITE_AGENT_URL:-http://localhost:3060}
+        - VITE_N8N_URL=${VITE_N8N_URL:-http://localhost:5678}
+    container_name: agent-ui
+    restart: unless-stopped
+    ports:
+      - "${AGENT_UI_PORT:-3061}:80"
+    networks:
+      - agent-network
+    depends_on:
+      - engine-agent-api
+
+volumes:
+  postgres_data:
+  whisper_cache:
+  n8n_data:
+
+networks:
+  agent-network:
+    name: agent-network
+    driver: bridge
+

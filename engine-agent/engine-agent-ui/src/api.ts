@@ -276,3 +276,77 @@ export async function deleteSkill(name: string): Promise<void> {
 export async function getSkill(name: string): Promise<Skill> {
 	return apiGet<Skill>(`/api/skills/${name}`);
 }
+
+// ============================================================================
+// N8N Webhook Endpoints (Enfoque B - Asistente Proactivo)
+// ============================================================================
+
+export interface ActividadAgenda {
+	id: string;
+	hora: string;
+	actividad: string;
+	completada: boolean;
+	recordado: boolean;
+}
+
+export interface HabitoConfig {
+	id: string;
+	slug: string;
+	nombre: string;
+	hora: string;
+	pregunta_prompt: string;
+	activa: boolean;
+}
+
+export interface PersonalidadItem {
+	id: string;
+	slug: string;
+	nombre: string;
+	descripcion: string;
+	activa: boolean;
+}
+
+export interface DashboardData {
+	agenda_hoy: ActividadAgenda[];
+	habitos: HabitoConfig[];
+	personalidades: PersonalidadItem[];
+}
+
+export interface N8NChatResponse {
+	ok: boolean;
+	text: string;
+}
+
+const N8N_URL = import.meta.env.VITE_N8N_URL || "http://localhost:5678";
+
+export async function sendChatMessageToN8N(message: string): Promise<N8NChatResponse> {
+	const res = await fetch(`${N8N_URL}/webhook/agent-chat`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ message }),
+	});
+
+	if (!res.ok) {
+		throw new Error(`Error comunicando con n8n: ${res.status} ${res.statusText}`);
+	}
+
+	return res.json();
+}
+
+export async function fetchDashboardFromN8N(): Promise<DashboardData> {
+	const res = await fetch(`${N8N_URL}/webhook/agent-dashboard`, {
+		method: "GET",
+		headers: {
+			"Content-Type": "application/json",
+		},
+	});
+
+	if (!res.ok) {
+		throw new Error(`Error consultando dashboard en n8n: ${res.status} ${res.statusText}`);
+	}
+
+	return res.json();
+}
+

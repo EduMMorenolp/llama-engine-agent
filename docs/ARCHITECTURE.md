@@ -1,225 +1,103 @@
-# Architecture — llama-engine-agent
+# Arquitectura de la Solución — llama-engine-agent
 
-## Diagrama de componentes high-level
+## 1. Diagrama General de Componentes
 
 ```mermaid
-graph TB
-    subgraph Frontend ["Frontend — engine-ui-agent (port 3061)"]
-        UI[React SPA]
-        WS_Client[WebSocket Client]
-        SSE_Client[SSE Client]
+flowchart TD
+    subgraph Hardware["Hardware Local (NVIDIA RTX 5050 8GB / 16GB RAM)"]
+        LLAMA["llama-runtime (llama.cpp)\nQwen 3.5 4B Q4_K_M\nPuerto 3050 / 8080"]
+        WHISPER["Faster-Whisper Server\nModelo small FP16 (CUDA)\nPuerto 8000"]
     end
 
-    subgraph Backend ["Backend — engine-agent (port 3060)"]
-        Express[Express Server]
-        WS_Server[WebSocket Server]
-        AgentLoop[Agent Loop]
-        ToolRegistry[Tool Registry]
-        LLMClient[LLM Client]
-        SessionService[Session Service]
-        MemoryService[Memory Service]
+    subgraph Docker_Services["Contenedores Docker"]
+        POSTGRES[("PostgreSQL 16 (Dedicado)\nPuerto 5434:5432\nTablas: agenda, habitos, registros,\npersonalidades, memorias")]
+        N8N["n8n Orquestador\n(n8n-docker en puerto 5678)\n- Schedule Crons (08:00 AM, cada 5 min)\n- Telegram Trigger & Webhooks\n- Tool Calling Execution"]
     end
 
-    subgraph Storage ["Storage"]
-        SQLite[(SQLite — sql.js WASM)]
+    subgraph Canales["Canales de Interacción"]
+        TG["Telegram Bot (Celular)\nTexto y Notas de voz"]
+        WEB["engine-ui-agent (PC)\nReact 19 + Vite + Web Speech API\nPuerto 3061"]
     end
 
-    subgraph External ["External"]
-        LlamaCpp["llama.cpp Server (port 3050)"]
-        Telegram["Telegram Bot (optional)"]
-    end
+    TG -->|Audio| WHISPER
+    WHISPER -->|Texto transcrito| N8N
+    TG -->|Mensaje de texto| N8N
+    WEB -->|Webhook Chat / Dictado de voz| N8N
 
-    UI -->|HTTP| Express
-    UI --> SSE_Client
-    UI --> WS_Client
-    SSE_Client -->|SSE Stream| Express
-    WS_Client -->|WebSocket| WS_Server
+    N8N -->|Inferencia + Tool Calling| LLAMA
+    LLAMA -->|Herramientas a ejecutar| N8N
+    N8N <-->|Consultas y Persistencia SQL| POSTGRES
 
-    Express --> AgentLoop
-    WS_Server --> AgentLoop
-    AgentLoop --> LLMClient
-    AgentLoop --> ToolRegistry
-    AgentLoop --> SessionService
-    AgentLoop --> MemoryService
-
-    SessionService --> SQLite
-    MemoryService --> SQLite
-
-    LLMClient -->|OpenAI API| LlamaCpp
-    Telegram -->|Bot API| Express
+    N8N -->|Avisos proactivos matutinos y alertas| TG
+    N8N -->|Respuesta del asistente| WEB
 ```
 
 ---
 
-## Flujo del Agent Loop
+## 2. Flujo de Secuencia: Disparador Matutino (Buenos Días)
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant FE as Frontend
-    participant BE as Backend
-    participant LLM as llama.cpp
-    participant Tools as Tool Registry
-    participant DB as SQLite
+    autonumber
+    participant Cron as n8n (Schedule 08:00 AM)
+    participant PG as PostgreSQL (Puerto 5434)
+    participant LLM as Qwen 3.5 4B (Puerto 3050)
+    participant TG as Telegram (Usuario)
 
-    U->>FE: Send message
-    FE->>BE: POST /api/chat (SSE) or WS "chat"
-    BE->>DB: Save user message
-    BE->>DB: Load memories
-    BE->>BE: Build system prompt + memories
-
-    loop Max 10 iterations
-        BE->>LLM: Send history + tool schemas
-        LLM-->>BE: Response (text or tool_calls)
-
-        alt Tool calls
-            BE->>Tools: Execute tool
-            Tools-->>BE: Tool result
-            BE->>DB: Save tool message
-            BE->>FE: SSE/WS: tool_start + tool_end
-            BE->>LLM: Continue with tool result
-        else Text only
-            BE->>DB: Save assistant message
-            BE->>FE: SSE/WS: message chunks + done
-        end
-    end
+    Cron->>PG: SELECT personalidad activa y agenda de hoy
+    PG-->>Cron: System prompt + actividades previas
+    Cron->>LLM: Redactar saludo cordial y preguntar actividades del día
+    LLM-->>Cron: Texto del saludo generado
+    Cron->>TG: Enviar mensaje de buenos días por Telegram
 ```
 
 ---
 
-## Estructura de la base de datos
+## 3. Flujo de Secuencia: Mensaje de Voz y Agendamiento
 
 ```mermaid
-erDiagram
-    sessions ||--o{ messages : "has"
-    sessions {
-        string id PK
-        string name
-        string model
-        datetime created_at
-        datetime updated_at
-    }
-    messages {
-        string id PK
-        string session_id FK
-        string role
-        string content
-        string tool_calls
-        string tool_call_id
-        datetime created_at
-    }
-    memories {
-        string id PK
-        string key UK
-        string content
-        string tags
-        datetime created_at
-        datetime updated_at
-    }
-    custom_tools {
-        string name PK
-        string description
-        string parameters
-        string handler_type
-        string handler_config
-        boolean enabled
-        datetime created_at
-    }
+sequenceDiagram
+    autonumber
+    participant User as Usuario (Telegram)
+    participant TG as Bot de Telegram
+    participant N8N as n8n Orquestador
+    participant FW as Faster-Whisper (CUDA)
+    participant LLM as Qwen 3.5 4B
+    participant PG as PostgreSQL
+
+    User->>TG: Envía nota de voz ("Hoy a las 18:00 voy al gimnasio")
+    TG->>N8N: Evento message.voice
+    N8N->>FW: POST /v1/audio/transcriptions (archivo de audio)
+    FW-->>N8N: Texto: "Hoy a las 18:00 voy al gimnasio"
+    N8N->>LLM: Prompt con fecha/hora actual y tools disponibles
+    LLM-->>N8N: Tool Call: agendar_actividad(hora="18:00", actividad="Gimnasio")
+    N8N->>PG: INSERT INTO agenda_diaria (fecha, hora, actividad)
+    PG-->>N8N: Confirmación OK
+    N8N->>TG: "✅ Agendé 'Gimnasio' a las 18:00 para hoy."
+    TG-->>User: Mensaje en Telegram
 ```
 
 ---
 
-## Flujo de datos — Streaming
+## 4. Flujo de Secuencia: Reloj Vigilante (Recordatorios y Hábitos)
 
 ```mermaid
-graph LR
-    subgraph SSE ["SSE Stream"]
-        A[Client] -->|POST /api/chat| B[Express]
-        B -->|text/event-stream| A
+sequenceDiagram
+    autonumber
+    participant Cron as n8n (Schedule cada 5 min)
+    participant PG as PostgreSQL
+    participant TG as Telegram
+
+    Cron->>PG: 1. SELECT actividades entre now() y now()+15m (recordado=false)
+    alt Hay actividad próxima
+        PG-->>Cron: Actividad encontrada
+        Cron->>TG: "⏰ Recordatorio: a las 18:00 tienes Gimnasio."
+        Cron->>PG: UPDATE agenda_diaria SET recordado = true
     end
 
-    subgraph WS ["WebSocket"]
-        C[Client] -->|type: chat| D[WS Server]
-        D -->|type: message/tool_start/tool_end/done| C
+    Cron->>PG: 2. SELECT habitos activos donde hora_disparo ≈ hora_actual
+    alt Coincide hora de hábito
+        PG-->>Cron: Hábito: Almuerzo ("¿Qué almorzaste hoy?")
+        Cron->>TG: "📌 Seguimiento: ¿Qué almorzaste hoy?"
     end
-
-    subgraph Events ["Event Types"]
-        E[message]
-        F[tool_start]
-        G[tool_end]
-        H[done]
-        I[error]
-    end
-
-    B --> E
-    B --> F
-    B --> G
-    B --> H
-    B --> I
-    D --> E
-    D --> F
-    D --> G
-    D --> H
-    D --> I
 ```
-
----
-
-## Estructura de directorios
-
-```
-llama-engine-agent/
-├── engine-agent/              # Backend
-│   ├── src/
-│   │   ├── index.ts           # Entry point + bootstrap
-│   │   ├── server.ts          # Express app factory
-│   │   ├── ws.ts              # WebSocket server
-│   │   ├── config/            # Env validation (Zod)
-│   │   ├── db/                # SQLite init + migrations
-│   │   ├── agent/             # Agent loop + LLM client + prompt
-│   │   ├── tools/             # Registry + 9 built-in tools
-│   │   ├── sessions/          # Session CRUD
-│   │   ├── memories/          # Memory CRUD
-│   │   ├── modules/           # chat, sessions, memories, tools, models, mcp
-│   │   ├── middleware/        # auth, validation, errorHandler
-│   │   ├── common/            # HTTP exceptions
-│   │   └── utils/             # Logger
-│   ├── data/                  # SQLite DB
-│   └── docs/                  # API-CONTRACTS.md
-├── engine-ui-agent/           # Frontend
-│   ├── src/
-│   │   ├── main.tsx           # Entry point
-│   │   ├── App.tsx            # Router + providers
-│   │   ├── api.ts             # Types + API functions
-│   │   ├── lib/               # fetchClient, WebSocket
-│   │   ├── providers/         # ToastProvider, SessionsProvider
-│   │   ├── components/        # Layout, Icons
-│   │   └── features/
-│   │       ├── chat/          # ChatView, Composer, MessageBubble
-│   │       └── sessions/      # SessionList
-│   └── ...
-└── docs/                      # Project documentation
-    ├── PRD.md
-    ├── ARCHITECTURE.md
-    ├── RULES.md
-    ├── DESIGN.md
-    ├── TASKS.md
-    └── MEMORY.md
-```
-
----
-
-## Decisiones técnicas
-
-| Decisión | Elección | Razón |
-|----------|----------|-------|
-| Runtime backend | Express 4 | Simplicidad, ecosistema amplio |
-| Base de datos | SQLite via sql.js (WASM) | Sin dependencias nativas, file-based, suficiente para single-user |
-| Validación | Zod | Type inference + validación runtime |
-| Linting/Formatting | Biome | Más rápido que ESLint + Prettier, config unificada |
-| Frontend framework | React 19 | Latest, concurrent features |
-| Bundler | Vite 6 | HMR rápido, ESM nativo |
-| State management | React Context + hooks | Sin dependencia externa, suficiente para la complejidad actual |
-| Markdown | react-markdown + remark-gfm | GFM support, plugins |
-| Testing | Vitest | Compatible con ESM, rápido |
-| LLM SDK | openai | Compatible con la API de llama.cpp |
