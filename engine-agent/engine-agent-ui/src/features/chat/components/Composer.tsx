@@ -70,8 +70,6 @@ export function Composer({
 		...DEFAULT_MODEL_SETTINGS,
 		temperature: appSettings.temperature,
 		topP: appSettings.topP,
-		topK: appSettings.topK,
-		repeatPenalty: appSettings.repeatPenalty,
 	});
 
 	useEffect(() => {
@@ -289,7 +287,10 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 								: "Escribe un mensaje o usa las herramientas del agente..."
 						}
 						value={text}
-						onChange={(e) => setText(e.target.value)}
+						onChange={(e) => {
+							setText(e.target.value);
+							onDraftTextChange?.(e.target.value);
+						}}
 						onKeyDown={handleKeyDown}
 						disabled={disabled}
 						rows={1}

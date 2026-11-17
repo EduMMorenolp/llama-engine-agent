@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { type AppSettings, loadSettings, saveSettings } from "./settings.ts";
+import { type AppSettings, DEFAULT_APP_SETTINGS, loadSettings, saveSettings } from "./settings.ts";
 
-export function useAppSettings() {
+export type UseAppSettingsReturn = AppSettings & {
+	settings: AppSettings;
+	updateSettings: (partial: Partial<AppSettings>) => void;
+};
+
+export function useAppSettings(): UseAppSettingsReturn {
 	const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
 
 	useEffect(() => {
@@ -29,6 +34,7 @@ export function useAppSettings() {
 	};
 
 	return {
+		...settings,
 		settings,
 		updateSettings,
 	};

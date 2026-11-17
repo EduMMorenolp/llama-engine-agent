@@ -8,7 +8,7 @@ export interface Toast {
 
 interface ToastContextValue {
 	toasts: Toast[];
-	addToast: (type: Toast["type"], message: string) => void;
+	addToast: (typeOrMessage: Toast["type"] | string, message?: string) => void;
 	removeToast: (id: string) => void;
 }
 
@@ -28,7 +28,24 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 	}, []);
 
 	const addToast = useCallback(
-		(type: Toast["type"], message: string) => {
+		(a: Toast["type"] | string, b?: string) => {
+			const validTypes = ["success", "error", "info", "warning"] as const;
+			let type: Toast["type"] = "info";
+			let message = "";
+
+			if (b !== undefined) {
+				if (validTypes.includes(a as Toast["type"])) {
+					type = a as Toast["type"];
+					message = b;
+				} else {
+					message = a;
+					type = validTypes.includes(b as Toast["type"]) ? (b as Toast["type"]) : "info";
+				}
+			} else {
+				message = a;
+				type = "info";
+			}
+
 			const id = crypto.randomUUID?.() ?? Date.now().toString();
 			setToasts((prev) => [...prev, { id, type, message }]);
 			setTimeout(() => removeToast(id), 3000);

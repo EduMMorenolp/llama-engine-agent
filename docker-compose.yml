@@ -87,7 +87,10 @@ services:
       - LLAMA_API_URL=${LLAMA_API_URL:-http://host.docker.internal:3050/v1}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-agent_user}:${POSTGRES_PASSWORD:-agent_secret_password}@engine-postgres:5432/${POSTGRES_DB:-agent_db}
     networks:
-      - agent-network
+      agent-network:
+        aliases:
+          - engine-agent-api
+          - engine-agent
     depends_on:
       engine-postgres:
         condition: service_healthy
@@ -117,4 +120,3 @@ networks:
   agent-network:
     name: agent-network
     driver: bridge
-

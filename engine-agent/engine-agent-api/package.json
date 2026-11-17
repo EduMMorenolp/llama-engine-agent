@@ -1,10 +1,11 @@
 {
-  "name": "engine-agent",
+  "name": "engine-agent-api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
     "start": "tsc -p tsconfig.json && node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",

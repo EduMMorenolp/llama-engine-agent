@@ -1,6 +1,5 @@
 import { exec } from "node:child_process";
 import fs from "node:fs";
-import { glob } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { getConfig } from "../config/index.js";
@@ -118,13 +117,21 @@ const globSearchHandler: ToolHandler = async (args) => {
 	const basePath = args.path ? String(args.path) : ".";
 	try {
 		const files: string[] = [];
-		for await (const entry of glob(pattern, { cwd: basePath })) {
-			const parts = entry.split(/[\\/]/);
+		const regex = new RegExp(
+			"^" + pattern.replace(/\./g, "\\.").replace(/\*/g, ".*").replace(/\?/g, ".") + "$",
+			"i",
+		);
+		const entries = await fs.promises.readdir(basePath, { recursive: true });
+		for (const entry of entries) {
+			const entryStr = String(entry);
+			const parts = entryStr.split(/[\\/]/);
 			if (parts.some((p) => IGNORED_DIRS.has(p))) continue;
-			files.push(entry);
-			if (files.length >= 100) {
-				files.push("... [Límite de 100 archivos alcanzado]");
-				break;
+			if (pattern === "*" || regex.test(entryStr) || regex.test(parts[parts.length - 1])) {
+				files.push(entryStr);
+				if (files.length >= 100) {
+					files.push("... [Límite de 100 archivos alcanzado]");
+					break;
+				}
 			}
 		}
 		return files.length ? files.join("\n") : "No se encontraron archivos";

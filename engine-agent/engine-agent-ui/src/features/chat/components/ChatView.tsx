@@ -698,7 +698,7 @@ export function ChatView() {
 									onDelete={handleDeleteMsg}
 									onEdit={handleEditMsg}
 									onReload={handleReloadMsg}
-									onFavorite={toggleFavoriteMessage}
+									onFavorite={(msg) => toggleFavoriteMessage(msg.id)}
 								/>
 							))}
 

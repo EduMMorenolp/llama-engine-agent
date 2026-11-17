@@ -1,8 +1,3 @@
-FROM docker.n8n.io/n8nio/n8n:latest
-
-USER root
-RUN apk update && apk add --no-cache curl tzdata
-USER node
+FROM n8nio/n8n:latest
 
 EXPOSE 5678
-

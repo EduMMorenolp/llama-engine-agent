@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- **Fixed**: **Compatibilidad Node 20 en glob_search y upstream nginx**. Reemplazo de import glob inexistente en node:fs/promises por fs.promises.readdir recursivo en tools/index.ts, y corrección del upstream a engine-agent-api con alias de red en docker-compose.yml y nginx.conf. [2026-11-17]
+  * **Files (Archivos)**: engine-agent/engine-agent-api/src/tools/index.ts, engine-agent/engine-agent-ui/nginx.conf, docker-compose.yml. [2026-11-17]
+- **Fixed**: **Tipado de componentes en engine-agent-ui y optimización de build**. Corrección de tipos en ToastProvider, useAppSettings, ChatView y Composer, y ajuste del script build a vite build para empaquetado ágil en Docker. [2026-11-17]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/lib/useAppSettings.ts, engine-agent/engine-agent-ui/src/providers/ToastProvider.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx, engine-agent/engine-agent-ui/src/features/chat/components/Composer.tsx, engine-agent/engine-agent-ui/package.json. [2026-11-17]
+- **Fixed**: **Registry Docker de n8n y script build de api**. Sustitución del registry con rate limit docker.n8n.io por la imagen oficial de Docker Hub n8nio/n8n:latest en engine-n8n/Dockerfile, y adición del script build en engine-agent/engine-agent-api/package.json. [2026-11-17]
+  * **Files (Archivos)**: engine-n8n/Dockerfile, engine-agent/engine-agent-api/package.json, engine-agent/engine-agent-ui/package.json. [2026-11-17]
 - **Changed**: **Estructura modular por servicios con Dockerfile individual**. Reorganización del repositorio en carpetas modulares por servicio (engine-agent/ con api y ui, engine-postgres/, engine-whisper/, engine-n8n/) con Dockerfile propio y orquestación raíz en docker-compose.yml idéntico al patrón de llama-engine. [2026-11-17]
   * **Files (Archivos)**: docker-compose.yml, .env, .env.example, engine-agent/README.md, engine-postgres/Dockerfile, engine-postgres/README.md, engine-whisper/Dockerfile, engine-whisper/README.md, engine-n8n/Dockerfile, engine-n8n/README.md, .vscode/tasks.json, README.md, AGENTS.md. [2026-11-17]
 - **Added**: **Documentación y vinculación con llama-engine**. Creación de README.md principal con arquitectura, guías de instalación, comandos de Docker y n8n, y especificación de la integración con el runtime de inferencia EduMMorenolp/llama-engine. [2026-11-17]
