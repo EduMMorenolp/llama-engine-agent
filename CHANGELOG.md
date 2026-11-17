@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- **Changed**: **Guía estandarizada para agentes y flujo Docker**. Actualización integral de AGENTS.md con estructura estandarizada de alcance, arquitectura de 5 servicios modulares, flujo obligatorio de ramas y verificación en Docker con `--no-deps`, convenciones Biome y comandos de validación. [2026-11-17]
+  * **Files (Archivos)**: AGENTS.md. [2026-11-17]
+
 - **Fixed**: **Compatibilidad Node 20 en glob_search y upstream nginx**. Reemplazo de import glob inexistente en node:fs/promises por fs.promises.readdir recursivo en tools/index.ts, y corrección del upstream a engine-agent-api con alias de red en docker-compose.yml y nginx.conf. [2026-11-17]
   * **Files (Archivos)**: engine-agent/engine-agent-api/src/tools/index.ts, engine-agent/engine-agent-ui/nginx.conf, docker-compose.yml. [2026-11-17]
 - **Fixed**: **Tipado de componentes en engine-agent-ui y optimización de build**. Corrección de tipos en ToastProvider, useAppSettings, ChatView y Composer, y ajuste del script build a vite build para empaquetado ágil en Docker. [2026-11-17]
