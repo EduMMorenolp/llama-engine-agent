@@ -8,6 +8,7 @@ export interface AppSettings {
 	topK: number;
 	repeatPenalty: number;
 	apiUrl: string;
+	apiKey: string;
 	engineUrl: string;
 	debugLogs: boolean;
 	theme: "dark" | "light";
@@ -23,6 +24,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 	topK: 40,
 	repeatPenalty: 1.1,
 	apiUrl: "http://localhost:3060",
+	apiKey: "llama-engine-dev",
 	engineUrl: "http://localhost:3050",
 	debugLogs: false,
 	theme: "dark",

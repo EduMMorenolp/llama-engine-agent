@@ -91,6 +91,25 @@ export function closeDb(): void {
 	}
 }
 
+function findMigrationsDir(): string | null {
+	const candidates = [
+		path.join(__dirname, "migrations"),
+		path.join(__dirname, "../src/db/migrations"),
+		path.join(process.cwd(), "src/db/migrations"),
+		path.join(process.cwd(), "dist/db/migrations"),
+		path.join(process.cwd(), "migrations"),
+	];
+
+	for (const candidate of candidates) {
+		try {
+			if (fs.existsSync(candidate) && fs.readdirSync(candidate).some((f) => f.endsWith(".sql"))) {
+				return candidate;
+			}
+		} catch {}
+	}
+	return null;
+}
+
 function runMigrations(db: Database): void {
 	db.run(`
 		CREATE TABLE IF NOT EXISTS _migrations (
@@ -108,11 +127,13 @@ function runMigrations(db: Database): void {
 		}
 	}
 
-	const migrationsDir = path.join(__dirname, "migrations");
-	if (!fs.existsSync(migrationsDir)) {
-		logger.info("No migrations directory found, skipping");
+	const migrationsDir = findMigrationsDir();
+	if (!migrationsDir) {
+		logger.warn("No migrations directory found, skipping");
 		return;
 	}
+
+	logger.info(`Running migrations from: ${migrationsDir}`);
 
 	const files = fs
 		.readdirSync(migrationsDir)
@@ -139,5 +160,6 @@ function runMigrations(db: Database): void {
 
 	if (count > 0) {
 		logger.info(`Applied ${count} migration(s)`);
+		saveDb();
 	}
 }

@@ -1,5 +1,27 @@
+export function getAgentUrl(): string {
+	try {
+		const raw = localStorage.getItem("llama_engine_settings");
+		if (raw) {
+			const parsed = JSON.parse(raw);
+			if (parsed.apiUrl) return parsed.apiUrl;
+		}
+	} catch {}
+	return import.meta.env.VITE_AGENT_URL ?? "http://localhost:3060";
+}
+
+export function getAgentKey(): string {
+	try {
+		const raw = localStorage.getItem("llama_engine_settings");
+		if (raw) {
+			const parsed = JSON.parse(raw);
+			if (parsed.apiKey) return parsed.apiKey;
+		}
+	} catch {}
+	return import.meta.env.VITE_AGENT_KEY || "llama-engine-dev";
+}
+
 export const AGENT_URL = import.meta.env.VITE_AGENT_URL ?? "http://localhost:3060";
-export const AGENT_KEY = import.meta.env.VITE_AGENT_KEY ?? "";
+export const AGENT_KEY = import.meta.env.VITE_AGENT_KEY ?? "llama-engine-dev";
 
 interface RequestOptions extends RequestInit {
 	params?: Record<string, string>;
@@ -7,7 +29,8 @@ interface RequestOptions extends RequestInit {
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
 	const { params, ...fetchOptions } = options;
-	const url = new URL(path, AGENT_URL);
+	const baseUrl = getAgentUrl();
+	const url = new URL(path, baseUrl);
 	if (params) {
 		for (const [key, value] of Object.entries(params)) {
 			url.searchParams.set(key, value);
@@ -15,7 +38,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 	}
 
 	const headers: Record<string, string> = {
-		"x-api-key": AGENT_KEY,
+		"x-api-key": getAgentKey(),
 		...(fetchOptions.headers as Record<string, string>),
 	};
 
@@ -61,6 +84,6 @@ export function apiDelete<T>(path: string): Promise<T> {
 }
 
 export function connectWebSocket(): WebSocket {
-	const wsUrl = `${AGENT_URL.replace(/^http/, "ws")}/ws`;
+	const wsUrl = `${getAgentUrl().replace(/^http/, "ws")}/ws`;
 	return new WebSocket(wsUrl);
 }

@@ -44,6 +44,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 	const [topK, setTopK] = useState(initial.topK);
 	const [repeatPenalty, setRepeatPenalty] = useState(initial.repeatPenalty);
 	const [apiUrl, setApiUrl] = useState(initial.apiUrl);
+	const [apiKey, setApiKey] = useState(initial.apiKey);
 	const [engineUrl, setEngineUrl] = useState(initial.engineUrl);
 	const [debugLogs, setDebugLogs] = useState(initial.debugLogs);
 	const [agents, setAgents] = useState<AgentDefinition[]>([]);
@@ -62,6 +63,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 			topK,
 			repeatPenalty,
 			apiUrl,
+			apiKey,
 			engineUrl,
 			debugLogs,
 		});
@@ -79,6 +81,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 		setTopK(DEFAULT_APP_SETTINGS.topK);
 		setRepeatPenalty(DEFAULT_APP_SETTINGS.repeatPenalty);
 		setApiUrl(DEFAULT_APP_SETTINGS.apiUrl);
+		setApiKey(DEFAULT_APP_SETTINGS.apiKey);
 		setEngineUrl(DEFAULT_APP_SETTINGS.engineUrl);
 		setDebugLogs(DEFAULT_APP_SETTINGS.debugLogs);
 		saveSettings(DEFAULT_APP_SETTINGS);
@@ -414,6 +417,16 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 												className="sidebar-search-input"
 												value={apiUrl}
 												onChange={(e) => setApiUrl(e.target.value)}
+											/>
+										</div>
+										<div className="settings-input-block">
+											<span className="settings-item-title">Agent API Key</span>
+											<input
+												type="password"
+												className="sidebar-search-input"
+												value={apiKey}
+												onChange={(e) => setApiKey(e.target.value)}
+												placeholder="llama-engine-dev"
 											/>
 										</div>
 										<div className="settings-input-block">

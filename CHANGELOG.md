@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+- **Fixed**: **Copia y ejecución de migraciones SQLite en engine-agent-api**. Empaquetado explícito de archivos `.sql` en el proceso de build y Dockerfile hacia `dist/db/migrations` y `migrations`, incorporando resolución multi-ruta en `src/db/index.ts` y persistencia forzada con `saveDb()` para erradicar el error `no such table: sessions` y sembrar agentes y habilidades por defecto. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-api/src/db/index.ts, engine-agent/engine-agent-api/Dockerfile, engine-agent/engine-agent-api/package.json. [2026-11-18]
+
+- **Fixed**: **Autenticación x-api-key y configuración en engine-agent-ui**. Inyección de `VITE_AGENT_KEY` en `docker-compose.yml` y Dockerfile con fallback predeterminado a `"llama-engine-dev"` en `api-client.ts`, incorporando campo editable de API Key en `SettingsModal` y `AppSettings` para resolver los errores HTTP 401 (Unauthorized) al consultar sesiones, agentes y skills. [2026-11-18]
+  * **Files (Archivos)**: docker-compose.yml, engine-agent/engine-agent-ui/Dockerfile, engine-agent/engine-agent-ui/src/lib/api-client.ts, engine-agent/engine-agent-ui/src/lib/settings.ts, engine-agent/engine-agent-ui/src/features/chat/components/SettingsModal.tsx, engine-agent/engine-agent-api/src/middleware/auth.ts. [2026-11-18]
+
+- **Fixed**: **Variables de entorno y enlace de red en engine-agent-api**. Inyección de `ENGINE_API_KEY`, `ENGINE_API_URL` y `HOST=0.0.0.0` en docker-compose.yml y .env para resolver el fallo de validación Zod (`ENGINE_API_KEY es requerida`) y permitir la conexión WebSocket y HTTP desde engine-agent-ui. [2026-11-18]
+  * **Files (Archivos)**: docker-compose.yml, .env, .env.example. [2026-11-18]
+
+- **Added**: **Guía completa de integración y conexión de n8n**. Documentación detallada en engine-n8n/README.md con los endpoints de host.docker.internal para conectar OpenAI-compatible (llama-engine), PostgreSQL persistente (engine-postgres en 5434), Faster-Whisper (puerto 8000), Code Sandbox y manual de importación de workflows. [2026-11-17]
+  * **Files (Archivos)**: engine-n8n/README.md. [2026-11-17]
+
+- **Changed**: **Desacoplamiento de n8n y contenedor engine-postgres**. Extracción de n8n y su sandbox hacia stack externo dedicado, renombrando el contenedor de base de datos a engine-postgres en docker-compose.yml con puertos aislados para evitar colisiones con n8n-postgres (5433). [2026-11-17]
+  * **Files (Archivos)**: docker-compose.yml, .env, .env.example. [2026-11-17]
+
 - **Changed**: **Guía estandarizada para agentes y flujo Docker**. Actualización integral de AGENTS.md con estructura estandarizada de alcance, arquitectura de 5 servicios modulares, flujo obligatorio de ramas y verificación en Docker con `--no-deps`, convenciones Biome y comandos de validación. [2026-11-17]
   * **Files (Archivos)**: AGENTS.md. [2026-11-17]
 

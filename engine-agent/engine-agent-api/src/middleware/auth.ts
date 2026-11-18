@@ -3,6 +3,9 @@ import { UnauthorizedException } from "../common/exceptions/http-exception.js";
 
 export function createAuthMiddleware(apiKey: string) {
 	return (req: Request, _res: Response, next: NextFunction) => {
+		if (!apiKey) {
+			return next();
+		}
 		const key =
 			(req.headers["x-api-key"] as string) ?? req.headers.authorization?.replace(/^Bearer /, "");
 		if (key !== apiKey) {

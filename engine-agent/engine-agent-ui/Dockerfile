@@ -4,7 +4,7 @@ COPY package.json package-lock.json* ./
 RUN npm install
 COPY . .
 ARG VITE_AGENT_URL=http://localhost:3060
-ARG VITE_AGENT_KEY=
+ARG VITE_AGENT_KEY=llama-engine-dev
 ENV VITE_AGENT_URL=$VITE_AGENT_URL
 ENV VITE_AGENT_KEY=$VITE_AGENT_KEY
 RUN npm run build
