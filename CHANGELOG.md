@@ -2,7 +2,6 @@
 
 ## [Unreleased]
 
-$ docker compose up -d --build --no-deps engine-agent-api engine-agent-ui
 
 - **Added**: **Reforma Total de UX/UI estilo Obsidian & Azul Eléctrico (Alineación visual con llama-engine)**. Rediseño integral de interfaz adoptando la arquitectura visual y tokens de `llama-engine` con paleta base azul eléctrico (`--accent: #3b82f6`, `--accent-strong: #60a5fa`, `--card: rgba(17, 23, 38, 0.72)`, obsidian profundo `--bg: #080b12` y gradientes radiales sutiles). [2026-11-19]
   * **Files (Archivos)**: engine-agent/engine-agent-ui/src/index.css, engine-agent/engine-agent-ui/src/App.tsx, engine-agent/engine-agent-ui/src/components/layout/Layout.tsx, engine-agent/engine-agent-ui/src/components/layout/Sidebar.tsx, engine-agent/engine-agent-ui/src/components/layout/Topbar.tsx. [2026-11-19]
