@@ -41,6 +41,12 @@ export function buildSkillCatalogString(skills: Skill[]): string {
 
 export function getSkillLevel0Metadata(skills: Skill[]): string {
 	if (skills.length === 0) return "";
-	return `\n## Skills disponibles:
-${skills.map((s: Skill) => `${s.name}: ${s.description}`).join("\n")}`;
+	const lines = skills.map((s: Skill) => {
+		const metaTools = (s.metadata as { allowed_tools?: string[] })?.allowed_tools ?? [];
+		const allowed =
+			Array.isArray(s.allowedTools) && s.allowedTools.length > 0 ? s.allowedTools : metaTools;
+		const toolsHint = allowed.length > 0 ? ` -> Usá directamente: ${allowed.join(", ")}` : "";
+		return `- **${s.name}** [agente: ${s.agent}]: ${s.description}${toolsHint}`;
+	});
+	return `\n## Skills instaladas (para aplicar una skill, invocá directamente sus herramientas nativas indicadas o consultá load_skill):\n${lines.join("\n")}`;
 }

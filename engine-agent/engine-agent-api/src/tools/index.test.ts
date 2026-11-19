@@ -335,7 +335,7 @@ describe("registerAllTools", () => {
 		const registry = new ToolRegistry();
 		registerAllTools(registry);
 		const specs = registry.getSpecs();
-		expect(specs.length).toBe(15);
+		expect(specs.length).toBe(18);
 		const names = specs.map((s) => s.function.name);
 		expect(names).toContain("bash");
 		expect(names).toContain("read_file");
@@ -349,5 +349,7 @@ describe("registerAllTools", () => {
 		expect(names).toContain("load_skill");
 		expect(names).toContain("create_skill");
 		expect(names).toContain("reflect");
+		expect(names).toContain("web_search");
+		expect(names).toContain("web_fetch");
 	});
 });

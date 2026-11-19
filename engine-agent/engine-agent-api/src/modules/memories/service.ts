@@ -102,8 +102,9 @@ export class MemoryService {
 					[mem.id],
 				);
 			}
-			const ids = oldMemories.map((m) => m.id).join(",");
-			this.db.run(`DELETE FROM memories WHERE id IN (${ids})`);
+			const placeholders = oldMemories.map(() => "?").join(",");
+			const ids = oldMemories.map((m) => m.id);
+			this.db.run(`DELETE FROM memories WHERE id IN (${placeholders})`, ids);
 			scheduleSave();
 		}
 	}

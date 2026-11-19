@@ -44,12 +44,11 @@ export class SessionService {
 	createSession(dto: CreateSessionDto): Session {
 		const id = dto.id || crypto.randomUUID();
 		const tagsJson = JSON.stringify(dto.tags ?? []);
-		this.db.run("INSERT INTO sessions (id, name, model, tags) VALUES (?, ?, ?, ?)", [
-			id,
-			dto.name ?? null,
-			dto.model ?? null,
-			tagsJson,
-		]);
+		const autoTitledVal = dto.autoTitled ? 1 : 0;
+		this.db.run(
+			"INSERT INTO sessions (id, name, model, tags, auto_titled) VALUES (?, ?, ?, ?, ?)",
+			[id, dto.name ?? null, dto.model ?? null, tagsJson, autoTitledVal],
+		);
 		scheduleSave();
 		return this.getSession(id);
 	}

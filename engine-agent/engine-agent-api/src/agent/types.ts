@@ -18,6 +18,7 @@ export interface AgentOptions {
 	modelSettings?: ModelSettings;
 	agent?: string;
 	depth?: number;
+	signal?: AbortSignal;
 }
 
 export interface AgentResult {
@@ -33,7 +34,7 @@ export interface ToolCallResult {
 }
 
 export interface StreamEvent {
-	type: "message" | "tool_start" | "tool_end" | "done" | "error";
+	type: "message" | "tool_start" | "tool_end" | "done" | "error" | "session_updated";
 	payload: Record<string, unknown>;
 }
 

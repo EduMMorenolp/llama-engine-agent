@@ -174,19 +174,21 @@ export function FavoritesModal({ onClose, onSelectSession }: FavoritesModalProps
 											</span>
 										</div>
 
-										<span
+										<button
+											type="button"
 											className="action-icon-btn"
 											title="Quitar de favoritos"
 											onClick={(e) => handleUnfavorite(session.id, message.id, e)}
-											onKeyDown={(e) => {
-												if (e.key === "Enter" || e.key === " ") {
-													handleUnfavorite(session.id, message.id, e as any);
-												}
+											style={{
+												color: "#fbbf24",
+												display: "inline-flex",
+												background: "none",
+												border: "none",
+												cursor: "pointer",
 											}}
-											style={{ color: "#fbbf24", display: "inline-flex" }}
 										>
 											<StarIcon size={14} filled />
-										</span>
+										</button>
 									</div>
 
 									<div

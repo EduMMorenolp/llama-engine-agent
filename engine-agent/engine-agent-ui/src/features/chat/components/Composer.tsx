@@ -40,6 +40,13 @@ interface ComposerProps {
 }
 
 const DEFAULT_TOOLS: ToolConfig[] = [
+	{ name: "web_search", label: "Web Search & Weather", enabled: true },
+	{ name: "web_fetch", label: "Web Fetch URL", enabled: true },
+	{ name: "list_skills", label: "List Skills", enabled: true },
+	{ name: "load_skill", label: "Load Skill", enabled: true },
+	{ name: "create_skill", label: "Create Skill", enabled: true },
+	{ name: "update_skill", label: "Update Skill", enabled: true },
+	{ name: "delete_skill", label: "Delete Skill", enabled: true },
 	{ name: "bash", label: "Bash Terminal", enabled: true },
 	{ name: "read_file", label: "Read File", enabled: true },
 	{ name: "write_file", label: "Write File", enabled: true },
@@ -89,11 +96,13 @@ export function Composer({
 - Si no sabés algo, lo decís honestamente en lugar de inventar.
 
 ## Herramientas
-Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente cuando resuelvan mejor la tarea:
+Tenés acceso a herramientas de búsqueda web, skills, shell, archivos y memoria. Usalas proactivamente cuando resuelvan mejor la tarea:
+- **web_search / web_fetch**: Buscá información en tiempo real en internet (clima actual y pronóstico, noticias, documentación, URLs) cuando el usuario consulte datos actuales o externos.
+- **list_skills / load_skill / create_skill / update_skill / delete_skill**: Listá las skills disponibles con list_skills (o load_skill), cargá sus instrucciones con load_skill o creá nuevas skills con create_skill.
 - **bash**: Ejecutá comandos para verificar, compilar, testear o diagnosticar. Siempre mostrá el resultado relevante.
 - **read_file / write_file / edit_file**: Leé y modificá archivos directamente en lugar de solo sugerir cambios.
 - **glob_search / grep_search**: Buscá en el código antes de asumir sobre la estructura o contenido del proyecto.
-- **memorize / search_memories**: Guardá datos relevantes del usuario (nombre, preferencias, contexto del proyecto) y consultalos al inicio de cada conversación.
+- **memorize / search_memories**: Guardá datos relevantes nuevos del usuario (nombre, preferencias, contexto del proyecto) cuando te los comparta. No llames herramientas en saludos simples o preguntas generales que puedas responder directamente.
 
 ## Formato
 - Usá markdown para código, listas y estructura.
@@ -112,6 +121,7 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 		stop: stopListening,
 		reset: resetTranscript,
 	} = useSpeechRecognition();
+	const textBeforeListeningRef = useRef("");
 
 	// Fetch dynamic tools from agent backend API
 	useEffect(() => {
@@ -132,12 +142,15 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 			});
 	}, []);
 
-	// Sync speech transcript into textarea
+	// Sync speech transcript into textarea (preserves existing draft)
 	useEffect(() => {
 		if (listening && transcript) {
-			setText(transcript);
+			const prefix = textBeforeListeningRef.current ? `${textBeforeListeningRef.current} ` : "";
+			const newText = prefix + transcript;
+			setText(newText);
+			onDraftTextChange?.(newText);
 		}
-	}, [listening, transcript]);
+	}, [listening, transcript, onDraftTextChange]);
 
 	// Auto-resize textarea according to scrollHeight and text content
 	useEffect(() => {
@@ -216,9 +229,11 @@ Tenés acceso a herramientas de shell, archivos y memoria. Usalas proactivamente
 		if (listening) {
 			stopListening();
 		} else {
+			textBeforeListeningRef.current = text.trim();
+			resetTranscript();
 			startListening();
 		}
-	}, [listening, startListening, stopListening]);
+	}, [listening, startListening, stopListening, resetTranscript, text]);
 
 	const handleSystemMessage = useCallback(() => {
 		setShowAttachMenu(false);

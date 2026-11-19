@@ -7,7 +7,7 @@ import { bashTool } from "./bash.js";
 import { createSkillTool } from "./create_skill.js";
 import { deleteSkillTool } from "./delete_skill.js";
 import { editFileTool, readFileTool, writeFileTool } from "./file-ops.js";
-import { loadSkillTool } from "./load_skill.js";
+import { listSkillsTool, loadSkillTool } from "./load_skill.js";
 import { memorizeTool, searchMemoriesTool, updateMemoryTool } from "./memory.js";
 import { reflectTool } from "./reflect.js";
 import type { ToolRegistry } from "./registry.js";
@@ -15,6 +15,7 @@ import { runSkillScriptTool } from "./run_skill_script.js";
 import { globSearchTool, grepSearchTool } from "./search.js";
 import type { ToolHandler } from "./types.js";
 import { updateSkillTool } from "./update_skill.js";
+import { webFetchTool, webSearchTool } from "./web.js";
 
 const execAsync = promisify(exec);
 
@@ -244,22 +245,80 @@ const updateMemoryHandler: ToolHandler = async (args, ctx) => {
 	return `Memoria "${key}" actualizada`;
 };
 
-const loadSkillHandler: ToolHandler = async (args, ctx) => {
-	const skillName = String(args.name);
-	if (!ctx.skillService) return `Skill service no disponible`;
-	const skill = ctx.skillService.getOrNull(skillName);
-	if (!skill) return `Skill "${skillName}" no encontrada`;
-	const skillDir = `${skill.directory}/SKILL.md`;
-	const fs = await import("node:fs");
-	if (fs.existsSync(skillDir)) {
-		return fs.readFileSync(skillDir, "utf8");
+function formatSkillsCatalog(ctx: Parameters<ToolHandler>[1]): string {
+	if (!ctx.skillService) return "Skill service no disponible";
+	const skills = ctx.skillService.list();
+	if (skills.length === 0) {
+		return "No hay skills instaladas actualmente. Podés crear una nueva con create_skill.";
 	}
-	return skill.description;
+	return skills
+		.map((s) => {
+			const triggers =
+				Array.isArray(s.triggers) && s.triggers.length > 0 ? s.triggers.join(", ") : "ninguno";
+			const tags = Array.isArray(s.tags) && s.tags.length > 0 ? s.tags.join(", ") : "ninguno";
+			return `- **${s.name}** (agente: ${s.agent})\n  Descripción: ${s.description}\n  Triggers: ${triggers} | Tags: ${tags} | Directorio: ${s.directory}`;
+		})
+		.join("\n\n");
+}
+
+const listSkillsHandler: ToolHandler = async (_args, ctx) => {
+	return formatSkillsCatalog(ctx);
+};
+
+const BUILTIN_SKILL_PLAYBOOKS: Record<string, string> = {
+	"web-research": [
+		'1. Para buscar clima, pronóstico, noticias o datos en internet, llamá INMEDIATAMENTE a la herramienta nativa `web_search` pasando `query` y `location` (si es clima, poné solo el nombre de la ciudad en `location`, por ejemplo `{"query": "clima mañana La Plata", "location": "La Plata"}`).',
+		"2. Si necesitás inspeccionar el contenido de una página o endpoint puntual, llamá a `web_fetch` con la URL.",
+		"3. NO uses `run_skill_script` (esta skill usa directamente `web_search` y `web_fetch`).",
+		"4. Presentá la respuesta sintetizada con los datos exactos obtenidos (temperaturas máxima/mínima, probabilidad de lluvia, viento o enlaces relevantes).",
+	].join("\n"),
+	"code-review": [
+		"1. Usá `glob_search`, `grep_search` y `read_file` para inspeccionar los archivos relevantes del proyecto.",
+		"2. Analizá corrección, legibilidad, arquitectura, seguridad y rendimiento.",
+		"3. Presentá hallazgos concretos con archivo, línea y propuesta de mejora.",
+	].join("\n"),
+	"quick-fix": [
+		"1. Leé el archivo afectado con `read_file` o buscá el error con `grep_search`.",
+		"2. Aplicá la corrección quirúrgica usando `edit_file` y verificá con `bash` si corresponde.",
+	].join("\n"),
+	"architecture-audit": [
+		"1. Listá la estructura del proyecto con `glob_search` y leé los archivos de configuración y entrada con `read_file`.",
+		"2. Evaluá modularidad, acoplamiento, dependencias y proponé un plan de mejoras.",
+	].join("\n"),
+};
+
+const loadSkillHandler: ToolHandler = async (args, ctx) => {
+	if (!ctx.skillService) return "Skill service no disponible";
+	const rawName = args?.name !== undefined && args?.name !== null ? String(args.name).trim() : "";
+	if (!rawName || rawName === "list" || rawName === "all" || rawName === "*") {
+		return `Skills disponibles:\n\n${formatSkillsCatalog(ctx)}`;
+	}
+	const skill = ctx.skillService.getOrNull(rawName);
+	if (!skill) {
+		return `Skill "${rawName}" no encontrada.\n\nSkills disponibles actualmente:\n${formatSkillsCatalog(ctx)}`;
+	}
+	ctx.skillService.incrementUsage(skill.name);
+	const baseSkillDir = getConfig().SKILL_DIR;
+	const candidatePaths = [
+		path.join(baseSkillDir, skill.directory, "SKILL.md"),
+		path.join(skill.directory, "SKILL.md"),
+		path.join(baseSkillDir, skill.name, "SKILL.md"),
+	];
+	for (const candidate of candidatePaths) {
+		if (fs.existsSync(candidate)) {
+			const instructions = fs.readFileSync(candidate, "utf8");
+			return `# Skill: ${skill.name} (agente: ${skill.agent})\nDescripción: ${skill.description}\n\n## Instrucciones (SKILL.md):\n${instructions}`;
+		}
+	}
+	const playbook =
+		BUILTIN_SKILL_PLAYBOOKS[skill.name] ??
+		`Ejecutá la tarea usando directamente las herramientas nativas permitidas: ${((skill.metadata as { allowed_tools?: string[] })?.allowed_tools || ["web_search", "read_file", "glob_search"]).join(", ")}.`;
+	return `# Skill activada: ${skill.name} (agente: ${skill.agent})\nDescripción: ${skill.description}\n\n## Instrucciones paso a paso:\n${playbook}`;
 };
 
 const createSkillHandler: ToolHandler = async (args, ctx) => {
-	if (!ctx.skillService) return `Skill service no disponible`;
-	const name = String(args.name);
+	if (!ctx.skillService) return "Skill service no disponible";
+	const name = String(args.name).trim();
 	const description = String(args.description);
 	const instructions = String(args.instructions);
 	const triggers = (args.triggers as string[]) ?? [];
@@ -275,38 +334,14 @@ const createSkillHandler: ToolHandler = async (args, ctx) => {
 		triggers,
 		tags,
 	});
-	const fs = await import("node:fs");
-	const path = await import("node:path");
-	const skillDir = path.join(getConfig().SKILL_DIR, directory);
+	const skillDir = path.join(getConfig().SKILL_DIR, name);
 	if (!fs.existsSync(skillDir)) fs.mkdirSync(skillDir, { recursive: true });
 	fs.writeFileSync(path.join(skillDir, "SKILL.md"), instructions, "utf8");
-	return `Skill "${name}" creada en ${skillDir}`;
-};
-
-const runSkillScriptHandler: ToolHandler = async (args, ctx) => {
-	const skillName = String(args.skillName);
-	const scriptName = String(args.scriptName);
-	const argsStr = args.args ? String(args.args) : "{}";
-	if (!ctx.skillService) return "Skill service no disponible";
-	const skill = ctx.skillService.getOrNull(skillName);
-	if (!skill) return `Skill "${skillName}" no encontrada`;
-	const scriptPath = `skills/${skill.directory}/scripts/${scriptName}.ts`;
-	if (!fs.existsSync(scriptPath)) return `Script "${scriptPath}" no encontrado`;
-	try {
-		const { stdout, stderr } = await execAsync(`npx tsx "${scriptPath}" ${argsStr}`, {
-			timeout: 30000,
-			encoding: "utf8",
-			cwd: ctx?.workDir || process.cwd(),
-		});
-		return truncate(stdout || stderr || "(script ejecutado sin salida)");
-	} catch (err: unknown) {
-		const error = err as { stderr?: string; message?: string };
-		return `Error ejecutando script: ${error.stderr || error.message || String(err)}`;
-	}
+	return `Skill "${name}" creada correctamente en ${skillDir}/SKILL.md`;
 };
 
 const reflectHandler: ToolHandler = async (args, ctx) => {
-	if (!ctx.memoryService) return `Memory service no disponible`;
+	if (!ctx.memoryService) return "Memory service no disponible";
 	const success = args.success as boolean;
 	const lesson = String(args.lesson);
 	const key = `reflect_${Date.now()}`;
@@ -318,8 +353,8 @@ const reflectHandler: ToolHandler = async (args, ctx) => {
 };
 
 const updateSkillHandler: ToolHandler = async (args, ctx) => {
-	if (!ctx.skillService) return `Skill service no disponible`;
-	const name = String(args.name);
+	if (!ctx.skillService) return "Skill service no disponible";
+	const name = String(args.name).trim();
 	const instructions = args.instructions as string | undefined;
 	const description = args.description as string | undefined;
 	const metadata = args.metadata as Record<string, unknown> | undefined;
@@ -327,8 +362,7 @@ const updateSkillHandler: ToolHandler = async (args, ctx) => {
 	if (instructions) {
 		const skill = ctx.skillService.getOrNull(name);
 		if (skill) {
-			const fs = await import("node:fs");
-			const skillDir = path.join(getConfig().SKILL_DIR, skill.directory);
+			const skillDir = path.join(getConfig().SKILL_DIR, skill.name);
 			if (!fs.existsSync(skillDir)) fs.mkdirSync(skillDir, { recursive: true });
 			fs.writeFileSync(path.join(skillDir, "SKILL.md"), instructions, "utf8");
 		}
@@ -337,21 +371,324 @@ const updateSkillHandler: ToolHandler = async (args, ctx) => {
 };
 
 const deleteSkillHandler: ToolHandler = async (args, ctx) => {
-	if (!ctx.skillService) return `Skill service no disponible`;
-	const name = String(args.name);
+	if (!ctx.skillService) return "Skill service no disponible";
+	const name = String(args.name).trim();
 	const skill = ctx.skillService.getOrNull(name);
 	ctx.skillService.delete(name);
 	if (skill) {
-		const fs = await import("node:fs");
-		const skillDir = path.join(getConfig().SKILL_DIR, skill.directory);
-		if (fs.existsSync(skillDir)) {
-			fs.rmSync(skillDir, { recursive: true, force: true });
+		for (const dir of [
+			path.join(getConfig().SKILL_DIR, skill.name),
+			path.join(getConfig().SKILL_DIR, skill.directory),
+		]) {
+			if (fs.existsSync(dir)) {
+				fs.rmSync(dir, { recursive: true, force: true });
+			}
 		}
 	}
 	return `Skill "${name}" eliminada`;
 };
 
+const runSkillScriptHandler: ToolHandler = async (args, ctx) => {
+	const skillName = String(args.skillName || "").trim();
+	const scriptName = String(args.scriptName || "").trim();
+	const scriptArgs = args.args ? String(args.args) : "";
+
+	if (!skillName || !scriptName) {
+		return "Error: skillName y scriptName son requeridos.";
+	}
+
+	const safeSkill = path.basename(skillName);
+	const safeScript = path.basename(scriptName);
+	const baseSkillDir = getConfig().SKILL_DIR;
+	const candidateDirs = [
+		path.join(baseSkillDir, safeSkill, "scripts"),
+		path.join(baseSkillDir, "default", safeSkill, "scripts"),
+		path.join(process.cwd(), "skills", safeSkill, "scripts"),
+	];
+
+	let scriptPath: string | null = null;
+	for (const dir of candidateDirs) {
+		if (fs.existsSync(dir)) {
+			const files = fs.readdirSync(dir);
+			const found = files.find((f) => f === safeScript || f.startsWith(`${safeScript}.`));
+			if (found) {
+				scriptPath = path.join(dir, found);
+				break;
+			}
+		}
+	}
+
+	if (!scriptPath) {
+		return `Error: No se encontró el script "${safeScript}" en la carpeta scripts de la skill "${safeSkill}".`;
+	}
+
+	try {
+		const ext = path.extname(scriptPath).toLowerCase();
+		let cmd = "";
+		if (ext === ".js" || ext === ".mjs" || ext === ".cjs") {
+			cmd = `node "${scriptPath}" ${scriptArgs}`;
+		} else if (ext === ".py") {
+			cmd = `python3 "${scriptPath}" ${scriptArgs}`;
+		} else if (ext === ".sh") {
+			cmd = `bash "${scriptPath}" ${scriptArgs}`;
+		} else {
+			cmd = `"${scriptPath}" ${scriptArgs}`;
+		}
+
+		const { stdout, stderr } = await execAsync(cmd.trim(), {
+			encoding: "utf8",
+			timeout: 30000,
+			maxBuffer: 5 * 1024 * 1024,
+			cwd: ctx?.workDir || process.cwd(),
+		});
+		return truncate(stdout || stderr || "(script ejecutado sin salida)");
+	} catch (err: unknown) {
+		const error = err as { stderr?: string; stdout?: string; message?: string };
+		return truncate(error.stderr || error.stdout || error.message || "Error al ejecutar script");
+	}
+};
+
+function stripHtml(html: string): string {
+	return html
+		.replace(/<script[\s\S]*?<\/script>/gi, " ")
+		.replace(/<style[\s\S]*?<\/style>/gi, " ")
+		.replace(/<[^>]+>/g, " ")
+		.replace(/&nbsp;/g, " ")
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+const webFetchHandler: ToolHandler = async (args) => {
+	const url = String(args.url || "").trim();
+	if (!url.startsWith("http://") && !url.startsWith("https://")) {
+		return "Error: La URL debe comenzar con http:// o https://";
+	}
+	try {
+		const res = await fetch(url, {
+			headers: {
+				"User-Agent": "Mozilla/5.0 (compatible; LlamaEngineAgent/1.0)",
+				"Accept-Language": "es-AR,es;q=0.9,en;q=0.8",
+			},
+			signal: AbortSignal.timeout(15000),
+		});
+		const contentType = res.headers.get("content-type") || "";
+		const text = await res.text();
+		if (contentType.includes("application/json")) {
+			return truncate(text);
+		}
+		if (contentType.includes("text/html")) {
+			return truncate(stripHtml(text));
+		}
+		return truncate(text);
+	} catch (err: unknown) {
+		const error = err as { message?: string };
+		return `Error al consultar URL "${url}": ${error.message || String(err)}`;
+	}
+};
+
+function extractWeatherCandidates(query: string, explicitLocation?: string): string[] {
+	const candidates: string[] = [];
+	if (explicitLocation && explicitLocation.trim()) {
+		const cleanExplicit = explicitLocation.trim();
+		candidates.push(cleanExplicit.split(",")[0].trim());
+		candidates.push(cleanExplicit);
+	}
+
+	const afterEnMatch = query.match(/\b(?:en|para|de)\s+([a-zA-ZáéíóúÁÉÍÓÚñÑ\s,]+)$/i);
+	const rawSource = afterEnMatch ? afterEnMatch[1] : query;
+
+	const cleaned = rawSource
+		.replace(
+			/\b(?:que|qué|cual|cuál|como|cómo|es|sera|será|esta|está|el|clima|tiempo|temperatura|pron[oó]stico|weather|forecast|lluvia|va|a|hacer|hace|habr[aá]|para|hoy|ma[ñn]ana|pasado|ahora|actual|en)\b/gi,
+			" ",
+		)
+		.replace(/\s+/g, " ")
+		.trim();
+
+	if (cleaned) {
+		if (cleaned.includes(",")) {
+			candidates.push(cleaned.split(",")[0].trim());
+		}
+		const withoutCountry = cleaned
+			.replace(/\b(?:provincia\s+de\s+)?buenos\s+aires\s+argentina$/i, "")
+			.replace(/\bargentina$/i, "")
+			.trim();
+		if (withoutCountry && withoutCountry.length >= 3) {
+			candidates.push(withoutCountry);
+			const withoutProvince = withoutCountry.replace(/\bbuenos\s+aires$/i, "").trim();
+			if (withoutProvince && withoutProvince.length >= 3) {
+				candidates.push(withoutProvince);
+			}
+		}
+		candidates.push(cleaned);
+	}
+
+	candidates.push("Buenos Aires");
+	return [...new Set(candidates.filter(Boolean))];
+}
+
+const webSearchHandler: ToolHandler = async (args) => {
+	const query = String(args.query || "").trim();
+	const explicitLocation = args.location ? String(args.location).trim() : undefined;
+	if (!query && !explicitLocation) return "Error: Debes especificar una consulta (query).";
+
+	const results: string[] = [];
+	const isWeatherQuery =
+		Boolean(explicitLocation) ||
+		/\b(?:clima|tiempo|temperatura|pron[oó]stico|weather|forecast|lluvia|calor|fr[ií]o)\b/i.test(
+			query,
+		);
+
+	if (isWeatherQuery) {
+		const candidates = extractWeatherCandidates(query, explicitLocation);
+		const fullTextLower = `${query} ${explicitLocation || ""}`.toLowerCase();
+		const wantsArgentina =
+			fullTextLower.includes("argentina") ||
+			fullTextLower.includes("buenos aires") ||
+			fullTextLower.includes("la plata");
+
+		try {
+			let place: {
+				name: string;
+				country?: string;
+				admin1?: string;
+				latitude: number;
+				longitude: number;
+				timezone?: string;
+			} | null = null;
+
+			for (const candidate of candidates) {
+				const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(candidate)}&count=5&language=es&format=json`;
+				const geoRes = await fetch(geoUrl, { signal: AbortSignal.timeout(8000) });
+				const geoData = (await geoRes.json()) as {
+					results?: Array<{
+						name: string;
+						country?: string;
+						country_code?: string;
+						admin1?: string;
+						latitude: number;
+						longitude: number;
+						timezone?: string;
+					}>;
+				};
+				if (geoData.results && geoData.results.length > 0) {
+					place =
+						(wantsArgentina
+							? geoData.results.find(
+									(r) => r.country_code === "AR" || r.country?.toLowerCase() === "argentina",
+								)
+							: null) ?? geoData.results[0];
+					break;
+				}
+			}
+
+			if (!place) {
+				place = {
+					name: "Buenos Aires",
+					country: "Argentina",
+					latitude: -34.61315,
+					longitude: -58.37723,
+					timezone: "America/Argentina/Buenos_Aires",
+				};
+			}
+
+			const meteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=4`;
+			const meteoRes = await fetch(meteoUrl, { signal: AbortSignal.timeout(8000) });
+			const meteo = (await meteoRes.json()) as {
+				current?: {
+					temperature_2m?: number;
+					relative_humidity_2m?: number;
+					apparent_temperature?: number;
+					precipitation?: number;
+					wind_speed_10m?: number;
+				};
+				daily?: {
+					time?: string[];
+					temperature_2m_max?: number[];
+					temperature_2m_min?: number[];
+					precipitation_probability_max?: number[];
+					wind_speed_10m_max?: number[];
+				};
+			};
+			if (meteo.current) {
+				const c = meteo.current;
+				const labels = ["Hoy", "Mañana", "Pasado mañana", "Día 4"];
+				const dailyLines = (meteo.daily?.time || []).map(
+					(day, i) =>
+						`  - **${labels[i] || day} (${day})**: Máx ${meteo.daily?.temperature_2m_max?.[i]}°C / Mín ${meteo.daily?.temperature_2m_min?.[i]}°C | Prob. lluvia: ${meteo.daily?.precipitation_probability_max?.[i] ?? 0}% | Viento máx: ${meteo.daily?.wind_speed_10m_max?.[i] ?? "-"} km/h`,
+				);
+				results.push(
+					[
+						`### Clima y Pronóstico Oficial (Open-Meteo): ${place.name}${place.admin1 ? `, ${place.admin1}` : ""} (${place.country || ""})`,
+						`- **Coordenadas**: ${place.latitude}, ${place.longitude}`,
+						`- **Ahora mismo**: ${c.temperature_2m}°C (Sensación térmica: ${c.apparent_temperature}°C) | Humedad: ${c.relative_humidity_2m}% | Viento: ${c.wind_speed_10m} km/h | Precipitación: ${c.precipitation} mm`,
+						`- **Pronóstico diario (Hoy y próximos días)**:\n${dailyLines.join("\n")}`,
+					].join("\n"),
+				);
+			}
+		} catch {}
+	}
+
+	try {
+		const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+		const res = await fetch(ddgUrl, {
+			headers: {
+				"User-Agent":
+					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+				"Accept-Language": "es-AR,es;q=0.9,en;q=0.8",
+			},
+			signal: AbortSignal.timeout(10000),
+		});
+		const html = await res.text();
+		const snippetMatches = [
+			...html.matchAll(
+				/<a class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi,
+			),
+		];
+		for (const m of snippetMatches.slice(0, 6)) {
+			const rawHref = m[1] || "";
+			const uddgMatch = rawHref.match(/uddg=([^&]+)/);
+			const link = uddgMatch ? decodeURIComponent(uddgMatch[1]) : rawHref;
+			const title = stripHtml(m[2] || "");
+			const snippet = stripHtml(m[3] || "");
+			if (title && snippet) {
+				results.push(`- **${title}** (${link})\n  ${snippet}`);
+			}
+		}
+	} catch {}
+
+	if (results.length === 0) {
+		try {
+			const wikiUrl = `https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`;
+			const wikiRes = await fetch(wikiUrl, { signal: AbortSignal.timeout(8000) });
+			const wikiData = (await wikiRes.json()) as {
+				query?: { search?: Array<{ title: string; snippet: string }> };
+			};
+			for (const item of (wikiData.query?.search || []).slice(0, 4)) {
+				results.push(`- **Wikipedia: ${item.title}**\n  ${stripHtml(item.snippet)}`);
+			}
+		} catch {}
+	}
+
+	return results.length > 0
+		? results.join("\n\n")
+		: `No se encontraron resultados externos para "${query}".`;
+};
+
 export function registerAllTools(registry: ToolRegistry): void {
+	registry.register(webSearchTool, webSearchHandler);
+	registry.register(webFetchTool, webFetchHandler);
+	registry.register(listSkillsTool, listSkillsHandler);
+	registry.register(loadSkillTool, loadSkillHandler);
+	registry.register(createSkillTool, createSkillHandler);
+	registry.register(updateSkillTool, (args, ctx) => updateSkillHandler(args, ctx));
+	registry.register(deleteSkillTool, (args, ctx) => deleteSkillHandler(args, ctx));
+	registry.register(runSkillScriptTool, runSkillScriptHandler);
 	registry.register(bashTool, bashHandler);
 	registry.register(readFileTool, readFileHandler);
 	registry.register(writeFileTool, writeFileHandler);
@@ -361,10 +698,5 @@ export function registerAllTools(registry: ToolRegistry): void {
 	registry.register(memorizeTool, memorizeHandler);
 	registry.register(searchMemoriesTool, searchMemoriesHandler);
 	registry.register(updateMemoryTool, updateMemoryHandler);
-	registry.register(loadSkillTool, loadSkillHandler);
-	registry.register(runSkillScriptTool, runSkillScriptHandler);
-	registry.register(createSkillTool, createSkillHandler);
-	registry.register(updateSkillTool, (args, ctx) => updateSkillHandler(args, ctx));
-	registry.register(deleteSkillTool, (args, ctx) => deleteSkillHandler(args, ctx));
 	registry.register(reflectTool, reflectHandler);
 }

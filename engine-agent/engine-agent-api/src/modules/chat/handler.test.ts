@@ -19,6 +19,7 @@ function mockRes() {
 function createMockStore(sessionExists = false) {
 	return {
 		getSession: vi.fn().mockReturnValue(sessionExists ? { id: "s1" } : null),
+		getSessionOrNull: vi.fn().mockReturnValue(sessionExists ? { id: "s1" } : null),
 		createSession: vi.fn().mockReturnValue({ id: "s1" }),
 	} as any;
 }

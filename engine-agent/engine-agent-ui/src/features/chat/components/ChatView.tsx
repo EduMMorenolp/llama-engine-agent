@@ -9,6 +9,7 @@ import {
 	DownloadIcon,
 	FileCodeIcon,
 	InfoIcon,
+	LightbulbIcon,
 	PlusIcon,
 	SearchIcon,
 	SidebarIcon,
@@ -23,6 +24,7 @@ import { useSessions } from "../../sessions/hooks/useSessions.ts";
 import { useChat } from "../hooks/useChat.ts";
 import { Composer } from "./Composer.tsx";
 import type { FileAttachment } from "./FileUpload.tsx";
+import { MemoriesModal } from "./MemoriesModal.tsx";
 import { MessageBubble } from "./MessageBubble.tsx";
 import { ModelInfoModal } from "./ModelInfoModal.tsx";
 import { SettingsModal } from "./SettingsModal.tsx";
@@ -141,6 +143,7 @@ export function ChatView() {
 	const [showExportMenu, setShowExportMenu] = useState(false);
 	const [selectedModelInfo, setSelectedModelInfo] = useState<ModelInfo | null>(null);
 	const [showSettings, setShowSettings] = useState(false);
+	const [showMemories, setShowMemories] = useState(false);
 	const [tabEditingSessionId, setTabEditingSessionId] = useState<string | null>(null);
 	const [tabEditingName, setTabEditingName] = useState("");
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -619,6 +622,15 @@ export function ChatView() {
 					<button
 						type="button"
 						className="action-icon-btn"
+						onClick={() => setShowMemories(true)}
+						title="Memorias del asistente"
+					>
+						<LightbulbIcon size={16} style={{ color: "var(--accent)" }} />
+					</button>
+
+					<button
+						type="button"
+						className="action-icon-btn"
 						onClick={() => setShowExportMenu((prev) => !prev)}
 						title="Exportar conversación (Markdown / JSON)"
 					>
@@ -689,18 +701,27 @@ export function ChatView() {
 						</div>
 					) : (
 						<>
-							{messages.map((msg) => (
-								<MessageBubble
-									key={msg.id}
-									message={msg}
-									modelName={selectedModel}
-									onFork={handleFork}
-									onDelete={handleDeleteMsg}
-									onEdit={handleEditMsg}
-									onReload={handleReloadMsg}
-									onFavorite={(msg) => toggleFavoriteMessage(msg.id)}
-								/>
-							))}
+							{(() => {
+								const toolResultsMap: Record<string, string> = {};
+								for (const m of messages) {
+									if (m.role === "tool" && m.toolCallId && m.content) {
+										toolResultsMap[m.toolCallId] = m.content;
+									}
+								}
+								return messages.map((msg) => (
+									<MessageBubble
+										key={msg.id}
+										message={msg}
+										toolResults={toolResultsMap}
+										modelName={selectedModel}
+										onFork={handleFork}
+										onDelete={handleDeleteMsg}
+										onEdit={handleEditMsg}
+										onReload={handleReloadMsg}
+										onFavorite={(msg) => toggleFavoriteMessage(msg.id)}
+									/>
+								));
+							})()}
 
 							{streaming && (currentContent || toolCalls.length > 0) && (
 								<MessageBubble
@@ -754,6 +775,9 @@ export function ChatView() {
 
 			{/* Settings Modal */}
 			{showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
+			{/* Memories Modal */}
+			{showMemories && <MemoriesModal onClose={() => setShowMemories(false)} />}
 		</div>
 	);
 }

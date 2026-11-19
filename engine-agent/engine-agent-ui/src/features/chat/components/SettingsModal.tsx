@@ -47,6 +47,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 	const [apiKey, setApiKey] = useState(initial.apiKey);
 	const [engineUrl, setEngineUrl] = useState(initial.engineUrl);
 	const [debugLogs, setDebugLogs] = useState(initial.debugLogs);
+	const [theme, setTheme] = useState<"dark" | "light">(initial.theme || "dark");
 	const [agents, setAgents] = useState<AgentDefinition[]>([]);
 	const [skills, setSkills] = useState<Skill[]>([]);
 	const [newAgentName, setNewAgentName] = useState("");
@@ -66,6 +67,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 			apiKey,
 			engineUrl,
 			debugLogs,
+			theme,
 		});
 		addToast("Configuración guardada correctamente", "success");
 		onClose();
@@ -84,6 +86,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 		setApiKey(DEFAULT_APP_SETTINGS.apiKey);
 		setEngineUrl(DEFAULT_APP_SETTINGS.engineUrl);
 		setDebugLogs(DEFAULT_APP_SETTINGS.debugLogs);
+		setTheme(DEFAULT_APP_SETTINGS.theme);
 		saveSettings(DEFAULT_APP_SETTINGS);
 		addToast("Valores restaurados por defecto", "info");
 	};
@@ -258,7 +261,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 				<div className="settings-content-area">
 					<div className="settings-content-header">
 						<span style={{ fontWeight: 600, fontSize: "16px" }}>
-							{activeTab === "chat" ? "Chat" : "Agentes"}
+							{activeTab === "chat" ? "Chat" : activeTab === "agents" ? "Agentes" : "Habilidades"}
 						</span>
 						<button
 							type="button"
@@ -303,6 +306,29 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 												onChange={(e) => setStreamResponses(e.target.checked)}
 												className="toggle-checkbox"
 											/>
+										</div>
+										<div className="settings-toggle-row">
+											<div>
+												<div className="settings-item-title">Tema visual</div>
+												<div className="settings-item-desc">
+													Elige entre tema Oscuro (Titanio) o Claro.
+												</div>
+											</div>
+											<select
+												value={theme}
+												onChange={(e) => setTheme(e.target.value as "dark" | "light")}
+												className="settings-select"
+												style={{
+													background: "var(--bg-surface)",
+													color: "var(--text-primary)",
+													border: "1px solid var(--border-default)",
+													borderRadius: "6px",
+													padding: "4px 8px",
+												}}
+											>
+												<option value="dark">Oscuro (Dark)</option>
+												<option value="light">Claro (Light)</option>
+											</select>
 										</div>
 									</div>
 								</div>

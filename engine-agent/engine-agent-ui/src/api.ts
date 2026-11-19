@@ -32,7 +32,7 @@ export interface Tool {
 }
 
 export interface StreamEvent {
-	type: "message" | "tool_start" | "tool_end" | "done" | "error";
+	type: "message" | "tool_start" | "tool_end" | "done" | "error" | "session_updated";
 	payload: Record<string, unknown>;
 }
 
@@ -350,3 +350,31 @@ export async function fetchDashboardFromN8N(): Promise<DashboardData> {
 	return res.json();
 }
 
+export interface MemoryItem {
+	id?: string;
+	key: string;
+	content: string;
+	tags: string[];
+	relevance?: number;
+	createdAt?: number;
+	updatedAt?: number;
+}
+
+export async function fetchMemories(query = ""): Promise<MemoryItem[]> {
+	const res = await apiGet<{ memories: MemoryItem[] }>(
+		`/api/memories${query ? `?q=${encodeURIComponent(query)}` : ""}`,
+	);
+	return res.memories ?? [];
+}
+
+export async function createMemory(
+	key: string,
+	content: string,
+	tags: string[] = [],
+): Promise<MemoryItem> {
+	return apiPost<MemoryItem>("/api/memories", { key, content, tags });
+}
+
+export async function deleteMemory(key: string): Promise<void> {
+	await apiDelete(`/api/memories/${encodeURIComponent(key)}`);
+}

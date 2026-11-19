@@ -5,6 +5,7 @@ export const createSessionDto = z.object({
 	name: z.string().optional().nullable(),
 	model: z.string().optional().nullable(),
 	tags: z.array(z.string()).max(10).optional(),
+	autoTitled: z.boolean().optional(),
 });
 
 export const updateSessionDto = z.object({

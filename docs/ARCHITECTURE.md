@@ -2,7 +2,51 @@
 
 ## 1. Diagrama General de Componentes
 
+```
+
+---
+
+## 5. Arquitectura del Asistente Agéntico (`engine-agent`)
+
+El subsistema `engine-agent` proporciona la interfaz conversacional avanzada con capacidades agénticas locales:
+
 ```mermaid
+flowchart LR
+    subgraph Frontend["engine-agent-ui (React 19 / Vite :3061)"]
+        UI_CHAT["Chat View & Messages"]
+        UI_COMPOSER["Composer & Voice Dictation"]
+        UI_MEMORIES["Memories Manager Modal"]
+        UI_SETTINGS["Settings & Theming Engine"]
+    end
+
+    subgraph Backend["engine-agent-api (Node.js Express / TS :3060)"]
+        WS_HUB["WebSocket Hub (/ws) + AbortController"]
+        AGENT_LOOP["Agent Loop (ReAct 18 Tools)"]
+        PROMPT_BUILDER["Atomic Context Trimmer"]
+        STORE_SQLITE[("SQLite Persistente (/app/data)\n- sessions & messages\n- memories & skills")]
+    end
+
+    subgraph Runtime["LLM Inference Engine"]
+        LLAMA_SRV["llama-engine (:3050)\nQwen 3.5 GGUF"]
+    end
+
+    UI_COMPOSER -->|WebSocket Streaming| WS_HUB
+    UI_MEMORIES -->|REST API /api/memories| Backend
+    WS_HUB --> AGENT_LOOP
+    AGENT_LOOP --> PROMPT_BUILDER
+    PROMPT_BUILDER --> STORE_SQLITE
+    AGENT_LOOP <-->|Inference + Tool Calls| LLAMA_SRV
+    AGENT_LOOP -->|session_updated / tool_start / tool_end| WS_HUB
+    WS_HUB -->|Real-time Events| UI_CHAT
+```
+
+### Componentes Clave:
+1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+mermaid
 flowchart TD
     subgraph Hardware["Hardware Local (NVIDIA RTX 5050 8GB / 16GB RAM)"]
         LLAMA["llama-runtime (llama.cpp)\nQwen 3.5 4B Q4_K_M\nPuerto 3050 / 8080"]
@@ -34,9 +78,97 @@ flowchart TD
 
 ---
 
-## 2. Flujo de Secuencia: Disparador Matutino (Buenos Días)
+## 5. Arquitectura del Asistente Agéntico (`engine-agent`)
+
+El subsistema `engine-agent` proporciona la interfaz conversacional avanzada con capacidades agénticas locales:
 
 ```mermaid
+flowchart LR
+    subgraph Frontend["engine-agent-ui (React 19 / Vite :3061)"]
+        UI_CHAT["Chat View & Messages"]
+        UI_COMPOSER["Composer & Voice Dictation"]
+        UI_MEMORIES["Memories Manager Modal"]
+        UI_SETTINGS["Settings & Theming Engine"]
+    end
+
+    subgraph Backend["engine-agent-api (Node.js Express / TS :3060)"]
+        WS_HUB["WebSocket Hub (/ws) + AbortController"]
+        AGENT_LOOP["Agent Loop (ReAct 18 Tools)"]
+        PROMPT_BUILDER["Atomic Context Trimmer"]
+        STORE_SQLITE[("SQLite Persistente (/app/data)\n- sessions & messages\n- memories & skills")]
+    end
+
+    subgraph Runtime["LLM Inference Engine"]
+        LLAMA_SRV["llama-engine (:3050)\nQwen 3.5 GGUF"]
+    end
+
+    UI_COMPOSER -->|WebSocket Streaming| WS_HUB
+    UI_MEMORIES -->|REST API /api/memories| Backend
+    WS_HUB --> AGENT_LOOP
+    AGENT_LOOP --> PROMPT_BUILDER
+    PROMPT_BUILDER --> STORE_SQLITE
+    AGENT_LOOP <-->|Inference + Tool Calls| LLAMA_SRV
+    AGENT_LOOP -->|session_updated / tool_start / tool_end| WS_HUB
+    WS_HUB -->|Real-time Events| UI_CHAT
+```
+
+### Componentes Clave:
+1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+
+
+---
+
+## 2. Flujo de Secuencia: Disparador Matutino (Buenos Días)
+
+```
+
+---
+
+## 5. Arquitectura del Asistente Agéntico (`engine-agent`)
+
+El subsistema `engine-agent` proporciona la interfaz conversacional avanzada con capacidades agénticas locales:
+
+```mermaid
+flowchart LR
+    subgraph Frontend["engine-agent-ui (React 19 / Vite :3061)"]
+        UI_CHAT["Chat View & Messages"]
+        UI_COMPOSER["Composer & Voice Dictation"]
+        UI_MEMORIES["Memories Manager Modal"]
+        UI_SETTINGS["Settings & Theming Engine"]
+    end
+
+    subgraph Backend["engine-agent-api (Node.js Express / TS :3060)"]
+        WS_HUB["WebSocket Hub (/ws) + AbortController"]
+        AGENT_LOOP["Agent Loop (ReAct 18 Tools)"]
+        PROMPT_BUILDER["Atomic Context Trimmer"]
+        STORE_SQLITE[("SQLite Persistente (/app/data)\n- sessions & messages\n- memories & skills")]
+    end
+
+    subgraph Runtime["LLM Inference Engine"]
+        LLAMA_SRV["llama-engine (:3050)\nQwen 3.5 GGUF"]
+    end
+
+    UI_COMPOSER -->|WebSocket Streaming| WS_HUB
+    UI_MEMORIES -->|REST API /api/memories| Backend
+    WS_HUB --> AGENT_LOOP
+    AGENT_LOOP --> PROMPT_BUILDER
+    PROMPT_BUILDER --> STORE_SQLITE
+    AGENT_LOOP <-->|Inference + Tool Calls| LLAMA_SRV
+    AGENT_LOOP -->|session_updated / tool_start / tool_end| WS_HUB
+    WS_HUB -->|Real-time Events| UI_CHAT
+```
+
+### Componentes Clave:
+1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+mermaid
 sequenceDiagram
     autonumber
     participant Cron as n8n (Schedule 08:00 AM)
@@ -53,9 +185,97 @@ sequenceDiagram
 
 ---
 
-## 3. Flujo de Secuencia: Mensaje de Voz y Agendamiento
+## 5. Arquitectura del Asistente Agéntico (`engine-agent`)
+
+El subsistema `engine-agent` proporciona la interfaz conversacional avanzada con capacidades agénticas locales:
 
 ```mermaid
+flowchart LR
+    subgraph Frontend["engine-agent-ui (React 19 / Vite :3061)"]
+        UI_CHAT["Chat View & Messages"]
+        UI_COMPOSER["Composer & Voice Dictation"]
+        UI_MEMORIES["Memories Manager Modal"]
+        UI_SETTINGS["Settings & Theming Engine"]
+    end
+
+    subgraph Backend["engine-agent-api (Node.js Express / TS :3060)"]
+        WS_HUB["WebSocket Hub (/ws) + AbortController"]
+        AGENT_LOOP["Agent Loop (ReAct 18 Tools)"]
+        PROMPT_BUILDER["Atomic Context Trimmer"]
+        STORE_SQLITE[("SQLite Persistente (/app/data)\n- sessions & messages\n- memories & skills")]
+    end
+
+    subgraph Runtime["LLM Inference Engine"]
+        LLAMA_SRV["llama-engine (:3050)\nQwen 3.5 GGUF"]
+    end
+
+    UI_COMPOSER -->|WebSocket Streaming| WS_HUB
+    UI_MEMORIES -->|REST API /api/memories| Backend
+    WS_HUB --> AGENT_LOOP
+    AGENT_LOOP --> PROMPT_BUILDER
+    PROMPT_BUILDER --> STORE_SQLITE
+    AGENT_LOOP <-->|Inference + Tool Calls| LLAMA_SRV
+    AGENT_LOOP -->|session_updated / tool_start / tool_end| WS_HUB
+    WS_HUB -->|Real-time Events| UI_CHAT
+```
+
+### Componentes Clave:
+1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+
+
+---
+
+## 3. Flujo de Secuencia: Mensaje de Voz y Agendamiento
+
+```
+
+---
+
+## 5. Arquitectura del Asistente Agéntico (`engine-agent`)
+
+El subsistema `engine-agent` proporciona la interfaz conversacional avanzada con capacidades agénticas locales:
+
+```mermaid
+flowchart LR
+    subgraph Frontend["engine-agent-ui (React 19 / Vite :3061)"]
+        UI_CHAT["Chat View & Messages"]
+        UI_COMPOSER["Composer & Voice Dictation"]
+        UI_MEMORIES["Memories Manager Modal"]
+        UI_SETTINGS["Settings & Theming Engine"]
+    end
+
+    subgraph Backend["engine-agent-api (Node.js Express / TS :3060)"]
+        WS_HUB["WebSocket Hub (/ws) + AbortController"]
+        AGENT_LOOP["Agent Loop (ReAct 18 Tools)"]
+        PROMPT_BUILDER["Atomic Context Trimmer"]
+        STORE_SQLITE[("SQLite Persistente (/app/data)\n- sessions & messages\n- memories & skills")]
+    end
+
+    subgraph Runtime["LLM Inference Engine"]
+        LLAMA_SRV["llama-engine (:3050)\nQwen 3.5 GGUF"]
+    end
+
+    UI_COMPOSER -->|WebSocket Streaming| WS_HUB
+    UI_MEMORIES -->|REST API /api/memories| Backend
+    WS_HUB --> AGENT_LOOP
+    AGENT_LOOP --> PROMPT_BUILDER
+    PROMPT_BUILDER --> STORE_SQLITE
+    AGENT_LOOP <-->|Inference + Tool Calls| LLAMA_SRV
+    AGENT_LOOP -->|session_updated / tool_start / tool_end| WS_HUB
+    WS_HUB -->|Real-time Events| UI_CHAT
+```
+
+### Componentes Clave:
+1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+mermaid
 sequenceDiagram
     autonumber
     participant User as Usuario (Telegram)
@@ -79,9 +299,97 @@ sequenceDiagram
 
 ---
 
-## 4. Flujo de Secuencia: Reloj Vigilante (Recordatorios y Hábitos)
+## 5. Arquitectura del Asistente Agéntico (`engine-agent`)
+
+El subsistema `engine-agent` proporciona la interfaz conversacional avanzada con capacidades agénticas locales:
 
 ```mermaid
+flowchart LR
+    subgraph Frontend["engine-agent-ui (React 19 / Vite :3061)"]
+        UI_CHAT["Chat View & Messages"]
+        UI_COMPOSER["Composer & Voice Dictation"]
+        UI_MEMORIES["Memories Manager Modal"]
+        UI_SETTINGS["Settings & Theming Engine"]
+    end
+
+    subgraph Backend["engine-agent-api (Node.js Express / TS :3060)"]
+        WS_HUB["WebSocket Hub (/ws) + AbortController"]
+        AGENT_LOOP["Agent Loop (ReAct 18 Tools)"]
+        PROMPT_BUILDER["Atomic Context Trimmer"]
+        STORE_SQLITE[("SQLite Persistente (/app/data)\n- sessions & messages\n- memories & skills")]
+    end
+
+    subgraph Runtime["LLM Inference Engine"]
+        LLAMA_SRV["llama-engine (:3050)\nQwen 3.5 GGUF"]
+    end
+
+    UI_COMPOSER -->|WebSocket Streaming| WS_HUB
+    UI_MEMORIES -->|REST API /api/memories| Backend
+    WS_HUB --> AGENT_LOOP
+    AGENT_LOOP --> PROMPT_BUILDER
+    PROMPT_BUILDER --> STORE_SQLITE
+    AGENT_LOOP <-->|Inference + Tool Calls| LLAMA_SRV
+    AGENT_LOOP -->|session_updated / tool_start / tool_end| WS_HUB
+    WS_HUB -->|Real-time Events| UI_CHAT
+```
+
+### Componentes Clave:
+1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+
+
+---
+
+## 4. Flujo de Secuencia: Reloj Vigilante (Recordatorios y Hábitos)
+
+```
+
+---
+
+## 5. Arquitectura del Asistente Agéntico (`engine-agent`)
+
+El subsistema `engine-agent` proporciona la interfaz conversacional avanzada con capacidades agénticas locales:
+
+```mermaid
+flowchart LR
+    subgraph Frontend["engine-agent-ui (React 19 / Vite :3061)"]
+        UI_CHAT["Chat View & Messages"]
+        UI_COMPOSER["Composer & Voice Dictation"]
+        UI_MEMORIES["Memories Manager Modal"]
+        UI_SETTINGS["Settings & Theming Engine"]
+    end
+
+    subgraph Backend["engine-agent-api (Node.js Express / TS :3060)"]
+        WS_HUB["WebSocket Hub (/ws) + AbortController"]
+        AGENT_LOOP["Agent Loop (ReAct 18 Tools)"]
+        PROMPT_BUILDER["Atomic Context Trimmer"]
+        STORE_SQLITE[("SQLite Persistente (/app/data)\n- sessions & messages\n- memories & skills")]
+    end
+
+    subgraph Runtime["LLM Inference Engine"]
+        LLAMA_SRV["llama-engine (:3050)\nQwen 3.5 GGUF"]
+    end
+
+    UI_COMPOSER -->|WebSocket Streaming| WS_HUB
+    UI_MEMORIES -->|REST API /api/memories| Backend
+    WS_HUB --> AGENT_LOOP
+    AGENT_LOOP --> PROMPT_BUILDER
+    PROMPT_BUILDER --> STORE_SQLITE
+    AGENT_LOOP <-->|Inference + Tool Calls| LLAMA_SRV
+    AGENT_LOOP -->|session_updated / tool_start / tool_end| WS_HUB
+    WS_HUB -->|Real-time Events| UI_CHAT
+```
+
+### Componentes Clave:
+1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+mermaid
 sequenceDiagram
     autonumber
     participant Cron as n8n (Schedule cada 5 min)
@@ -101,3 +409,47 @@ sequenceDiagram
         Cron->>TG: "📌 Seguimiento: ¿Qué almorzaste hoy?"
     end
 ```
+
+---
+
+## 5. Arquitectura del Asistente Agéntico (`engine-agent`)
+
+El subsistema `engine-agent` proporciona la interfaz conversacional avanzada con capacidades agénticas locales:
+
+```mermaid
+flowchart LR
+    subgraph Frontend["engine-agent-ui (React 19 / Vite :3061)"]
+        UI_CHAT["Chat View & Messages"]
+        UI_COMPOSER["Composer & Voice Dictation"]
+        UI_MEMORIES["Memories Manager Modal"]
+        UI_SETTINGS["Settings & Theming Engine"]
+    end
+
+    subgraph Backend["engine-agent-api (Node.js Express / TS :3060)"]
+        WS_HUB["WebSocket Hub (/ws) + AbortController"]
+        AGENT_LOOP["Agent Loop (ReAct 18 Tools)"]
+        PROMPT_BUILDER["Atomic Context Trimmer"]
+        STORE_SQLITE[("SQLite Persistente (/app/data)\n- sessions & messages\n- memories & skills")]
+    end
+
+    subgraph Runtime["LLM Inference Engine"]
+        LLAMA_SRV["llama-engine (:3050)\nQwen 3.5 GGUF"]
+    end
+
+    UI_COMPOSER -->|WebSocket Streaming| WS_HUB
+    UI_MEMORIES -->|REST API /api/memories| Backend
+    WS_HUB --> AGENT_LOOP
+    AGENT_LOOP --> PROMPT_BUILDER
+    PROMPT_BUILDER --> STORE_SQLITE
+    AGENT_LOOP <-->|Inference + Tool Calls| LLAMA_SRV
+    AGENT_LOOP -->|session_updated / tool_start / tool_end| WS_HUB
+    WS_HUB -->|Real-time Events| UI_CHAT
+```
+
+### Componentes Clave:
+1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+

@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+- **Added**: **Gestión interactiva de memorias del asistente (`MemoriesModal`)**. Interfaz gráfica con búsqueda reactiva, visualización de tags y formulario para crear o eliminar memorias persistentes conectadas a `/api/memories`, accesible desde el encabezado del chat. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/MemoriesModal.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx, engine-agent/engine-agent-ui/src/api.ts. [2026-11-18]
+
+- **Added**: **Inspección interactiva de herramientas (Acordeón de Tool Calls)**. Componente colapsable `ToolCallItem` en `MessageBubble` con estados visuales (ejecutando, éxito, error), previsualización de argumentos, bloque expandible con salida/resultado devuelto por cada herramienta y botón de copia rápida de datos. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/MessageBubble.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx. [2026-11-18]
+
+- **Added**: **Soporte completo de tema claro y oscuro (Dynamic Theming)**. Selector de tema en `SettingsModal`, atributo reactivo `data-theme` en `<html>` gestionado por `useAppSettings` y paleta de colores para `[data-theme="light"]` en `index.css`. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/index.css, engine-agent/engine-agent-ui/src/lib/useAppSettings.ts, engine-agent/engine-agent-ui/src/features/chat/components/SettingsModal.tsx. [2026-11-18]
+
+- **Fixed**: **Lógica de flujo en sesiones, bifurcación y borrado de mensajes**. Conexión de `deleteMessage` y `forkSession` en `SessionsProvider` con los endpoints persistentes de la API (`/api/sessions/:id/messages/:msgId` y `/api/sessions/:id/fork`), empaquetado seguro de tool calls con sus resultados en el historial e sincronización en tiempo real vía evento WebSocket `session_updated`. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/providers/SessionsProvider.tsx, engine-agent/engine-agent-ui/src/features/chat/hooks/useChat.ts, engine-agent/engine-agent-api/src/ws.ts, engine-agent/engine-agent-api/src/agent/loop.ts, engine-agent/engine-agent-api/src/modules/sessions/service.ts, engine-agent/engine-agent-api/src/modules/sessions/dto.ts. [2026-11-18]
+
+- **Fixed**: **Cancelación con AbortController y sanitización de caché de herramientas**. Soporte de cancelación en tiempo real en bucle `runAgent` y WebSockets ante desconexiones o evento `abort`, filtro estricto de `enabledTools` respetando selección de usuario, y política en `toolCache` para evitar almacenar respuestas con prefijo `Error:`. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-api/src/agent/loop.ts, engine-agent/engine-agent-api/src/agent/types.ts, engine-agent/engine-agent-api/src/ws.ts, engine-agent/engine-agent-ui/src/features/chat/hooks/useChat.ts. [2026-11-18]
+
+- **Fixed**: **Recorte atómico de mensajes en ventana de contexto y SQL de memorias**. Refactorización de `trimHistoryPreservingPairs` para tratar bloques `[assistant (tool_calls), ...tools]` como unidades indivisibles previniendo errores de esquema en el LLM, corrección de placeholders parametrizados en `MemoryService.consolidate` y registro sanitizado de `run_skill_script` con 100% de suites de tests pasando. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-api/src/agent/prompt.ts, engine-agent/engine-agent-api/src/modules/memories/service.ts, engine-agent/engine-agent-api/src/tools/index.ts, engine-agent/engine-agent-api/src/modules/chat/handler.ts. [2026-11-18]
+
+- **Fixed**: **Dictado por voz sin borrado accidental en Composer**. Concatenación no destructiva de la transcripción de `useSpeechRecognition` preservando el texto previamente escrito por el usuario en el área de mensaje. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/Composer.tsx. [2026-11-18]
+
+- **Added**: **Herramientas nativas de listado de skills (`list_skills`) y búsqueda web en tiempo real (`web_search`, `web_fetch`)**. Inyección automática del catálogo de skills con mapeo directo a sus herramientas nativas en `buildPrompt`, playbooks paso a paso en `load_skill`, extracción inteligente de localidades argentinas e internacionales en Open-Meteo (`La Plata, Buenos Aires, Argentina`), retiro de `run_skill_script` para evitar bucles de adivinanza de scripts en modelos 4B, migración `008-web-assistant-skills.sql` y volumen persistente `agent_data:/app/data` en `docker-compose.yml`. [2026-11-18]
+  * **Files (Archivos)**: docker-compose.yml, engine-agent/engine-agent-api/src/agent/loop.ts, engine-agent/engine-agent-api/src/agent/skill-loader.ts, engine-agent/engine-agent-api/src/tools/web.ts, engine-agent/engine-agent-api/src/tools/load_skill.ts, engine-agent/engine-agent-api/src/tools/index.ts, engine-agent/engine-agent-api/src/db/migrations/008-web-assistant-skills.sql, engine-agent/engine-agent-ui/src/features/chat/components/Composer.tsx. [2026-11-18]
+
+- **Fixed**: **Resolución automática de host.docker.internal hacia llama-engine y optimización de inferencia**. Reescritura automática de `localhost`/`127.0.0.1` a `host.docker.internal` en `src/config/index.ts` cuando `engine-agent-api` corre en contenedor Docker (`/.dockerenv`), adición de `extra_hosts` en `docker-compose.yml`, actualización de `.env`, corrección de `getSessionOrNull` en `src/modules/chat/handler.ts`, soporte de `chat_template_kwargs.enable_thinking: false` en `llm-client.ts`, limpieza de etiquetas `<think>` en auto-titulado de sesiones y ajuste de timeouts en `nginx.conf` para erradicar el error `Connection error.`. [2026-11-18]
+  * **Files (Archivos)**: .env, docker-compose.yml, engine-agent/engine-agent-api/src/config/index.ts, engine-agent/engine-agent-api/src/modules/chat/handler.ts, engine-agent/engine-agent-api/src/agent/llm-client.ts, engine-agent/engine-agent-api/src/agent/loop.ts, engine-agent/engine-agent-api/src/agent/prompt.ts, engine-agent/engine-agent-ui/src/features/chat/components/Composer.tsx, engine-agent/engine-agent-ui/nginx.conf. [2026-11-18]
+
 - **Fixed**: **Copia y ejecución de migraciones SQLite en engine-agent-api**. Empaquetado explícito de archivos `.sql` en el proceso de build y Dockerfile hacia `dist/db/migrations` y `migrations`, incorporando resolución multi-ruta en `src/db/index.ts` y persistencia forzada con `saveDb()` para erradicar el error `no such table: sessions` y sembrar agentes y habilidades por defecto. [2026-11-18]
   * **Files (Archivos)**: engine-agent/engine-agent-api/src/db/index.ts, engine-agent/engine-agent-api/Dockerfile, engine-agent/engine-agent-api/package.json. [2026-11-18]
 

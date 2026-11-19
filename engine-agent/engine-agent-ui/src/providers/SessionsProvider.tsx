@@ -10,7 +10,10 @@ import {
 import {
 	createSession as apiCreateSession,
 	deleteSession as apiDeleteSession,
+	forkSession as apiForkSession,
 	updateSession as apiUpdateSession,
+	deleteSessionMessage,
+	updateSessionMessage,
 	fetchSession,
 	fetchSessions,
 	type Message,
@@ -62,6 +65,19 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		messagesLengthRef.current = messages.length;
 	}, [messages.length]);
+
+	useEffect(() => {
+		const handleSessionUpdated = (e: Event) => {
+			const detail = (e as CustomEvent).detail;
+			if (detail?.sessionId && detail?.name) {
+				setSessions((prev) =>
+					prev.map((s) => (s.id === detail.sessionId ? { ...s, name: detail.name } : s)),
+				);
+			}
+		};
+		window.addEventListener("session_updated", handleSessionUpdated);
+		return () => window.removeEventListener("session_updated", handleSessionUpdated);
+	}, []);
 
 	const selectSession = useCallback(async (id: string) => {
 		setActiveSessionId(id);
@@ -253,7 +269,6 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 				}),
 			);
 			try {
-				const { updateSessionMessage } = await import("../api.ts");
 				await updateSessionMessage(activeSessionId, messageId, { favorite: newFavState });
 			} catch (err) {
 				console.warn("[sessions] Error al actualizar favorito en backend:", err);
@@ -264,20 +279,41 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 
 	const forkSession = useCallback(
 		async (upToMessageId: string) => {
-			const active = sessions.find((s) => s.id === activeSessionId);
-			const idx = messages.findIndex((m) => m.id === upToMessageId);
-			const copiedMessages = idx >= 0 ? messages.slice(0, idx + 1) : messages;
-			const newName = active?.name ? `${active.name} (Fork)` : "Chat Fork";
-			const forkedSession = await createNewSession(newName, active?.model ?? undefined);
-			setMessages(copiedMessages.map((m) => ({ ...m, sessionId: forkedSession.id })));
-			return forkedSession;
+			if (!activeSessionId) throw new Error("No hay sesión activa");
+			try {
+				const active = sessions.find((s) => s.id === activeSessionId);
+				const newName = active?.name ? `${active.name} (Fork)` : "Chat Fork";
+				const forked = await apiForkSession(activeSessionId, { upToMessageId, name: newName });
+				setSessions((prev) => [forked, ...prev.filter((s) => s.id !== forked.id)]);
+				await selectSession(forked.id);
+				return forked;
+			} catch (err) {
+				console.warn("[sessions] Error al hacer fork en backend, fallback local:", err);
+				const active = sessions.find((s) => s.id === activeSessionId);
+				const idx = messages.findIndex((m) => m.id === upToMessageId);
+				const copiedMessages = idx >= 0 ? messages.slice(0, idx + 1) : messages;
+				const newName = active?.name ? `${active.name} (Fork)` : "Chat Fork";
+				const forkedSession = await createNewSession(newName, active?.model ?? undefined);
+				setMessages(copiedMessages.map((m) => ({ ...m, sessionId: forkedSession.id })));
+				return forkedSession;
+			}
 		},
-		[activeSessionId, messages, sessions, createNewSession],
+		[activeSessionId, messages, sessions, selectSession, createNewSession],
 	);
 
-	const deleteMessage = useCallback((messageId: string) => {
-		setMessages((prev) => prev.filter((m) => m.id !== messageId));
-	}, []);
+	const deleteMessage = useCallback(
+		async (messageId: string) => {
+			setMessages((prev) => prev.filter((m) => m.id !== messageId));
+			if (activeSessionId) {
+				try {
+					await deleteSessionMessage(activeSessionId, messageId);
+				} catch (err) {
+					console.warn("[sessions] Error al eliminar mensaje en backend:", err);
+				}
+			}
+		},
+		[activeSessionId],
+	);
 
 	const addMessage = useCallback((msg: Message) => {
 		setMessages((prev) => [...prev, msg]);

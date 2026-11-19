@@ -80,7 +80,11 @@ export class LLMClient {
 				: undefined;
 
 		try {
-			const response = await this.client.chat.completions.create({
+			const extraBody =
+				modelSettings?.enableReasoning === false
+					? { chat_template_kwargs: { enable_thinking: false } }
+					: {};
+			const response = (await this.client.chat.completions.create({
 				model: useModel,
 				messages: messages as any,
 				tools: openaiTools as any,
@@ -91,7 +95,8 @@ export class LLMClient {
 				presence_penalty: modelSettings?.presencePenalty,
 				frequency_penalty: modelSettings?.frequencyPenalty,
 				stream: false,
-			});
+				...extraBody,
+			} as any)) as OpenAI.Chat.Completions.ChatCompletion;
 
 			const choice = response.choices[0];
 			if (!choice) {
@@ -146,7 +151,11 @@ export class LLMClient {
 
 		const createStream = async () => {
 			try {
-				return await this.client.chat.completions.create({
+				const extraBody =
+					modelSettings?.enableReasoning === false
+						? { chat_template_kwargs: { enable_thinking: false } }
+						: {};
+				return (await this.client.chat.completions.create({
 					model: useModel,
 					messages: messages as any,
 					tools: openaiTools as any,
@@ -157,7 +166,8 @@ export class LLMClient {
 					presence_penalty: modelSettings?.presencePenalty,
 					frequency_penalty: modelSettings?.frequencyPenalty,
 					stream: true,
-				});
+					...extraBody,
+				} as any)) as unknown as AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
 			} catch (err: any) {
 				const status = err.status ?? err.statusCode ?? "";
 				const rawErrorMsg = err.error?.message ?? err.message ?? "Error desconocido";

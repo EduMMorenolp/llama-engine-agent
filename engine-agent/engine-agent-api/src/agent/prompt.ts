@@ -32,17 +32,16 @@ export function buildPrompt(context: PromptContext): LLMMessage[] {
 
 	systemParts.push(`
 ## Gestión de Memoria
-Tenés acceso a herramientas de memoria persistente. Usalas siempre que sea relevante:
+Las memorias relevantes del usuario ya se inyectan automáticamente a continuación si existen. Tenés herramientas de memoria para casos específicos:
 
-- **search_memories**: Al inicio de cada conversación, buscá si hay memorias previas del usuario (nombre, idioma, preferencias, contexto). Esto te permite personalizar tu respuesta.
-- **memorize**: Cuando el usuario te comparta información personal (nombre, idioma, preferencias, ocupación, gustos), guardala con una clave descriptiva y contenido claro. Ejemplo: key="user_name", content="Eduardo".
-- **update_memory**: Si la información del usuario cambia, actualizá la memoria existente.
+- **memorize**: Cuando el usuario comparta datos personales nuevos (nombre, idioma, preferencias, ocupación, gustos), guardalos con clave descriptiva (ej: key="user_name", content="Eduardo").
+- **update_memory**: Si un dato existente del usuario cambia, actualizalo.
+- **search_memories**: Solo usala si necesitás buscar un recuerdo específico que no figure en la lista inyectada abajo.
 
 Reglas:
-1. Si no encontrás memorias al buscar, no inventes — simplemente preguntá o continuá sin contexto previo.
-2. No guardes información temporal o irrelevante (como "el usuario preguntó por el clima").
-3. Usá claves en snake_case descriptivas (ej: user_name, user_lang, user preferences).
-4. Cuando actualices, mantené el formato existente.`);
+1. No invoques herramientas en saludos simples o charlas generales que no requieran acciones externas.
+2. No guardes información temporal o irrelevante.
+3. Usá claves en snake_case descriptivas (ej: user_name, user_lang, user_preferences).`);
 
 	if (memories && memories.length > 0) {
 		systemParts.push("\n## Memoria del usuario:");
@@ -170,43 +169,65 @@ function trimHistoryPreservingPairs(messages: LLMMessage[], maxChars: number): L
 
 	const firstMsg = messages[0];
 	let currentChars = countMessageChars(firstMsg);
-	const recentKept: LLMMessage[] = [];
 
-	// Walk backwards from the end, preserving assistant→tool pairs
-	for (let i = messages.length - 1; i >= 1; i--) {
-		const msg = messages[i];
-
-		// If this is a tool response, check if the previous message is its assistant
-		if (msg.role === "tool" && i > 1 && messages[i - 1].role === "assistant") {
-			const assistantMsg = messages[i - 1];
-			const pairChars = countMessageChars(assistantMsg) + countMessageChars(msg);
-			if (currentChars + pairChars <= maxChars) {
-				recentKept.push(msg);
-				recentKept.push(assistantMsg);
-				currentChars += pairChars;
-				i--; // Skip assistant already processed
-			} else {
-				break;
+	// Group messages (excluding firstMsg) into atomic units
+	// An atomic unit is either:
+	// - a single non-tool message (user, assistant without tool_calls)
+	// - an assistant with tool_calls + ALL its subsequent tool responses
+	const blocks: LLMMessage[][] = [];
+	const rest = messages.slice(1);
+	let i = 0;
+	while (i < rest.length) {
+		const m = rest[i];
+		if (m.role === "assistant" && m.tool_calls && m.tool_calls.length > 0) {
+			const group: LLMMessage[] = [m];
+			i++;
+			while (i < rest.length && rest[i].role === "tool") {
+				group.push(rest[i]);
+				i++;
 			}
-		} else if (msg.role !== "tool") {
-			const msgChars = countMessageChars(msg);
-			if (currentChars + msgChars <= maxChars) {
-				recentKept.push(msg);
-				currentChars += msgChars;
-			} else {
-				break;
-			}
+			blocks.push(group);
+		} else if (m.role !== "tool") {
+			blocks.push([m]);
+			i++;
+		} else {
+			// Orphan tool message, skip
+			i++;
 		}
 	}
 
-	recentKept.reverse();
-	return [firstMsg, ...recentKept];
+	// Walk backwards through blocks from the end
+	const keptBlocks: LLMMessage[][] = [];
+	for (let b = blocks.length - 1; b >= 0; b--) {
+		const block = blocks[b];
+		const blockChars = block.reduce((sum, msg) => sum + countMessageChars(msg), 0);
+		if (currentChars + blockChars <= maxChars) {
+			keptBlocks.push(block);
+			currentChars += blockChars;
+		} else {
+			break;
+		}
+	}
+
+	keptBlocks.reverse();
+	return [firstMsg, ...keptBlocks.flat()];
 }
 
 export function getMemoriesForContext(
 	memoryService: MemoryService,
+	maxBudgetTokens = 500,
 ): Array<{ key: string; content: string }> {
-	return memoryService.search("").map((m) => ({ key: m.key, content: m.content }));
+	const all = memoryService.search("");
+	let usedChars = 0;
+	const maxChars = maxBudgetTokens * 4;
+	const result: Array<{ key: string; content: string }> = [];
+	for (const m of all) {
+		const cost = m.key.length + m.content.length + 4;
+		if (usedChars + cost > maxChars) break;
+		result.push({ key: m.key, content: m.content });
+		usedChars += cost;
+	}
+	return result;
 }
 
 export function calculateContextUsage(

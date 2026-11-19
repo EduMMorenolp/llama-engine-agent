@@ -1,5 +1,19 @@
+import fs from "node:fs";
 import { z } from "zod";
 import "dotenv/config";
+
+function resolveDockerHostUrl(rawUrl: string): string {
+	try {
+		if (fs.existsSync("/.dockerenv")) {
+			const parsed = new URL(rawUrl);
+			if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+				parsed.hostname = "host.docker.internal";
+				return parsed.toString().replace(/\/+$/, "");
+			}
+		}
+	} catch {}
+	return rawUrl;
+}
 
 const envSchema = z
 	.object({
@@ -34,7 +48,10 @@ export function getConfig(): EnvConfig {
 		const msg = result.error.issues.map((i) => i.message).join(", ");
 		throw new Error(msg);
 	}
-	_config = result.data as EnvConfig;
+	_config = {
+		...(result.data as EnvConfig),
+		ENGINE_API_URL: resolveDockerHostUrl(result.data.ENGINE_API_URL),
+	};
 	return _config;
 }
 

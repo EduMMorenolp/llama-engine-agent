@@ -37,6 +37,7 @@ export interface ToolCallInfo {
 interface MessageBubbleProps {
 	message: Message;
 	toolCalls?: ToolCallInfo[];
+	toolResults?: Record<string, string>;
 	isStreaming?: boolean;
 	modelName?: string;
 	onCopy?: (text: string) => void;
@@ -128,9 +129,154 @@ function getToolStatus(tc: any): "pending" | "done" | "error" {
 	return "done";
 }
 
+function ToolCallItem({ tc }: { tc: any }) {
+	const [isOpen, setIsOpen] = useState(false);
+	const toolName = getToolName(tc);
+	const toolStatus = getToolStatus(tc);
+	const rawArgsStr = formatToolArgs(tc);
+	const toolArgsStr = rawArgsStr.length > 70 ? `${rawArgsStr.slice(0, 70)}...` : rawArgsStr;
+	const result =
+		typeof tc.result === "string" ? tc.result : tc.result ? JSON.stringify(tc.result, null, 2) : "";
+
+	return (
+		<div className={`tool-call-card ${toolStatus}`} style={{ marginBottom: "6px" }}>
+			<button
+				type="button"
+				className="tool-call-header-btn"
+				onClick={() => setIsOpen(!isOpen)}
+				style={{
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+					width: "100%",
+					background: "none",
+					border: "none",
+					padding: "8px 10px",
+					cursor: "pointer",
+					textAlign: "left",
+					color: "inherit",
+				}}
+			>
+				<div
+					className="tool-call-left"
+					style={{
+						display: "flex",
+						alignItems: "center",
+						gap: "8px",
+						overflow: "hidden",
+					}}
+				>
+					{isOpen ? <ChevronDownIcon size={13} /> : <ChevronRightIcon size={13} />}
+					<TerminalIcon size={14} style={{ color: "var(--accent)", flexShrink: 0 }} />
+					<span className="tool-call-name" style={{ fontWeight: 600 }}>
+						{toolName}
+					</span>
+					{!isOpen && toolArgsStr && (
+						<span
+							className="tool-call-args"
+							style={{
+								opacity: 0.65,
+								fontSize: "12px",
+								overflow: "hidden",
+								textOverflow: "ellipsis",
+								whiteSpace: "nowrap",
+							}}
+						>
+							{toolArgsStr}
+						</span>
+					)}
+				</div>
+				<div className="tool-call-status" style={{ flexShrink: 0, marginLeft: "8px" }}>
+					{toolStatus === "pending" ? (
+						<span style={{ color: "var(--warning)", fontSize: "11px", fontWeight: 500 }}>
+							Ejecutando...
+						</span>
+					) : toolStatus === "done" ? (
+						<CheckIcon size={14} style={{ color: "var(--success)" }} />
+					) : (
+						<XIcon size={14} style={{ color: "var(--danger)" }} />
+					)}
+				</div>
+			</button>
+
+			{isOpen && (
+				<div
+					className="tool-call-expanded"
+					style={{
+						padding: "0 10px 10px 10px",
+						borderTop: "1px solid var(--border-subtle)",
+						marginTop: "4px",
+					}}
+				>
+					{rawArgsStr && (
+						<div style={{ marginTop: "6px" }}>
+							<div
+								style={{
+									fontSize: "11px",
+									fontWeight: 600,
+									color: "var(--text-muted)",
+									marginBottom: "3px",
+								}}
+							>
+								Argumentos:
+							</div>
+							<pre
+								style={{
+									margin: 0,
+									padding: "6px 8px",
+									background: "var(--bg-surface)",
+									borderRadius: "6px",
+									fontSize: "11.5px",
+									fontFamily: "var(--font-mono)",
+									overflowX: "auto",
+									maxHeight: "140px",
+								}}
+							>
+								{rawArgsStr}
+							</pre>
+						</div>
+					)}
+					<div style={{ marginTop: "6px" }}>
+						<div
+							style={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "center",
+								marginBottom: "3px",
+							}}
+						>
+							<span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)" }}>
+								Salida / Resultado:
+							</span>
+							{result && <CodeCopyButton text={result} />}
+						</div>
+						<pre
+							style={{
+								margin: 0,
+								padding: "6px 8px",
+								background: "var(--bg-surface)",
+								borderRadius: "6px",
+								fontSize: "11.5px",
+								fontFamily: "var(--font-mono)",
+								overflowX: "auto",
+								maxHeight: "220px",
+								whiteSpace: "pre-wrap",
+								wordBreak: "break-word",
+							}}
+						>
+							{result || (toolStatus === "pending" ? "Ejecutando herramienta..." : "(sin salida)")}
+						</pre>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
 export function MessageBubble({
 	message,
 	toolCalls = [],
+	toolResults,
 	isStreaming = false,
 	modelName = "qwen3.5-9b",
 	onCopy,
@@ -144,7 +290,7 @@ export function MessageBubble({
 	const isUser = message.role === "user";
 	const isTool = message.role === "tool";
 	const [copiedMsg, setCopiedMsg] = useState(false);
-	const [thinkingOpen, setThinkingOpen] = useState(appSettings.expandReasoning);
+	const [thinkingOpen, setThinkingOpen] = useState(false);
 
 	if (isTool) return null;
 	const content = message.content ?? "";
@@ -178,6 +324,16 @@ export function MessageBubble({
 		} catch {
 			parsedToolCalls = [];
 		}
+	}
+
+	if (toolResults && parsedToolCalls.length > 0) {
+		parsedToolCalls = parsedToolCalls.map((tc) => {
+			const callId = tc.id || tc.function?.id;
+			if (callId && toolResults[callId] && !tc.result) {
+				return { ...tc, result: toolResults[callId], status: "done" };
+			}
+			return tc;
+		});
 	}
 
 	const handleCopyMessage = async () => {
@@ -250,37 +406,9 @@ export function MessageBubble({
 					{/* Tool Execution Cards */}
 					{parsedToolCalls.length > 0 && (
 						<div className="tool-calls-container">
-							{parsedToolCalls.map((tc, idx) => {
-								const toolName = getToolName(tc);
-								const toolStatus = getToolStatus(tc);
-								const rawArgsStr = formatToolArgs(tc);
-								const toolArgsStr =
-									rawArgsStr.length > 75 ? `${rawArgsStr.slice(0, 75)}...` : rawArgsStr;
-
-								return (
-									<div
-										key={tc.id || `${toolName}-${toolStatus}-${idx}`}
-										className={`tool-call-card ${toolStatus}`}
-									>
-										<div className="tool-call-left">
-											<TerminalIcon size={14} style={{ color: "var(--accent)" }} />
-											<span className="tool-call-name">{toolName}</span>
-											{toolArgsStr && <span className="tool-call-args">{toolArgsStr}</span>}
-										</div>
-										<div className="tool-call-status">
-											{toolStatus === "pending" ? (
-												<span style={{ color: "var(--warning)", fontSize: "11px" }}>
-													Ejecutando...
-												</span>
-											) : toolStatus === "done" ? (
-												<CheckIcon size={14} style={{ color: "var(--success)" }} />
-											) : (
-												<XIcon size={14} style={{ color: "var(--danger)" }} />
-											)}
-										</div>
-									</div>
-								);
-							})}
+							{parsedToolCalls.map((tc, idx) => (
+								<ToolCallItem key={tc.id || `${getToolName(tc)}-${idx}`} tc={tc} />
+							))}
 						</div>
 					)}
 

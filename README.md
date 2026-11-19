@@ -64,8 +64,8 @@ llama-engine-agent/
 | **engine-whisper** | `./engine-whisper` | Transcripción STT de notas de voz con CUDA | `http://localhost:8000` | ~1.0 GB VRAM |
 | **engine-postgres** | `./engine-postgres` | Base de datos persistente (agenda, hábitos) | `localhost:5434` (interno 5432) | ~100 MB RAM |
 | **engine-n8n** | `./engine-n8n` | Orquestador de eventos, crons y tool calling | `http://localhost:5678` | ~400 MB RAM |
-| **engine-agent-api**| `./engine-agent/engine-agent-api` | API REST & WebSocket del agente | `http://localhost:3060` | ~80 MB RAM |
-| **engine-agent-ui** | `./engine-agent/engine-agent-ui` | Dashboard web y chat con Web Speech API | `http://localhost:3061` | Navegador (0 VRAM) |
+| **engine-agent-api**| `./engine-agent/engine-agent-api` | API REST & WebSocket del agente con 18 tools agénticas | `http://localhost:3060` | ~80 MB RAM |
+| **engine-agent-ui** | `./engine-agent/engine-agent-ui` | Dashboard web, gestor de memorias, inspección de tools y temas | `http://localhost:3061` | Navegador (0 VRAM) |
 
 ---
 

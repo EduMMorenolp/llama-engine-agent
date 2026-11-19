@@ -12,14 +12,26 @@ export function createChatHandler(
 	agentService: AgentService,
 ) {
 	return async (req: Request, res: Response) => {
-		const { sessionId: inputSessionId, message, model, agent: agentName } = req.body ?? {};
+		const {
+			sessionId: inputSessionId,
+			message,
+			model,
+			systemPrompt,
+			enabledTools,
+			modelSettings,
+			agent: agentName,
+		} = req.body ?? {};
 		if (!message || typeof message !== "string") {
 			res.status(400).json({ error: "message es requerido" });
 			return;
 		}
 
 		const sessionId = inputSessionId ?? crypto.randomUUID();
-		if (!store.getSession(sessionId)) {
+		const existingSession =
+			typeof store.getSessionOrNull === "function"
+				? store.getSessionOrNull(sessionId)
+				: (store as any).getSession?.(sessionId);
+		if (!existingSession) {
 			store.createSession({ id: sessionId, model });
 		}
 
@@ -29,11 +41,20 @@ export function createChatHandler(
 		res.flushHeaders();
 
 		let agentDef: AgentDefinition | null = null;
-		if (agentName) {
+		if (agentName && typeof agentService?.getOrNull === "function") {
 			agentDef = agentService.getOrNull(agentName);
 		}
 
 		const finalModel = agentDef?.model ?? model;
+		const finalSystemPrompt = agentDef?.corePrompt
+			? systemPrompt && systemPrompt !== agentDef.corePrompt
+				? `${agentDef.corePrompt}\n\n${systemPrompt}`
+				: agentDef.corePrompt
+			: systemPrompt;
+		const finalEnabledTools =
+			agentDef?.tools && agentDef.tools.length > 0
+				? (enabledTools?.filter((t: string) => agentDef?.tools?.includes(t)) ?? agentDef.tools)
+				: enabledTools;
 
 		try {
 			await runAgent(
@@ -46,8 +67,9 @@ export function createChatHandler(
 					sessionId,
 					message,
 					model: finalModel,
-					systemPrompt: agentDef?.corePrompt,
-					enabledTools: agentDef?.tools ? [...agentDef.tools] : undefined,
+					systemPrompt: finalSystemPrompt,
+					enabledTools: finalEnabledTools ? [...finalEnabledTools] : undefined,
+					modelSettings,
 					agent: agentName,
 				},
 				(event) => {

@@ -164,6 +164,18 @@ export function useChat(): UseChatReturn {
 							setToolCalls([...activeToolCalls]);
 							break;
 						}
+						case "session_updated": {
+							const newName = (data.payload?.name as string) ?? "";
+							const targetSessionId = (data.payload?.sessionId as string) || sessionId;
+							if (newName && typeof window !== "undefined") {
+								window.dispatchEvent(
+									new CustomEvent("session_updated", {
+										detail: { sessionId: targetSessionId, name: newName },
+									}),
+								);
+							}
+							break;
+						}
 						case "done": {
 							if (assistantContent) {
 								onMessage({
@@ -242,7 +254,13 @@ export function useChat(): UseChatReturn {
 	);
 
 	const stopStreaming = useCallback(() => {
-		if (wsRef.current) {
+		if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+			try {
+				wsRef.current.send(JSON.stringify({ type: "abort" }));
+			} catch {}
+			wsRef.current.close();
+			wsRef.current = null;
+		} else if (wsRef.current) {
 			wsRef.current.close();
 			wsRef.current = null;
 		}

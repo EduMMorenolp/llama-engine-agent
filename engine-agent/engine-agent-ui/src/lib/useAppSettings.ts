@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { type AppSettings, DEFAULT_APP_SETTINGS, loadSettings, saveSettings } from "./settings.ts";
+import { type AppSettings, loadSettings, saveSettings } from "./settings.ts";
 
 export type UseAppSettingsReturn = AppSettings & {
 	settings: AppSettings;
@@ -27,6 +27,11 @@ export function useAppSettings(): UseAppSettingsReturn {
 			window.removeEventListener("storage", handleSettingsChanged);
 		};
 	}, []);
+
+	useEffect(() => {
+		const currentTheme = settings.theme || "dark";
+		document.documentElement.setAttribute("data-theme", currentTheme);
+	}, [settings.theme]);
 
 	const updateSettings = (partial: Partial<AppSettings>) => {
 		const updated = saveSettings(partial);

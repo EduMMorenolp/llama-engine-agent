@@ -38,8 +38,11 @@ export async function runAgent(
 
 	const memories = getMemoriesForContext(memoryService);
 	let tools = toolRegistry.getSpecs();
-	if (enabledTools !== undefined) {
-		tools = tools.filter((t) => enabledTools.includes(t.function.name));
+	if (enabledTools !== undefined && enabledTools.length > 0) {
+		const allowedTools = new Set(enabledTools);
+		tools = tools.filter((t) => allowedTools.has(t.function.name));
+	} else if (enabledTools !== undefined && enabledTools.length === 0) {
+		tools = [];
 	}
 	const toolContext: ToolContext = {
 		sessionId,
@@ -54,12 +57,15 @@ export async function runAgent(
 			? "\n\nInstrucción de respuesta: No uses etiquetas ni bloques de pensamiento <think>. Responde directamente a la consulta."
 			: "";
 
+	const skills = config.skillService ? config.skillService.list() : [];
+
 	const messages: LLMMessage[] = buildPrompt({
 		store,
 		sessionId,
 		systemPrompt: (systemPrompt ?? "") + reasoningInstruction,
 		memories,
 		model,
+		skills,
 	});
 
 	const allToolCalls: ToolCallResult[] = [];
@@ -67,6 +73,9 @@ export async function runAgent(
 	let finalContent = "";
 
 	for (let i = 0; i < maxIterations; i++) {
+		if (options.signal?.aborted) {
+			break;
+		}
 		iterations++;
 		const toolsToPass = tools;
 
@@ -76,6 +85,9 @@ export async function runAgent(
 		if (typeof llmClient.sendMessageStream === "function") {
 			const stream = llmClient.sendMessageStream(messages, toolsToPass, model, modelSettings);
 			for await (const chunk of stream) {
+				if (options.signal?.aborted) {
+					break;
+				}
 				if (chunk.type === "content" && chunk.data) {
 					accumulatedContent += chunk.data;
 					onEvent?.({ type: "message", payload: { role: "assistant", content: chunk.data } });
@@ -146,6 +158,14 @@ export async function runAgent(
 			const settledResults = await Promise.allSettled(
 				responseToolCalls.map(async (tc) => {
 					const callId = tc.id || randomUUID();
+					if (options.signal?.aborted) {
+						return {
+							id: callId,
+							name: tc.function.name,
+							args: {},
+							result: "Ejecución cancelada por el usuario",
+						};
+					}
 					let args: Record<string, unknown> = {};
 					try {
 						args = JSON.parse(tc.function.arguments);
@@ -168,7 +188,9 @@ export async function runAgent(
 						} catch (err: unknown) {
 							result = `Error: ${err instanceof Error ? err.message : String(err)}`;
 						}
-						toolCache.set(tc.function.name, args, result);
+						if (!result.startsWith("Error:")) {
+							toolCache.set(tc.function.name, args, result);
+						}
 						toolCache.invalidateOnMutation(tc.function.name);
 					}
 
@@ -250,12 +272,18 @@ export async function runAgent(
 						[{ role: "user", content: titlePrompt }],
 						[],
 						model,
+						{ enableReasoning: false },
 					);
-					const rawTitle = (res.content || "").replace(/["'\n]/g, "").trim();
+					const cleanContent = (res.content || "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+					const rawTitle = cleanContent.replace(/["'\n]/g, "").trim();
 					if (rawTitle && rawTitle.length < 60) {
 						const fresh = store.getSessionOrNull(sessionId);
 						if (fresh && (!fresh.name || fresh.autoTitled)) {
 							store.updateSession(sessionId, { name: rawTitle, autoTitled: true });
+							onEvent?.({
+								type: "session_updated",
+								payload: { sessionId, name: rawTitle },
+							});
 						}
 					}
 				} catch {
