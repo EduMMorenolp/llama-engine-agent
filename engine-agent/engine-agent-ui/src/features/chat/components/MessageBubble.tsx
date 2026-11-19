@@ -29,6 +29,7 @@ import {
 
 import { useAppSettings } from "../../../lib/useAppSettings.ts";
 import type { ArtifactData } from "./ArtifactPanel.tsx";
+import { HitlConfirmationCard } from "./HitlConfirmationCard.tsx";
 
 export interface ToolCallInfo {
 	id?: string;
@@ -162,86 +163,126 @@ function ToolCallItem({ tc }: { tc: GenericToolCall }) {
 		typeof tc.result === "string" ? tc.result : tc.result ? JSON.stringify(tc.result, null, 2) : "";
 
 	return (
-		<div className={`tool-call-card ${toolStatus}`} style={{ marginBottom: "6px" }}>
-			<button
-				type="button"
-				className="tool-call-header-btn"
-				onClick={() => setIsOpen(!isOpen)}
-				style={{
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "space-between",
-					width: "100%",
-					background: "none",
-					border: "none",
-					padding: "8px 10px",
-					cursor: "pointer",
-					textAlign: "left",
-					color: "inherit",
-				}}
-			>
-				<div
-					className="tool-call-left"
+		<div style={{ marginBottom: "6px" }}>
+			{(toolName.includes("bash") || toolName.includes("write")) &&
+				(!result || toolStatus === "pending") && (
+					<HitlConfirmationCard
+						toolName={toolName}
+						commandText={rawArgsStr || "execute_bash --cmd ..."}
+						onConfirm={() => setIsOpen(true)}
+						onReject={() => setIsOpen(false)}
+					/>
+				)}
+			<div className={`tool-call-card ${toolStatus}`}>
+				<button
+					type="button"
+					className="tool-call-header-btn"
+					onClick={() => setIsOpen(!isOpen)}
 					style={{
 						display: "flex",
 						alignItems: "center",
-						gap: "8px",
-						overflow: "hidden",
+						justifyContent: "space-between",
+						width: "100%",
+						background: "none",
+						border: "none",
+						padding: "8px 10px",
+						cursor: "pointer",
+						textAlign: "left",
+						color: "inherit",
 					}}
 				>
-					{isOpen ? <ChevronDownIcon size={13} /> : <ChevronRightIcon size={13} />}
-					<TerminalIcon size={14} style={{ color: "var(--accent)", flexShrink: 0 }} />
-					<span className="tool-call-name" style={{ fontWeight: 600 }}>
-						{toolName}
-					</span>
-					{!isOpen && toolArgsStr && (
-						<span
-							className="tool-call-args"
-							style={{
-								opacity: 0.65,
-								fontSize: "12px",
-								overflow: "hidden",
-								textOverflow: "ellipsis",
-								whiteSpace: "nowrap",
-							}}
-						>
-							{toolArgsStr}
+					<div
+						className="tool-call-left"
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: "8px",
+							overflow: "hidden",
+						}}
+					>
+						{isOpen ? <ChevronDownIcon size={13} /> : <ChevronRightIcon size={13} />}
+						<TerminalIcon size={14} style={{ color: "var(--accent)", flexShrink: 0 }} />
+						<span className="tool-call-name" style={{ fontWeight: 600 }}>
+							{toolName}
 						</span>
-					)}
-				</div>
-				<div className="tool-call-status" style={{ flexShrink: 0, marginLeft: "8px" }}>
-					{toolStatus === "pending" ? (
-						<span style={{ color: "var(--warning)", fontSize: "11px", fontWeight: 500 }}>
-							Ejecutando...
-						</span>
-					) : toolStatus === "done" ? (
-						<CheckIcon size={14} style={{ color: "var(--success)" }} />
-					) : (
-						<XIcon size={14} style={{ color: "var(--danger)" }} />
-					)}
-				</div>
-			</button>
+						{!isOpen && toolArgsStr && (
+							<span
+								className="tool-call-args"
+								style={{
+									opacity: 0.65,
+									fontSize: "12px",
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+									whiteSpace: "nowrap",
+								}}
+							>
+								{toolArgsStr}
+							</span>
+						)}
+					</div>
+					<div className="tool-call-status" style={{ flexShrink: 0, marginLeft: "8px" }}>
+						{toolStatus === "pending" ? (
+							<span style={{ color: "var(--warning)", fontSize: "11px", fontWeight: 500 }}>
+								Ejecutando...
+							</span>
+						) : toolStatus === "done" ? (
+							<CheckIcon size={14} style={{ color: "var(--success)" }} />
+						) : (
+							<XIcon size={14} style={{ color: "var(--danger)" }} />
+						)}
+					</div>
+				</button>
 
-			{isOpen && (
-				<div
-					className="tool-call-expanded"
-					style={{
-						padding: "0 10px 10px 10px",
-						borderTop: "1px solid var(--border-subtle)",
-						marginTop: "4px",
-					}}
-				>
-					{rawArgsStr && (
+				{isOpen && (
+					<div
+						className="tool-call-expanded"
+						style={{
+							padding: "0 10px 10px 10px",
+							borderTop: "1px solid var(--border-subtle)",
+							marginTop: "4px",
+						}}
+					>
+						{rawArgsStr && (
+							<div style={{ marginTop: "6px" }}>
+								<div
+									style={{
+										fontSize: "11px",
+										fontWeight: 600,
+										color: "var(--text-muted)",
+										marginBottom: "3px",
+									}}
+								>
+									Argumentos:
+								</div>
+								<pre
+									style={{
+										margin: 0,
+										padding: "6px 8px",
+										background: "var(--bg-surface)",
+										borderRadius: "6px",
+										fontSize: "11.5px",
+										fontFamily: "var(--font-mono)",
+										overflowX: "auto",
+										maxHeight: "140px",
+									}}
+								>
+									{rawArgsStr}
+								</pre>
+							</div>
+						)}
 						<div style={{ marginTop: "6px" }}>
 							<div
 								style={{
-									fontSize: "11px",
-									fontWeight: 600,
-									color: "var(--text-muted)",
+									display: "flex",
+									justifyContent: "space-between",
+									alignItems: "center",
 									marginBottom: "3px",
 								}}
 							>
-								Argumentos:
+								<span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)" }}>
+									Salida / Resultado:
+								</span>
+								{result && <CodeCopyButton text={result} />}
 							</div>
 							<pre
 								style={{
@@ -252,46 +293,18 @@ function ToolCallItem({ tc }: { tc: GenericToolCall }) {
 									fontSize: "11.5px",
 									fontFamily: "var(--font-mono)",
 									overflowX: "auto",
-									maxHeight: "140px",
+									maxHeight: "220px",
+									whiteSpace: "pre-wrap",
+									wordBreak: "break-word",
 								}}
 							>
-								{rawArgsStr}
+								{result ||
+									(toolStatus === "pending" ? "Ejecutando herramienta..." : "(sin salida)")}
 							</pre>
 						</div>
-					)}
-					<div style={{ marginTop: "6px" }}>
-						<div
-							style={{
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center",
-								marginBottom: "3px",
-							}}
-						>
-							<span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)" }}>
-								Salida / Resultado:
-							</span>
-							{result && <CodeCopyButton text={result} />}
-						</div>
-						<pre
-							style={{
-								margin: 0,
-								padding: "6px 8px",
-								background: "var(--bg-surface)",
-								borderRadius: "6px",
-								fontSize: "11.5px",
-								fontFamily: "var(--font-mono)",
-								overflowX: "auto",
-								maxHeight: "220px",
-								whiteSpace: "pre-wrap",
-								wordBreak: "break-word",
-							}}
-						>
-							{result || (toolStatus === "pending" ? "Ejecutando herramienta..." : "(sin salida)")}
-						</pre>
 					</div>
-				</div>
-			)}
+				)}
+			</div>
 		</div>
 	);
 }

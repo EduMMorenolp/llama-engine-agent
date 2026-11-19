@@ -1,30 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useSearchParams } from "react-router-dom";
 import { fetchAvailableModels, type Message, type ModelInfo } from "../../../api.ts";
 import logoImg from "../../../assets/logo.jpg";
 import {
 	ArrowDownIcon,
-	CheckIcon,
-	ChevronDownIcon,
-	CommandIcon,
-	DownloadIcon,
 	FileCodeIcon,
-	InfoIcon,
-	LightbulbIcon,
-	PlusIcon,
 	SearchIcon,
-	SidebarIcon,
 	SparklesIcon,
 	TerminalIcon,
-	XIcon,
 } from "../../../components/ui/Icons.tsx";
-import { getAgentForSession } from "../../../lib/session-agents.ts";
+import { getAgentForSession, setAgentForSession } from "../../../lib/session-agents.ts";
 import { useAppSettings } from "../../../lib/useAppSettings.ts";
 import { useToast } from "../../../providers/ToastProvider.tsx";
 import { useSessions } from "../../sessions/hooks/useSessions.ts";
 import { useChat } from "../hooks/useChat.ts";
 import { useSpeechSynthesis } from "../hooks/useSpeechSynthesis.ts";
 import { type ArtifactData, ArtifactPanel } from "./ArtifactPanel.tsx";
+import { ChatInspector } from "./ChatInspector.tsx";
+import { ChatSubSidebar } from "./ChatSubSidebar.tsx";
 import { CommandPaletteModal } from "./CommandPaletteModal.tsx";
 import { Composer } from "./Composer.tsx";
 import type { FileAttachment } from "./FileUpload.tsx";
@@ -36,8 +29,12 @@ import { SettingsModal } from "./SettingsModal.tsx";
 import { VoiceOrb } from "./VoiceOrb.tsx";
 
 interface LayoutContextType {
-	sidebarOpen: boolean;
-	toggleSidebar: () => void;
+	inspectorOpen?: boolean;
+	toggleInspector?: () => void;
+	subSidebarOpen?: boolean;
+	toggleSubSidebar?: () => void;
+	selectedModel?: string;
+	models?: ModelInfo[];
 }
 
 const FALLBACK_MODELS: ModelInfo[] = [
@@ -123,7 +120,6 @@ export function ChatView() {
 		createNewSession,
 		selectSession,
 		removeSession,
-		renameSession,
 		forkSession,
 		deleteMessage,
 		toggleFavoriteMessage,
@@ -136,17 +132,42 @@ export function ChatView() {
 	const { streaming, currentContent, toolCalls, sendMessage, stopStreaming } = useChat();
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const messagesContainerRef = useRef<HTMLDivElement>(null);
-	const modelMenuRef = useRef<HTMLDivElement>(null);
-	const { sidebarOpen, toggleSidebar } = useOutletContext<LayoutContextType>() ?? {
-		sidebarOpen: true,
-		toggleSidebar: () => {},
-	};
+	const [searchParams, setSearchParams] = useSearchParams();
+	const outletContext = useOutletContext<LayoutContextType>() ?? {};
+	const subSidebarOpen = outletContext.subSidebarOpen ?? true;
+	const toggleSubSidebar = outletContext.toggleSubSidebar ?? (() => {});
+	const inspectorOpen = outletContext.inspectorOpen ?? false;
+	const toggleInspector = outletContext.toggleInspector ?? (() => {});
 
 	const appSettings = useAppSettings();
-	const [models, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS);
-	const [selectedModel, setSelectedModel] = useState("qwen3.5-9b");
-	const [showModelMenu, setShowModelMenu] = useState(false);
-	const [showExportMenu, setShowExportMenu] = useState(false);
+	const [, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS);
+	const [selectedModel, setSelectedModel] = useState("qwen3.5-4b");
+	const [enabledTools, setEnabledTools] = useState<string[]>([
+		"web_search",
+		"web_fetch",
+		"execute_bash",
+		"read_file",
+		"write_file",
+		"mcp",
+	]);
+
+	const handleToggleTool = (toolName: string) => {
+		setEnabledTools((prev) =>
+			prev.includes(toolName) ? prev.filter((t) => t !== toolName) : [...prev, toolName],
+		);
+	};
+
+	useEffect(() => {
+		const draftParam = searchParams.get("draft");
+		if (draftParam) {
+			setDraftText(draftParam);
+			setSearchParams({}, { replace: true });
+		}
+		const agentParam = searchParams.get("agent");
+		if (agentParam && activeSessionId) {
+			setAgentForSession(activeSessionId, agentParam);
+		}
+	}, [searchParams, activeSessionId, setSearchParams]);
 	const { speak, stop: stopSpeaking, speaking, currentSpeakingId } = useSpeechSynthesis();
 	const [selectedArtifact, setSelectedArtifact] = useState<ArtifactData | null>(null);
 	const [messageVariants, setMessageVariants] = useState<Record<string, string[]>>({});
@@ -155,22 +176,16 @@ export function ChatView() {
 	const [showSettings, setShowSettings] = useState(false);
 	const [showMemories, setShowMemories] = useState(false);
 	const [showCommandPalette, setShowCommandPalette] = useState(false);
-	const [tabEditingSessionId, setTabEditingSessionId] = useState<string | null>(null);
-	const [tabEditingName, setTabEditingName] = useState("");
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
 	const [draftText, setDraftText] = useState("");
 
-	const totalChars = messages.reduce((sum, m) => sum + (m.content?.length || 0), 0);
-	const MAX_CONTEXT_CHARS = 60000;
-	const contextPercent = Math.min(100, Math.round((totalChars / MAX_CONTEXT_CHARS) * 100));
-	const isHighContext = contextPercent >= 85;
-
 	const prevSessionIdRef = useRef<string | null>(null);
 	const prevMessagesCountRef = useRef<number>(0);
-	const exportMenuRef = useRef<HTMLDivElement>(null);
+	const handleSendRef = useRef<(text: string, attachments: FileAttachment[]) => Promise<void>>(() =>
+		Promise.resolve(),
+	);
 
 	const handleExport = (format: "markdown" | "json") => {
-		setShowExportMenu(false);
 		if (messages.length === 0) {
 			addToast("No hay mensajes para exportar", "info");
 			return;
@@ -243,33 +258,25 @@ export function ChatView() {
 				forkSession("");
 			}
 		};
+		const handleCompactContextEvent = () => {
+			handleSendRef.current(
+				"/compact Por favor resume y compacta la conversación anterior extrayendo los hechos, acuerdos y conclusiones principales.",
+				[],
+			);
+		};
 
 		window.addEventListener("keydown", handleGlobalKeyDown);
 		window.addEventListener("trigger_new_chat", handleNewChatEvent);
 		window.addEventListener("trigger_fork_chat", handleForkChatEvent);
+		window.addEventListener("trigger_compact_context", handleCompactContextEvent);
 
 		return () => {
 			window.removeEventListener("keydown", handleGlobalKeyDown);
 			window.removeEventListener("trigger_new_chat", handleNewChatEvent);
 			window.removeEventListener("trigger_fork_chat", handleForkChatEvent);
+			window.removeEventListener("trigger_compact_context", handleCompactContextEvent);
 		};
 	}, [createNewSession, activeSessionId, forkSession]);
-
-	// Close menus when clicking outside
-	useEffect(() => {
-		function handleClickOutside(e: MouseEvent) {
-			if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
-				setShowModelMenu(false);
-			}
-			if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
-				setShowExportMenu(false);
-			}
-		}
-		if (showModelMenu || showExportMenu) {
-			document.addEventListener("mousedown", handleClickOutside);
-			return () => document.removeEventListener("mousedown", handleClickOutside);
-		}
-	}, [showModelMenu, showExportMenu]);
 
 	const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
 		if (messagesContainerRef.current) {
@@ -450,7 +457,7 @@ export function ChatView() {
 		handleSend(promptText, []);
 	};
 
-	const activeModelObj = models.find((m) => m.id === selectedModel) || models[0];
+	handleSendRef.current = handleSend;
 
 	if (sessionsLoading && messages.length === 0 && !streaming) {
 		return (
@@ -462,406 +469,192 @@ export function ChatView() {
 	}
 
 	return (
-		<div className="main" style={{ width: "100%", height: "100%", position: "relative" }}>
-			{/* Chat Top Navbar with Tabs & Controls */}
-			<header className="chat-navbar">
-				<div className="chat-navbar-left" ref={modelMenuRef} style={{ position: "relative" }}>
-					{!sidebarOpen && (
-						<button
-							type="button"
-							className="toggle-sidebar-btn"
-							onClick={toggleSidebar}
-							title="Mostrar barra lateral"
-						>
-							<SidebarIcon size={17} />
-						</button>
-					)}
+		<div
+			style={{
+				display: "flex",
+				width: "100%",
+				height: "100%",
+				overflow: "hidden",
+				position: "relative",
+			}}
+		>
+			{/* Sub-Sidebar para organizar este chat */}
+			<ChatSubSidebar
+				collapsed={!subSidebarOpen}
+				onToggleCollapse={toggleSubSidebar}
+				sessions={sessions}
+				activeSessionId={activeSessionId}
+				onSelectSession={selectSession}
+				onNewSession={() => createNewSession()}
+				onDeleteSession={removeSession}
+				onOpenSystemPrompt={() => setShowSettings(true)}
+				onOpenMemories={() => setShowMemories(true)}
+			/>
 
-					{/* Model Dropdown Button */}
-					<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-						<button
-							type="button"
-							className="model-badge-selector"
-							onClick={() => setShowModelMenu((prev) => !prev)}
-							title="Seleccionar modelo de IA"
-						>
-							<span className="model-dot" />
-							<span>{selectedModel}</span>
-							<ChevronDownIcon
-								size={14}
-								style={{
-									color: "var(--text-muted)",
-									transform: showModelMenu ? "rotate(180deg)" : "none",
-									transition: "transform 0.2s ease",
-								}}
-							/>
-						</button>
-
-						<button
-							type="button"
-							className="action-icon-btn"
-							onClick={() => setSelectedModelInfo(activeModelObj)}
-							title="Información del modelo activo"
-						>
-							<InfoIcon size={15} style={{ color: "var(--text-secondary)" }} />
-						</button>
-					</div>
-
-					{/* Multi-chat Tabs */}
-					<div className="chat-tabs-bar">
-						{sessions.slice(0, 4).map((s) => {
-							const isEditingTab = tabEditingSessionId === s.id;
-							const displayName = s.name || `Chat ${s.id.slice(0, 6)}`;
-
-							return (
-								<div
-									key={s.id}
-									className={`chat-tab-chip ${s.id === activeSessionId ? "active" : ""}`}
-									role="tab"
-									tabIndex={0}
-									onClick={() => !isEditingTab && selectSession(s.id)}
-									onKeyDown={(e) => {
-										if ((e.key === "Enter" || e.key === " ") && !isEditingTab) {
-											selectSession(s.id);
-										}
-									}}
-									onDoubleClick={(e) => {
-										e.stopPropagation();
-										setTabEditingSessionId(s.id);
-										setTabEditingName(displayName);
-									}}
-									title={isEditingTab ? undefined : "Doble clic para renombrar"}
-								>
-									{isEditingTab ? (
-										<input
-											ref={(el) => el?.focus()}
-											type="text"
-											className="chat-tab-rename-input"
-											value={tabEditingName}
-											onChange={(e) => setTabEditingName(e.target.value)}
-											onClick={(e) => e.stopPropagation()}
-											onKeyDown={(e) => {
-												if (e.key === "Enter") {
-													e.preventDefault();
-													if (tabEditingName.trim()) {
-														renameSession(s.id, tabEditingName.trim());
-													}
-													setTabEditingSessionId(null);
-												} else if (e.key === "Escape") {
-													e.preventDefault();
-													setTabEditingSessionId(null);
-												}
-											}}
-											onBlur={() => {
-												if (tabEditingName.trim()) {
-													renameSession(s.id, tabEditingName.trim());
-												}
-												setTabEditingSessionId(null);
-											}}
-										/>
-									) : (
-										<span>{displayName}</span>
-									)}
-									<button
-										type="button"
-										className="chat-tab-close"
-										onClick={(e) => {
-											e.stopPropagation();
-											removeSession(s.id);
-										}}
-										title="Cerrar pestaña"
-									>
-										<XIcon size={12} />
-									</button>
-								</div>
-							);
-						})}
-						<button
-							type="button"
-							className="chat-tab-chip new-tab"
-							onClick={() => createNewSession()}
-							title="Nueva pestaña"
-						>
-							<PlusIcon size={13} />
-						</button>
-					</div>
-
-					{/* Model Dropdown Menu */}
-					{showModelMenu && (
-						<div className="popover-menu model-dropdown-popover">
-							<div className="popover-header">
-								<span>Modelos GGUF (llama.cpp)</span>
-							</div>
-							{models.map((m) => (
-								<button
-									type="button"
-									key={m.id}
-									className={`popover-item ${m.id === selectedModel ? "active-model-item" : ""}`}
-									onClick={() => {
-										setSelectedModel(m.id);
-										setShowModelMenu(false);
-									}}
-								>
-									<div
-										style={{ display: "flex", flexDirection: "column", flex: 1, textAlign: "left" }}
-									>
-										<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-											<span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
-												{m.name}
-											</span>
-											{m.badge && (
-												<span
-													className="model-tag-badge"
-													style={{
-														background: m.loaded ? "rgba(16, 185, 129, 0.2)" : undefined,
-														color: m.loaded ? "#10b981" : undefined,
-													}}
-												>
-													{m.badge}
-												</span>
-											)}
-										</div>
-										<span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{m.desc}</span>
-									</div>
-									<div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-										<button
-											type="button"
-											className="session-action-btn"
-											onClick={(e) => {
-												e.stopPropagation();
-												setShowModelMenu(false);
-												setSelectedModelInfo(m);
-											}}
-											title={`Ver información de ${m.name}`}
-										>
-											<InfoIcon size={13} />
-										</button>
-										{m.id === selectedModel && (
-											<CheckIcon size={15} style={{ color: "var(--accent)" }} />
-										)}
-									</div>
-								</button>
-							))}
-						</div>
-					)}
-				</div>
-
-				{/* Right Controls: Export session, Context Badge & Actions */}
-				<div
-					className="chat-navbar-right"
-					ref={exportMenuRef}
-					style={{ position: "relative", display: "flex", alignItems: "center", gap: "8px" }}
-				>
-					{messages.length > 0 && (
-						<span
-							className="model-tag-badge"
-							style={{
-								background: isHighContext ? "rgba(239, 68, 68, 0.15)" : "rgba(255, 255, 255, 0.06)",
-								color: isHighContext ? "#ef4444" : "var(--text-secondary)",
-								border: isHighContext ? "1px solid rgba(239, 68, 68, 0.3)" : undefined,
-								fontSize: "11px",
-								fontWeight: 500,
-							}}
-							title={`Uso de ventana de contexto: ${totalChars.toLocaleString()} / 60,000 caracteres (${contextPercent}%)`}
-						>
-							Contexto {contextPercent}%
-						</span>
-					)}
-
-					<button
-						type="button"
-						className="action-icon-btn"
-						onClick={() => setShowCommandPalette(true)}
-						title="Paleta de comandos (Ctrl+K)"
-					>
-						<CommandIcon size={16} style={{ color: "var(--text-secondary)" }} />
-					</button>
-
-					<button
-						type="button"
-						className="action-icon-btn"
-						onClick={() => setShowMemories(true)}
-						title="Memorias del asistente"
-					>
-						<LightbulbIcon size={16} style={{ color: "var(--accent)" }} />
-					</button>
-
-					<button
-						type="button"
-						className="action-icon-btn"
-						onClick={() => setShowExportMenu((prev) => !prev)}
-						title="Exportar conversación (Markdown / JSON)"
-					>
-						<DownloadIcon size={16} style={{ color: "var(--text-secondary)" }} />
-					</button>
-
-					{showExportMenu && (
-						<div
-							className="popover-menu"
-							style={{ right: 0, top: "calc(100% + 6px)", minWidth: 160 }}
-						>
-							<div className="popover-header">
-								<span>Exportar Chat</span>
-							</div>
-							<button
-								type="button"
-								className="popover-item"
-								onClick={() => handleExport("markdown")}
-							>
-								<FileCodeIcon size={15} />
-								<span>Markdown (.md)</span>
-							</button>
-							<button type="button" className="popover-item" onClick={() => handleExport("json")}>
-								<SparklesIcon size={15} />
-								<span>JSON (.json)</span>
-							</button>
-						</div>
-					)}
-				</div>
-			</header>
-
-			{/* Chat Body: Messages & Artifacts Split View */}
+			{/* Main Chat Work Area (Messages + Composer + Artifact Panel) */}
 			<div
-				className="chat-body-layout"
 				style={{
 					display: "flex",
 					flex: 1,
-					minHeight: 0,
+					minWidth: 0,
+					height: "100%",
 					position: "relative",
+					flexDirection: "column",
 					overflow: "hidden",
-					width: "100%",
 				}}
 			>
-				{/* Message Stream */}
+				{/* Chat Body: Messages & Artifacts Split View */}
 				<div
-					className="messages-container"
-					ref={messagesContainerRef}
-					onScroll={handleScroll}
-					style={{ flex: 1, minWidth: 0 }}
+					className="chat-body-layout"
+					style={{
+						display: "flex",
+						flex: 1,
+						minHeight: 0,
+						position: "relative",
+						overflow: "hidden",
+						width: "100%",
+					}}
 				>
-					<div className="messages-inner">
-						{loadingMore && (
-							<div className="load-more-indicator">
-								<div className="spinner" style={{ width: 16, height: 16 }} />
-								<span>Cargando más mensajes...</span>
-							</div>
-						)}
-						{messages.length === 0 && !streaming ? (
-							<div className="empty-hero">
-								<div className="hero-avatar-glow">
-									<img src={logoImg} alt="Llama Engine" className="hero-avatar-img" />
+					{/* Message Stream */}
+					<div
+						className="messages-container"
+						ref={messagesContainerRef}
+						onScroll={handleScroll}
+						style={{ flex: 1, minWidth: 0 }}
+					>
+						<div className="messages-inner">
+							{loadingMore && (
+								<div className="load-more-indicator">
+									<div className="spinner" style={{ width: 16, height: 16 }} />
+									<span>Cargando más mensajes...</span>
 								</div>
-								<h1 className="hero-title">¿En qué puedo ayudarte hoy?</h1>
-								<p className="hero-subtitle">
-									Agente potenciado por LLM y herramientas avanzadas de ejecución de comandos,
-									análisis de archivos y razonamiento en tiempo real.
-								</p>
+							)}
+							{messages.length === 0 && !streaming ? (
+								<div className="empty-hero">
+									<div className="hero-avatar-glow">
+										<img src={logoImg} alt="Llama Engine" className="hero-avatar-img" />
+									</div>
+									<h1 className="hero-title">¿En qué puedo ayudarte hoy?</h1>
+									<p className="hero-subtitle">
+										Agente potenciado por LLM y herramientas avanzadas de ejecución de comandos,
+										análisis de archivos y razonamiento en tiempo real.
+									</p>
 
-								<div className="starter-cards-grid">
-									{STARTER_PROMPTS.map((starter) => (
-										<button
-											key={starter.title}
-											type="button"
-											className="starter-card"
-											onClick={() => handleStarterClick(starter.prompt)}
-										>
-											<div className="starter-card-title">
-												{starter.icon}
-												<span>{starter.title}</span>
-											</div>
-											<div className="starter-card-desc">{starter.desc}</div>
-										</button>
-									))}
+									<div className="starter-cards-grid">
+										{STARTER_PROMPTS.map((starter) => (
+											<button
+												key={starter.title}
+												type="button"
+												className="starter-card"
+												onClick={() => handleStarterClick(starter.prompt)}
+											>
+												<div className="starter-card-title">
+													{starter.icon}
+													<span>{starter.title}</span>
+												</div>
+												<div className="starter-card-desc">{starter.desc}</div>
+											</button>
+										))}
+									</div>
 								</div>
-							</div>
-						) : (
-							<>
-								{(() => {
-									const toolResultsMap: Record<string, string> = {};
-									for (const m of messages) {
-										if (m.role === "tool" && m.toolCallId && m.content) {
-											toolResultsMap[m.toolCallId] = m.content;
-										}
-									}
-									return messages.map((msg) => (
-										<MessageBubble
-											key={msg.id}
-											message={msg}
-											toolResults={toolResultsMap}
-											modelName={selectedModel}
-											onFork={handleFork}
-											onDelete={handleDeleteMsg}
-											onEdit={handleEditMsg}
-											onReload={handleReloadMsg}
-											onFavorite={(m) => toggleFavoriteMessage(m.id)}
-											onOpenArtifact={(art) => setSelectedArtifact(art)}
-											onSpeak={(txt) => {
-												if (currentSpeakingId === msg.id && speaking) {
-													stopSpeaking();
-												} else {
-													speak(txt, msg.id);
-												}
-											}}
-											isSpeakingThis={currentSpeakingId === msg.id && speaking}
-											variants={messageVariants[msg.id]}
-											activeVariantIndex={activeVariantIndices[msg.id] ?? 0}
-											onVariantChange={(idx) =>
-												setActiveVariantIndices((prev) => ({ ...prev, [msg.id]: idx }))
+							) : (
+								<>
+									{(() => {
+										const toolResultsMap: Record<string, string> = {};
+										for (const m of messages) {
+											if (m.role === "tool" && m.toolCallId && m.content) {
+												toolResultsMap[m.toolCallId] = m.content;
 											}
-										/>
-									));
-								})()}
+										}
+										return messages.map((msg) => (
+											<MessageBubble
+												key={msg.id}
+												message={msg}
+												toolResults={toolResultsMap}
+												modelName={selectedModel}
+												onFork={handleFork}
+												onDelete={handleDeleteMsg}
+												onEdit={handleEditMsg}
+												onReload={handleReloadMsg}
+												onFavorite={(m) => toggleFavoriteMessage(m.id)}
+												onOpenArtifact={(art) => setSelectedArtifact(art)}
+												onSpeak={(txt) => {
+													if (currentSpeakingId === msg.id && speaking) {
+														stopSpeaking();
+													} else {
+														speak(txt, msg.id);
+													}
+												}}
+												isSpeakingThis={currentSpeakingId === msg.id && speaking}
+												variants={messageVariants[msg.id]}
+												activeVariantIndex={activeVariantIndices[msg.id] ?? 0}
+												onVariantChange={(idx) =>
+													setActiveVariantIndices((prev) => ({ ...prev, [msg.id]: idx }))
+												}
+											/>
+										));
+									})()}
 
-								{streaming && (currentContent || toolCalls.length > 0) && (
-									<MessageBubble
-										message={{
-											id: "streaming",
-											sessionId: activeSessionId ?? "",
-											role: "assistant",
-											content: currentContent,
-											toolCalls: null,
-											toolCallId: null,
-											createdAt: Date.now(),
-										}}
-										toolCalls={toolCalls}
-										modelName={selectedModel}
-										isStreaming
-									/>
-								)}
-							</>
-						)}
-						<div ref={messagesEndRef} />
+									{streaming && (currentContent || toolCalls.length > 0) && (
+										<MessageBubble
+											message={{
+												id: "streaming",
+												sessionId: activeSessionId ?? "",
+												role: "assistant",
+												content: currentContent,
+												toolCalls: null,
+												toolCallId: null,
+												createdAt: Date.now(),
+											}}
+											toolCalls={toolCalls}
+											modelName={selectedModel}
+											isStreaming
+										/>
+									)}
+								</>
+							)}
+							<div ref={messagesEndRef} />
+						</div>
 					</div>
+
+					{/* Canvas / Artifacts Split Panel (Claude / Bolt style) */}
+					{selectedArtifact && (
+						<ArtifactPanel artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />
+					)}
 				</div>
 
-				{/* Canvas / Artifacts Split Panel (Claude / Bolt style) */}
-				{selectedArtifact && (
-					<ArtifactPanel artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />
+				{/* Floating Input Composer */}
+				<Composer
+					onSend={handleSend}
+					onStop={stopStreaming}
+					disabled={streaming}
+					model={selectedModel}
+					draftText={draftText}
+					onDraftTextChange={setDraftText}
+				/>
+
+				{/* Floating Scroll to Bottom Button */}
+				{showScrollBottom && (
+					<button
+						type="button"
+						className="scroll-to-bottom-btn"
+						onClick={() => scrollToBottom("smooth")}
+						title="Desplazarse al final del chat"
+						aria-label="Desplazarse al final del chat"
+					>
+						<ArrowDownIcon size={18} />
+					</button>
 				)}
 			</div>
 
-			{/* Floating Input Composer */}
-			<Composer
-				onSend={handleSend}
-				onStop={stopStreaming}
-				disabled={streaming}
-				model={selectedModel}
-				draftText={draftText}
-				onDraftTextChange={setDraftText}
+			{/* Right Inspector Panel (3 live blocks: Toggles Skills & MCP, Memories, Agenda & Habits) */}
+			<ChatInspector
+				open={inspectorOpen}
+				onClose={toggleInspector}
+				enabledTools={enabledTools}
+				onToggleTool={handleToggleTool}
+				onOpenMemoriesModal={() => setShowMemories(true)}
 			/>
-
-			{/* Floating Scroll to Bottom Button */}
-			{showScrollBottom && (
-				<button
-					type="button"
-					className="scroll-to-bottom-btn"
-					onClick={() => scrollToBottom("smooth")}
-					title="Desplazarse al final del chat"
-					aria-label="Desplazarse al final del chat"
-				>
-					<ArrowDownIcon size={18} />
-				</button>
-			)}
 
 			{/* Model Information Modal */}
 			{selectedModelInfo && (

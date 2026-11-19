@@ -72,4 +72,3 @@ export function useSpeechSynthesis() {
 
 	return { speak, stop, speaking, currentSpeakingId, isSupported: supported };
 }
-

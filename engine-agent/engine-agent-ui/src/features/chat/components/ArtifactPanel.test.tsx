@@ -1,14 +1,14 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ArtifactPanel, type ArtifactData } from "./ArtifactPanel.tsx";
+import { type ArtifactData, ArtifactPanel } from "./ArtifactPanel.tsx";
 
 describe("ArtifactPanel", () => {
 	it("renders code artifact with title and code content", () => {
 		const artifact: ArtifactData = {
+			id: "a1",
 			title: "Script Python",
 			language: "python",
 			content: 'print("Hola mundo")',
-			type: "code",
 		};
 		const onClose = vi.fn();
 		const { container } = render(<ArtifactPanel artifact={artifact} onClose={onClose} />);
@@ -20,10 +20,10 @@ describe("ArtifactPanel", () => {
 
 	it("calls onClose when close button is clicked", () => {
 		const artifact: ArtifactData = {
+			id: "a2",
 			title: "HTML Preview",
 			language: "html",
 			content: "<h1>Título</h1>",
-			type: "html",
 		};
 		const onClose = vi.fn();
 		render(<ArtifactPanel artifact={artifact} onClose={onClose} />);
@@ -35,10 +35,10 @@ describe("ArtifactPanel", () => {
 
 	it("renders preview and code tabs for HTML artifacts", () => {
 		const artifact: ArtifactData = {
+			id: "a3",
 			title: "Página web",
 			language: "html",
 			content: "<p>Hola</p>",
-			type: "html",
 		};
 		render(<ArtifactPanel artifact={artifact} onClose={vi.fn()} />);
 

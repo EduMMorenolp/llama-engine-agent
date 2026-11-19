@@ -121,4 +121,3 @@ export function VoiceOrb({ mode, onStop }: VoiceOrbProps) {
 		</div>
 	);
 }
-

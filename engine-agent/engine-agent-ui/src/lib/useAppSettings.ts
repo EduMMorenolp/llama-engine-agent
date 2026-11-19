@@ -4,6 +4,7 @@ import { type AppSettings, loadSettings, saveSettings } from "./settings.ts";
 export type UseAppSettingsReturn = AppSettings & {
 	settings: AppSettings;
 	updateSettings: (partial: Partial<AppSettings>) => void;
+	toggleTheme: () => void;
 };
 
 export function useAppSettings(): UseAppSettingsReturn {
@@ -38,9 +39,15 @@ export function useAppSettings(): UseAppSettingsReturn {
 		setSettings(updated);
 	};
 
+	const toggleTheme = () => {
+		const nextTheme = settings.theme === "dark" ? "light" : "dark";
+		updateSettings({ theme: nextTheme });
+	};
+
 	return {
 		...settings,
 		settings,
 		updateSettings,
+		toggleTheme,
 	};
 }

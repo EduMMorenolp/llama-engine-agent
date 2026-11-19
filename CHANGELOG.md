@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+$ docker compose up -d --build --no-deps engine-agent-api engine-agent-ui
+
+- **Added**: **Reforma Total de UX/UI estilo Obsidian & Azul Eléctrico (Alineación visual con llama-engine)**. Rediseño integral de interfaz adoptando la arquitectura visual y tokens de `llama-engine` con paleta base azul eléctrico (`--accent: #3b82f6`, `--accent-strong: #60a5fa`, `--card: rgba(17, 23, 38, 0.72)`, obsidian profundo `--bg: #080b12` y gradientes radiales sutiles). [2026-11-19]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/index.css, engine-agent/engine-agent-ui/src/App.tsx, engine-agent/engine-agent-ui/src/components/layout/Layout.tsx, engine-agent/engine-agent-ui/src/components/layout/Sidebar.tsx, engine-agent/engine-agent-ui/src/components/layout/Topbar.tsx. [2026-11-19]
+
+- **Added**: **Sidebar Principal Modular con Rutas de Gestión Agéntica (`Sidebar`)**. Navegación de primer nivel agrupada en "Principal", "Capacidades Agénticas" y "Sistema", con rutas para `/` (Chats), `/agents` (Agentes y personalidades), `/skills` (Catálogo de Skills), `/tools` (Herramientas Agénticas), `/mcp` (Servidores MCP), `/memories` (Memorias persistentes), `/agenda` (Agenda & Hábitos) y `/settings` (Configuración), además de la tarjeta inferior de runtime con estado en vivo del modelo y memoria. [2026-11-19]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/components/layout/Sidebar.tsx, engine-agent/engine-agent-ui/src/App.tsx. [2026-11-19]
+
+- **Added**: **Sub-sidebar por Conversación y Selector de Agente (`ChatSubSidebar`)**. Panel lateral izquierdo dedicado por chat que organiza la lista de conversaciones con buscador reactivo, selector de agente activo (`asistente`, `coder`, `researcher`, `reviewer`) con dot identificatorio y accesos rápidos al System Prompt y Memorias del agente. [2026-11-19]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/ChatSubSidebar.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx. [2026-11-19]
+
+- **Added**: **Inspector Agéntico en Vivo (`ChatInspector`)**. Panel lateral derecho colapsable de pantalla ancha estructurado en 3 bloques vivos: Toggles de activación de Skills & MCP (`web_search`, `execute_bash`, etc.), chips y tags de Memorias persistentes y checklist interactivo de Agenda y Hábitos diarios sincronizados con PostgreSQL/n8n. [2026-11-19]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/ChatInspector.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx. [2026-11-19]
+
+- **Added**: **Topbar con Pestañas Multi-Chat y Gestión Visual de Contexto (`Topbar`)**. Pestañas dinámicas con puntos de color por personalidad de agente, selector de modelo activo, botón de monitoreo de contexto con popover tricolor (System, Tools, Historial) y botón de acción directa "Compactar", toggle de inspector y tema claro/oscuro. [2026-11-19]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/components/layout/Topbar.tsx, engine-agent/engine-agent-ui/src/components/layout/Layout.tsx. [2026-11-19]
+
+- **Added**: **Human-in-the-Loop (HITL) interactivo y Acciones en Respuestas**. Tarjeta interactiva `Confirmar ejecución · [bash/tool]` (`HitlConfirmationCard`) con botones Permitir y Rechazar antes de correr comandos críticos en bash o manipulación de archivos, junto a accesos directos (Copiar, Regenerar, Guardar/Fijar, Bifurcar, Escuchar por voz). [2026-11-19]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/HitlConfirmationCard.tsx, engine-agent/engine-agent-ui/src/features/chat/components/MessageBubble.tsx. [2026-11-19]
+
+- **Added**: **Pantallas dedicadas de administración agéntica con prompts guiados**. Creación de páginas completas para `/agents`, `/skills`, `/tools`, `/mcp`, `/memories` y `/agenda`, permitiendo inspeccionar especificaciones técnicas y pedir directamente al agente ("Pedir al agente modificar X") que ajuste o cree nuevas capacidades. [2026-11-19]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/agents/pages/AgentsPage.tsx, engine-agent/engine-agent-ui/src/features/skills/pages/SkillsPage.tsx, engine-agent/engine-agent-ui/src/features/tools/pages/ToolsPage.tsx, engine-agent/engine-agent-ui/src/features/mcp/pages/MCPPage.tsx, engine-agent/engine-agent-ui/src/features/memories/pages/MemoriesPage.tsx, engine-agent/engine-agent-ui/src/features/agenda/pages/AgendaPage.tsx, engine-agent/engine-agent-ui/src/features/settings/pages/SettingsPage.tsx. [2026-11-19]
+
 - **Added**: **Panel interactivo de "Artifacts" / Canvas a pantalla partida (`ArtifactPanel`)**. Visualizador lateral en split view y modo pantalla completa (estilo Claude / Bolt) para fragmentos de código, HTML interactivo en iframe aislado, SVG y diagramas. Dispone de pestañas "Vista Previa" y "Código", botones de copia con un clic, descarga directa de archivo y botón directo "Canvas" en la cabecera de cada bloque de código dentro de `MessageBubble`. [2026-11-18]
   * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/ArtifactPanel.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ArtifactPanel.test.tsx, engine-agent/engine-agent-ui/src/features/chat/components/MessageBubble.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx, engine-agent/engine-agent-ui/src/components/ui/Icons.tsx. [2026-11-18]
 
