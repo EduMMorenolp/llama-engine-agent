@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Session } from "../../../api.ts";
 import {
 	BotIcon,
 	BrainIcon,
 	ChevronLeftIcon,
+	ChevronRightIcon,
 	PlusIcon,
 	SearchIcon,
 	SlidersIcon,
@@ -45,9 +46,19 @@ export function ChatSubSidebar({
 	onAgentChange,
 }: ChatSubSidebarProps) {
 	const [searchQuery, setSearchQuery] = useState("");
-	const currentAgent = activeSessionId
-		? (getAgentForSession(activeSessionId) ?? "asistente")
-		: "asistente";
+	const [currentAgent, setCurrentAgent] = useState("asistente");
+
+	useEffect(() => {
+		const syncAgent = () => {
+			const next = activeSessionId
+				? (getAgentForSession(activeSessionId) ?? "asistente")
+				: "asistente";
+			setCurrentAgent(next);
+		};
+		syncAgent();
+		window.addEventListener("agent_session_changed", syncAgent);
+		return () => window.removeEventListener("agent_session_changed", syncAgent);
+	}, [activeSessionId]);
 
 	const filteredSessions = sessions.filter((s) => {
 		if (!searchQuery.trim()) return true;
@@ -56,14 +67,81 @@ export function ChatSubSidebar({
 	});
 
 	const handleAgentSelect = (agentId: string) => {
+		setCurrentAgent(agentId);
 		if (activeSessionId) {
 			setAgentForSession(activeSessionId, agentId);
+			window.dispatchEvent(
+				new CustomEvent("agent_session_changed", {
+					detail: { sessionId: activeSessionId, agentId },
+				}),
+			);
 			onAgentChange?.(agentId);
 		}
 	};
 
 	if (collapsed) {
-		return null;
+		return (
+			<aside
+				className="chat-sub-sidebar collapsed-rail"
+				aria-label="Organizador de conversaciones colapsado"
+				style={{
+					width: "44px",
+					flexShrink: 0,
+					background: "var(--panel)",
+					borderRight: "1px solid var(--border)",
+					height: "100%",
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					padding: "10px 4px",
+					gap: "8px",
+				}}
+			>
+				<button
+					type="button"
+					className="session-action-btn"
+					onClick={onToggleCollapse}
+					title="Mostrar Sesiones de Chat"
+					aria-label="Mostrar Sesiones de Chat"
+					style={{ width: "30px", height: "30px" }}
+				>
+					<ChevronRightIcon size={15} />
+				</button>
+				<button
+					type="button"
+					className="session-action-btn"
+					onClick={onNewSession}
+					title="Nueva conversación"
+					aria-label="Nueva conversación"
+					style={{ width: "30px", height: "30px" }}
+				>
+					<PlusIcon size={15} />
+				</button>
+				<div
+					style={{ width: "20px", height: "1px", background: "var(--border)", margin: "2px 0" }}
+				/>
+				<button
+					type="button"
+					className="session-action-btn"
+					onClick={onOpenMemories}
+					title="Ver Memorias persistentes"
+					aria-label="Ver Memorias persistentes"
+					style={{ width: "30px", height: "30px" }}
+				>
+					<BrainIcon size={14} />
+				</button>
+				<button
+					type="button"
+					className="session-action-btn"
+					onClick={onOpenSystemPrompt}
+					title="Editar System Prompt del agente"
+					aria-label="Editar System Prompt del agente"
+					style={{ width: "30px", height: "30px" }}
+				>
+					<SlidersIcon size={14} />
+				</button>
+			</aside>
+		);
 	}
 
 	return (
@@ -212,7 +290,7 @@ export function ChatSubSidebar({
 			>
 				{filteredSessions.map((s) => {
 					const isActive = s.id === activeSessionId;
-					const agentTag = s.tags?.[0] || "asistente";
+					const agentTag = getAgentForSession(s.id) || s.tags?.[0] || "asistente";
 					const displayName = s.name || `Chat ${s.id.slice(0, 6)}`;
 
 					return (

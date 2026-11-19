@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { fetchAvailableModels, type ModelInfo } from "../../api.ts";
 import { CommandPaletteModal } from "../../features/chat/components/CommandPaletteModal.tsx";
 import { useSessions } from "../../features/sessions/hooks/useSessions.ts";
@@ -14,6 +14,7 @@ const FALLBACK_MODELS: ModelInfo[] = [
 ];
 
 export function Layout() {
+	const navigate = useNavigate();
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [inspectorOpen, setInspectorOpen] = useState(false);
 	const [subSidebarOpen, setSubSidebarOpen] = useState(true);
@@ -100,9 +101,9 @@ export function Layout() {
 			{paletteOpen && (
 				<CommandPaletteModal
 					onClose={() => setPaletteOpen(false)}
-					onOpenMemories={() => {}}
-					onOpenSettings={() => {}}
-					onExportChat={() => {}}
+					onOpenMemories={() => navigate("/memories")}
+					onOpenSettings={() => navigate("/settings")}
+					onExportChat={() => window.dispatchEvent(new CustomEvent("trigger_export_chat"))}
 				/>
 			)}
 		</div>

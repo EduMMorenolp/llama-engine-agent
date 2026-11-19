@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
-import {
-	type ActividadAgenda,
-	fetchDashboardFromN8N,
-	fetchMemories,
-	type HabitoConfig,
-	type MemoryItem,
-} from "../../../api.ts";
+import { fetchMemories, type MemoryItem } from "../../../api.ts";
 import {
 	BrainIcon,
-	CalendarIcon,
 	PlusIcon,
 	ServerIcon,
 	WrenchIcon,
@@ -31,86 +24,14 @@ export function ChatInspector({
 	onOpenMemoriesModal,
 }: ChatInspectorProps) {
 	const [memories, setMemories] = useState<MemoryItem[]>([]);
-	const [agendaItems, setAgendaItems] = useState<ActividadAgenda[]>([
-		{
-			id: "1",
-			hora: "09:00",
-			actividad: "Revisar logs de Docker y Whisper",
-			completada: true,
-			recordado: true,
-		},
-		{
-			id: "2",
-			hora: "14:30",
-			actividad: "Sincronización de skills con Qwen 4B",
-			completada: false,
-			recordado: false,
-		},
-		{
-			id: "3",
-			hora: "18:00",
-			actividad: "Backup de base de datos Postgres",
-			completada: false,
-			recordado: false,
-		},
-	]);
-	const [habits, setHabits] = useState<HabitoConfig[]>([
-		{
-			id: "h1",
-			slug: "agua",
-			nombre: "Tomar 2L de agua",
-			hora: "08:00",
-			pregunta_prompt: "",
-			activa: true,
-		},
-		{
-			id: "h2",
-			slug: "ejercicio",
-			nombre: "30 min de ejercicio o caminata",
-			hora: "19:00",
-			pregunta_prompt: "",
-			activa: true,
-		},
-		{
-			id: "h3",
-			slug: "lectura",
-			nombre: "Leer 15 páginas técnicas",
-			hora: "21:30",
-			pregunta_prompt: "",
-			activa: true,
-		},
-	]);
 
 	useEffect(() => {
 		if (open) {
 			fetchMemories()
-				.then((mems) => setMemories(mems.slice(0, 8)))
+				.then((mems) => setMemories(mems.slice(0, 12)))
 				.catch(() => {});
-
-			fetchDashboardFromN8N()
-				.then((data) => {
-					if (data.agenda_hoy && data.agenda_hoy.length > 0) {
-						setAgendaItems(data.agenda_hoy);
-					}
-					if (data.habitos && data.habitos.length > 0) {
-						setHabits(data.habitos);
-					}
-				})
-				.catch(() => {
-					// Fallback a agenda local de muestra
-				});
 		}
 	}, [open]);
-
-	const toggleAgendaItem = (id: string) => {
-		setAgendaItems((prev) =>
-			prev.map((item) => (item.id === id ? { ...item, completada: !item.completada } : item)),
-		);
-	};
-
-	const toggleHabitItem = (id: string) => {
-		setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, activa: !h.activa } : h)));
-	};
 
 	if (!open) {
 		return null;
@@ -279,91 +200,6 @@ export function ChatInspector({
 							No hay memorias activas para esta sesión.
 						</span>
 					)}
-				</div>
-			</div>
-
-			{/* Bloque 3: Resumen de Agenda y Hábitos del Día */}
-			<div className="inspector-block">
-				<div className="inspector-block-header">
-					<span className="inspector-block-title">
-						<CalendarIcon size={14} style={{ color: "#10b981" }} />
-						Agenda & Hábitos de Hoy
-					</span>
-					<span className="nav-badge" style={{ fontSize: "10px" }}>
-						Postgres
-					</span>
-				</div>
-
-				<div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-					<span
-						style={{
-							fontSize: "11px",
-							fontWeight: 700,
-							color: "var(--muted)",
-							textTransform: "uppercase",
-						}}
-					>
-						Agenda
-					</span>
-					{agendaItems.map((item) => (
-						<label
-							key={item.id}
-							style={{
-								display: "flex",
-								alignItems: "flex-start",
-								gap: "8px",
-								fontSize: "12px",
-								cursor: "pointer",
-								color: item.completada ? "var(--muted)" : "var(--text)",
-								textDecoration: item.completada ? "line-through" : "none",
-							}}
-						>
-							<input
-								type="checkbox"
-								checked={item.completada}
-								onChange={() => toggleAgendaItem(item.id)}
-								style={{ accentColor: "var(--accent)", marginTop: "2px" }}
-							/>
-							<div>
-								<span style={{ fontWeight: 600, marginRight: "4px" }}>{item.hora}</span>
-								<span>{item.actividad}</span>
-							</div>
-						</label>
-					))}
-
-					<div style={{ height: "1px", background: "var(--border)", margin: "4px 0" }} />
-
-					<span
-						style={{
-							fontSize: "11px",
-							fontWeight: 700,
-							color: "var(--muted)",
-							textTransform: "uppercase",
-						}}
-					>
-						Hábitos Diarios
-					</span>
-					{habits.map((h) => (
-						<label
-							key={h.id}
-							style={{
-								display: "flex",
-								alignItems: "center",
-								gap: "8px",
-								fontSize: "12px",
-								cursor: "pointer",
-								color: h.activa ? "var(--text)" : "var(--muted)",
-							}}
-						>
-							<input
-								type="checkbox"
-								checked={h.activa}
-								onChange={() => toggleHabitItem(h.id)}
-								style={{ accentColor: "#10b981" }}
-							/>
-							<span>{h.nombre}</span>
-						</label>
-					))}
 				</div>
 			</div>
 		</aside>

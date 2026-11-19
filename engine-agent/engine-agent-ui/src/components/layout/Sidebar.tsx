@@ -3,7 +3,6 @@ import { NavLink } from "react-router-dom";
 import {
 	BotIcon,
 	BrainIcon,
-	CalendarIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
 	MessageSquareIcon,
@@ -46,9 +45,8 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 		],
 	},
 	{
-		title: "Asistencia Diaria",
+		title: "Sistema",
 		items: [
-			{ to: "/agenda", label: "Agenda & Hábitos", end: false, icon: <CalendarIcon size={17} /> },
 			{ to: "/settings", label: "Configuración", end: false, icon: <SlidersIcon size={17} /> },
 		],
 	},

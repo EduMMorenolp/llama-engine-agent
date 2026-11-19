@@ -141,7 +141,8 @@ export function ChatView() {
 
 	const appSettings = useAppSettings();
 	const [, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS);
-	const [selectedModel, setSelectedModel] = useState("qwen3.5-4b");
+	const [localSelectedModel, setSelectedModel] = useState("qwen3.5-4b");
+	const selectedModel = outletContext.selectedModel || localSelectedModel;
 	const [enabledTools, setEnabledTools] = useState<string[]>([
 		"web_search",
 		"web_fetch",
@@ -159,13 +160,20 @@ export function ChatView() {
 
 	useEffect(() => {
 		const draftParam = searchParams.get("draft");
+		const agentParam = searchParams.get("agent");
 		if (draftParam) {
 			setDraftText(draftParam);
-			setSearchParams({}, { replace: true });
 		}
-		const agentParam = searchParams.get("agent");
 		if (agentParam && activeSessionId) {
 			setAgentForSession(activeSessionId, agentParam);
+			window.dispatchEvent(
+				new CustomEvent("agent_session_changed", {
+					detail: { sessionId: activeSessionId, agentId: agentParam },
+				}),
+			);
+		}
+		if (draftParam || (agentParam && activeSessionId)) {
+			setSearchParams({}, { replace: true });
 		}
 	}, [searchParams, activeSessionId, setSearchParams]);
 	const { speak, stop: stopSpeaking, speaking, currentSpeakingId } = useSpeechSynthesis();
@@ -184,6 +192,7 @@ export function ChatView() {
 	const handleSendRef = useRef<(text: string, attachments: FileAttachment[]) => Promise<void>>(() =>
 		Promise.resolve(),
 	);
+	const handleExportRef = useRef<(format: "markdown" | "json") => void>(() => {});
 
 	const handleExport = (format: "markdown" | "json") => {
 		if (messages.length === 0) {
@@ -225,6 +234,7 @@ export function ChatView() {
 		URL.revokeObjectURL(url);
 		addToast(`Sesión exportada como ${format.toUpperCase()}`, "success");
 	};
+	handleExportRef.current = handleExport;
 
 	// Load models from llama.cpp / engine-api
 	useEffect(() => {
@@ -243,15 +253,8 @@ export function ChatView() {
 			});
 	}, []);
 
-	// Global shortcuts (Ctrl+K for Command Palette) & custom slash events
+	// Custom slash events & export events
 	useEffect(() => {
-		const handleGlobalKeyDown = (e: KeyboardEvent) => {
-			if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-				e.preventDefault();
-				setShowCommandPalette((prev) => !prev);
-			}
-		};
-
 		const handleNewChatEvent = () => createNewSession();
 		const handleForkChatEvent = () => {
 			if (activeSessionId) {
@@ -264,17 +267,20 @@ export function ChatView() {
 				[],
 			);
 		};
+		const handleExportChatEvent = () => {
+			handleExportRef.current("markdown");
+		};
 
-		window.addEventListener("keydown", handleGlobalKeyDown);
 		window.addEventListener("trigger_new_chat", handleNewChatEvent);
 		window.addEventListener("trigger_fork_chat", handleForkChatEvent);
 		window.addEventListener("trigger_compact_context", handleCompactContextEvent);
+		window.addEventListener("trigger_export_chat", handleExportChatEvent);
 
 		return () => {
-			window.removeEventListener("keydown", handleGlobalKeyDown);
 			window.removeEventListener("trigger_new_chat", handleNewChatEvent);
 			window.removeEventListener("trigger_fork_chat", handleForkChatEvent);
 			window.removeEventListener("trigger_compact_context", handleCompactContextEvent);
+			window.removeEventListener("trigger_export_chat", handleExportChatEvent);
 		};
 	}, [createNewSession, activeSessionId, forkSession]);
 

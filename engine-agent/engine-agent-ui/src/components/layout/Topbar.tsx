@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { ModelInfo, Session } from "../../api.ts";
+import { getAgentForSession } from "../../lib/session-agents.ts";
 import { useAppSettings } from "../../lib/useAppSettings.ts";
 import {
 	ChevronDownIcon,
@@ -20,7 +21,6 @@ const SECTION_LABELS: Record<string, string> = {
 	tools: "Herramientas Agénticas",
 	mcp: "Servidores MCP",
 	memories: "Gestor de Memorias",
-	agenda: "Agenda & Hábitos Diarios",
 	settings: "Configuración del Sistema",
 };
 
@@ -68,8 +68,15 @@ export function Topbar({
 	const appSettings = useAppSettings();
 	const [showModelMenu, setShowModelMenu] = useState(false);
 	const [showContextPopover, setShowContextPopover] = useState(false);
+	const [, setAgentRefreshTick] = useState(0);
 	const modelMenuRef = useRef<HTMLDivElement>(null);
 	const contextMenuRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		const handleAgentChange = () => setAgentRefreshTick((t) => t + 1);
+		window.addEventListener("agent_session_changed", handleAgentChange);
+		return () => window.removeEventListener("agent_session_changed", handleAgentChange);
+	}, []);
 
 	const pathSegment = location.pathname.split("/").filter(Boolean)[0] || "";
 	const currentTitle = SECTION_LABELS[pathSegment] ?? "Chats";
@@ -115,7 +122,7 @@ export function Topbar({
 			{isChatView && sessions.length > 0 && (
 				<div className="chat-tabs-bar" style={{ flex: 1, margin: "0 14px", minWidth: 0 }}>
 					{sessions.slice(0, 4).map((s) => {
-						const agentTag = s.tags?.[0] || "asistente";
+						const agentTag = getAgentForSession(s.id) || s.tags?.[0] || "asistente";
 						const dotColor = AGENT_COLORS[agentTag] || "#3b82f6";
 						const isActive = s.id === activeSessionId;
 						const displayName = s.name || `Chat ${s.id.slice(0, 6)}`;
@@ -134,10 +141,14 @@ export function Topbar({
 									style={{
 										background: dotColor,
 										boxShadow: isActive ? `0 0 8px ${dotColor}` : undefined,
+										flexShrink: 0,
 									}}
 									title={`Agente: ${agentTag}`}
 								/>
-								<span style={{ maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}>
+								<span
+									className="chat-tab-title"
+									style={{ maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}
+								>
 									{displayName}
 								</span>
 								<button
