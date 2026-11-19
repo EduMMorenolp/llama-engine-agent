@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { type AgentDefinition, fetchAgents } from "../../../api.ts";
 import { BotIcon, MessageSquareIcon, SlidersIcon } from "../../../components/ui/Icons.tsx";
+import { setAgentForSession } from "../../../lib/session-agents.ts";
+import { useSessions } from "../../sessions/hooks/useSessions.ts";
 
 const DEFAULT_AGENTS: AgentDefinition[] = [
 	{
@@ -51,6 +53,7 @@ const DEFAULT_AGENTS: AgentDefinition[] = [
 
 export function AgentsPage() {
 	const navigate = useNavigate();
+	const { createNewSession } = useSessions();
 	const [agents, setAgents] = useState<AgentDefinition[]>(DEFAULT_AGENTS);
 	const [loading, setLoading] = useState(true);
 
@@ -65,13 +68,39 @@ export function AgentsPage() {
 			});
 	}, []);
 
-	const handleChatWithAgent = (agentName: string) => {
-		navigate(`/?agent=${agentName}`);
+	const handleChatWithAgent = async (agentName: string) => {
+		try {
+			const newSession = await createNewSession(`Chat con ${agentName}`);
+			if (newSession?.id) {
+				setAgentForSession(newSession.id, agentName);
+				window.dispatchEvent(
+					new CustomEvent("agent_session_changed", {
+						detail: { sessionId: newSession.id, agentId: agentName },
+					}),
+				);
+			}
+			navigate("/");
+		} catch {
+			navigate(`/?agent=${agentName}`);
+		}
 	};
 
-	const handleAskAgentToModify = (agentName: string) => {
+	const handleAskAgentToModify = async (agentName: string) => {
 		const prompt = `Por favor analiza la configuración del agente "${agentName}", revisa su system prompt y las herramientas asignadas para optimizar su rendimiento.`;
-		navigate(`/?draft=${encodeURIComponent(prompt)}`);
+		try {
+			const newSession = await createNewSession(`Configurar agente: ${agentName}`);
+			if (newSession?.id) {
+				setAgentForSession(newSession.id, agentName);
+				window.dispatchEvent(
+					new CustomEvent("agent_session_changed", {
+						detail: { sessionId: newSession.id, agentId: agentName },
+					}),
+				);
+			}
+			navigate(`/?draft=${encodeURIComponent(prompt)}`);
+		} catch {
+			navigate(`/?agent=${agentName}&draft=${encodeURIComponent(prompt)}`);
+		}
 	};
 
 	return (

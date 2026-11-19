@@ -199,6 +199,10 @@ export async function addMCPServer(server: Partial<MCPServer>): Promise<MCPServe
 	return apiPost<MCPServer>("/api/mcp/servers", server);
 }
 
+export async function updateMCPServer(id: string, server: Partial<MCPServer>): Promise<MCPServer> {
+	return apiPatch<MCPServer>(`/api/mcp/servers/${id}`, server);
+}
+
 export async function deleteMCPServer(id: string): Promise<void> {
 	await apiDelete(`/api/mcp/servers/${id}`);
 }

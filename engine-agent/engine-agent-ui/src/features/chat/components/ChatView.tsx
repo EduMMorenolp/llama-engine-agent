@@ -25,7 +25,7 @@ import { MemoriesModal } from "./MemoriesModal.tsx";
 import { MessageBubble } from "./MessageBubble.tsx";
 import { ModelInfoModal } from "./ModelInfoModal.tsx";
 import type { ModelSettings } from "./ModelSettingsModal.tsx";
-import { SettingsModal } from "./SettingsModal.tsx";
+import { SystemPromptModal } from "./SystemPromptModal.tsx";
 import { VoiceOrb } from "./VoiceOrb.tsx";
 
 interface LayoutContextType {
@@ -182,6 +182,7 @@ export function ChatView() {
 	const [activeVariantIndices, setActiveVariantIndices] = useState<Record<string, number>>({});
 	const [selectedModelInfo, setSelectedModelInfo] = useState<ModelInfo | null>(null);
 	const [showSettings, setShowSettings] = useState(false);
+	const [customSystemPrompt, setCustomSystemPrompt] = useState("");
 	const [showMemories, setShowMemories] = useState(false);
 	const [showCommandPalette, setShowCommandPalette] = useState(false);
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -404,8 +405,8 @@ export function ChatView() {
 			{
 				agent: getAgentForSession(sessionId) ?? undefined,
 				model: selectedModel,
-				systemPrompt: options?.systemPrompt,
-				enabledTools: options?.enabledTools,
+				systemPrompt: options?.systemPrompt || customSystemPrompt || undefined,
+				enabledTools: options?.enabledTools || enabledTools,
 				modelSettings: options?.modelSettings,
 			},
 			(msg) => addMessage(msg),
@@ -667,8 +668,17 @@ export function ChatView() {
 				<ModelInfoModal model={selectedModelInfo} onClose={() => setSelectedModelInfo(null)} />
 			)}
 
-			{/* Settings Modal */}
-			{showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+			{/* System Prompt Modal for Active Session */}
+			{showSettings && (
+				<SystemPromptModal
+					prompt={customSystemPrompt}
+					onSave={(newPrompt) => {
+						setCustomSystemPrompt(newPrompt);
+						addToast("System Prompt actualizado para la sesión activa", "success");
+					}}
+					onClose={() => setShowSettings(false)}
+				/>
+			)}
 
 			{/* Memories Modal */}
 			{showMemories && <MemoriesModal onClose={() => setShowMemories(false)} />}

@@ -257,30 +257,43 @@ export function MemoriesPage() {
 						className="dialog-backdrop-btn"
 						onClick={() => setShowAddModal(false)}
 					/>
-					<div className="dialog-content" style={{ maxWidth: 460 }}>
-						<div className="dialog-header">
-							<h3>Crear Nueva Memoria</h3>
+					<div
+						className="dialog-card"
+						style={{
+							zIndex: 1,
+							position: "relative",
+							maxWidth: "480px",
+							width: "92vw",
+						}}
+					>
+						<div className="dialog-title-row">
+							<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+								<BrainIcon size={18} style={{ color: "var(--accent)" }} />
+								<span className="dialog-title">Crear Nueva Memoria</span>
+							</div>
 							<button
 								type="button"
-								className="action-icon-btn"
+								className="session-action-btn"
 								onClick={() => setShowAddModal(false)}
+								style={{ opacity: 1 }}
 							>
-								<XIcon size={16} />
+								<XIcon size={18} />
 							</button>
 						</div>
 
 						<form
 							onSubmit={handleCreate}
-							style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "14px" }}
+							style={{ display: "flex", flexDirection: "column", gap: "14px" }}
 						>
 							<div>
 								<label
 									htmlFor="mem-key-input"
 									style={{
 										fontSize: "12px",
+										fontWeight: 600,
 										color: "var(--muted)",
 										display: "block",
-										marginBottom: "4px",
+										marginBottom: "6px",
 									}}
 								>
 									Clave / Identificador
@@ -288,7 +301,8 @@ export function MemoriesPage() {
 								<input
 									id="mem-key-input"
 									type="text"
-									className="text-input"
+									className="sidebar-search-input"
+									style={{ padding: "8px 10px" }}
 									value={newKey}
 									onChange={(e) => setNewKey(e.target.value)}
 									placeholder="ej. preferencia_stack"
@@ -301,16 +315,17 @@ export function MemoriesPage() {
 									htmlFor="mem-content-input"
 									style={{
 										fontSize: "12px",
+										fontWeight: 600,
 										color: "var(--muted)",
 										display: "block",
-										marginBottom: "4px",
+										marginBottom: "6px",
 									}}
 								>
 									Contenido / Hecho
 								</label>
 								<textarea
 									id="mem-content-input"
-									className="text-input"
+									className="dialog-textarea"
 									rows={3}
 									value={newContent}
 									onChange={(e) => setNewContent(e.target.value)}
@@ -324,9 +339,10 @@ export function MemoriesPage() {
 									htmlFor="mem-tags-input"
 									style={{
 										fontSize: "12px",
+										fontWeight: 600,
 										color: "var(--muted)",
 										display: "block",
-										marginBottom: "4px",
+										marginBottom: "6px",
 									}}
 								>
 									Etiquetas (separadas por coma)
@@ -334,33 +350,23 @@ export function MemoriesPage() {
 								<input
 									id="mem-tags-input"
 									type="text"
-									className="text-input"
+									className="sidebar-search-input"
+									style={{ padding: "8px 10px" }}
 									value={newTags}
 									onChange={(e) => setNewTags(e.target.value)}
 									placeholder="frontend, dev, preferencia"
 								/>
 							</div>
 
-							<div
-								style={{
-									display: "flex",
-									justifyContent: "flex-end",
-									gap: "8px",
-									marginTop: "10px",
-								}}
-							>
+							<div className="dialog-footer">
 								<button
 									type="button"
-									className="btn btn-ghost"
+									className="btn-secondary"
 									onClick={() => setShowAddModal(false)}
 								>
 									Cancelar
 								</button>
-								<button
-									type="submit"
-									className="btn btn-primary"
-									style={{ background: "var(--accent)", color: "#080b12" }}
-								>
+								<button type="submit" className="btn-primary">
 									Guardar Memoria
 								</button>
 							</div>

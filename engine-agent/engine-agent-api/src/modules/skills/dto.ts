@@ -16,6 +16,7 @@ export const createSkillDto = z.object({
 });
 
 export const updateSkillDto = z.object({
+	agent: z.string().min(1).optional(),
 	description: z.string().min(1).max(500).optional(),
 	directory: z.string().min(1).max(255).optional(),
 	metadata: z.record(z.unknown()).optional(),

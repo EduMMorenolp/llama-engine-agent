@@ -9,9 +9,12 @@ export const addServerDto = z.object({
 	env: z.record(z.string()).optional(),
 });
 
+export const updateServerDto = addServerDto.partial();
+
 export const serverIdParamsDto = z.object({
 	id: z.string().min(1),
 });
 
 export type AddServerDto = z.infer<typeof addServerDto>;
+export type UpdateServerDto = z.infer<typeof updateServerDto>;
 export type ServerIdParamsDto = z.infer<typeof serverIdParamsDto>;

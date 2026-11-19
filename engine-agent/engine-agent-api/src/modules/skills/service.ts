@@ -75,6 +75,10 @@ export class SkillService {
 		this.get(name);
 		const fields: string[] = [];
 		const values: unknown[] = [];
+		if (dto.agent !== undefined) {
+			fields.push("agent = ?");
+			values.push(dto.agent);
+		}
 		if (dto.description !== undefined) {
 			fields.push("description = ?");
 			values.push(dto.description);

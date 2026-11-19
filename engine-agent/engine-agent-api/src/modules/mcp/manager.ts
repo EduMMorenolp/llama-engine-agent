@@ -75,6 +75,21 @@ export class MCPManager {
 		return server;
 	}
 
+	updateServer(
+		id: string,
+		config: Partial<Omit<MCPServerConfig, "id" | "status">>,
+	): MCPServerConfig | undefined {
+		const existing = this.servers.get(id);
+		if (!existing) return undefined;
+		const updated: MCPServerConfig = {
+			...existing,
+			...config,
+			id,
+		};
+		this.servers.set(id, updated);
+		return updated;
+	}
+
 	async removeServer(id: string): Promise<boolean> {
 		if (this.activeProcesses.has(id)) {
 			await this.disconnect(id);
@@ -91,6 +106,34 @@ export class MCPManager {
 		if (server.status === "connected") {
 			const active = this.activeProcesses.get(id);
 			return { success: true, tools: active?.registeredTools ?? [] };
+		}
+
+		if (server.transport === "http" || server.transport === "sse") {
+			if (!server.url) {
+				server.status = "error";
+				server.errorMessage = "URL de endpoint requerida para transporte HTTP/SSE";
+				return { success: false, tools: [], error: server.errorMessage };
+			}
+			try {
+				const res = await fetch(server.url, {
+					method: "GET",
+					signal: AbortSignal.timeout(5000),
+				});
+				if (res.status < 500) {
+					server.status = "connected";
+					server.errorMessage = undefined;
+					server.toolsCount = server.toolsCount || 1;
+					return { success: true, tools: [] };
+				}
+				server.status = "error";
+				server.errorMessage = `HTTP ${res.status}: ${res.statusText}`;
+				return { success: false, tools: [], error: server.errorMessage };
+			} catch (err: unknown) {
+				const msg = err instanceof Error ? err.message : String(err);
+				server.status = "error";
+				server.errorMessage = `No se pudo alcanzar ${server.url}: ${msg}`;
+				return { success: false, tools: [], error: server.errorMessage };
+			}
 		}
 
 		if (server.transport !== "stdio" || !server.command) {
