@@ -6,6 +6,7 @@ import {
 	ArrowDownIcon,
 	CheckIcon,
 	ChevronDownIcon,
+	CommandIcon,
 	DownloadIcon,
 	FileCodeIcon,
 	InfoIcon,
@@ -22,12 +23,17 @@ import { useAppSettings } from "../../../lib/useAppSettings.ts";
 import { useToast } from "../../../providers/ToastProvider.tsx";
 import { useSessions } from "../../sessions/hooks/useSessions.ts";
 import { useChat } from "../hooks/useChat.ts";
+import { useSpeechSynthesis } from "../hooks/useSpeechSynthesis.ts";
+import { type ArtifactData, ArtifactPanel } from "./ArtifactPanel.tsx";
+import { CommandPaletteModal } from "./CommandPaletteModal.tsx";
 import { Composer } from "./Composer.tsx";
 import type { FileAttachment } from "./FileUpload.tsx";
 import { MemoriesModal } from "./MemoriesModal.tsx";
 import { MessageBubble } from "./MessageBubble.tsx";
 import { ModelInfoModal } from "./ModelInfoModal.tsx";
+import type { ModelSettings } from "./ModelSettingsModal.tsx";
 import { SettingsModal } from "./SettingsModal.tsx";
+import { VoiceOrb } from "./VoiceOrb.tsx";
 
 interface LayoutContextType {
 	sidebarOpen: boolean;
@@ -141,9 +147,14 @@ export function ChatView() {
 	const [selectedModel, setSelectedModel] = useState("qwen3.5-9b");
 	const [showModelMenu, setShowModelMenu] = useState(false);
 	const [showExportMenu, setShowExportMenu] = useState(false);
+	const { speak, stop: stopSpeaking, speaking, currentSpeakingId } = useSpeechSynthesis();
+	const [selectedArtifact, setSelectedArtifact] = useState<ArtifactData | null>(null);
+	const [messageVariants, setMessageVariants] = useState<Record<string, string[]>>({});
+	const [activeVariantIndices, setActiveVariantIndices] = useState<Record<string, number>>({});
 	const [selectedModelInfo, setSelectedModelInfo] = useState<ModelInfo | null>(null);
 	const [showSettings, setShowSettings] = useState(false);
 	const [showMemories, setShowMemories] = useState(false);
+	const [showCommandPalette, setShowCommandPalette] = useState(false);
 	const [tabEditingSessionId, setTabEditingSessionId] = useState<string | null>(null);
 	const [tabEditingName, setTabEditingName] = useState("");
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -216,6 +227,33 @@ export function ChatView() {
 				// Fallback to static model list
 			});
 	}, []);
+
+	// Global shortcuts (Ctrl+K for Command Palette) & custom slash events
+	useEffect(() => {
+		const handleGlobalKeyDown = (e: KeyboardEvent) => {
+			if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+				e.preventDefault();
+				setShowCommandPalette((prev) => !prev);
+			}
+		};
+
+		const handleNewChatEvent = () => createNewSession();
+		const handleForkChatEvent = () => {
+			if (activeSessionId) {
+				forkSession("");
+			}
+		};
+
+		window.addEventListener("keydown", handleGlobalKeyDown);
+		window.addEventListener("trigger_new_chat", handleNewChatEvent);
+		window.addEventListener("trigger_fork_chat", handleForkChatEvent);
+
+		return () => {
+			window.removeEventListener("keydown", handleGlobalKeyDown);
+			window.removeEventListener("trigger_new_chat", handleNewChatEvent);
+			window.removeEventListener("trigger_fork_chat", handleForkChatEvent);
+		};
+	}, [createNewSession, activeSessionId, forkSession]);
 
 	// Close menus when clicking outside
 	useEffect(() => {
@@ -301,7 +339,11 @@ export function ChatView() {
 	const handleSend = async (
 		text: string,
 		attachments: FileAttachment[],
-		options?: { systemPrompt?: string; enabledTools?: string[]; modelSettings?: any },
+		options?: {
+			systemPrompt?: string;
+			enabledTools?: string[];
+			modelSettings?: ModelSettings;
+		},
 	) => {
 		setDraftText("");
 		let sessionId = activeSessionId;
@@ -314,7 +356,7 @@ export function ChatView() {
 		let fullMessage = text.trim();
 		if (attachments && attachments.length > 0) {
 			const attachmentsParts = attachments.map((a) => {
-				if (a.preview && a.preview.startsWith("data:image")) {
+				if (a.preview?.startsWith("data:image")) {
 					return `![${a.name}](${a.preview})`;
 				}
 				if (a.content) {
@@ -368,7 +410,7 @@ export function ChatView() {
 		try {
 			await forkSession(messageId);
 			addToast("success", "Conversación bifurcada con éxito");
-		} catch (err: unknown) {
+		} catch (_err: unknown) {
 			addToast("error", "Error al bifurcar conversación");
 		}
 	};
@@ -391,6 +433,13 @@ export function ChatView() {
 			if (idx > 0) {
 				const prevUserMsg = [...messages.slice(0, idx)].reverse().find((m) => m.role === "user");
 				if (prevUserMsg) {
+					setMessageVariants((prev) => {
+						const existing = prev[msg.id] || [msg.content ?? ""];
+						return {
+							...prev,
+							[msg.id]: existing,
+						};
+					});
 					handleSend(prevUserMsg.content ?? "", []);
 				}
 			}
@@ -622,6 +671,15 @@ export function ChatView() {
 					<button
 						type="button"
 						className="action-icon-btn"
+						onClick={() => setShowCommandPalette(true)}
+						title="Paleta de comandos (Ctrl+K)"
+					>
+						<CommandIcon size={16} style={{ color: "var(--text-secondary)" }} />
+					</button>
+
+					<button
+						type="button"
+						className="action-icon-btn"
 						onClick={() => setShowMemories(true)}
 						title="Memorias del asistente"
 					>
@@ -662,87 +720,124 @@ export function ChatView() {
 				</div>
 			</header>
 
-			{/* Message Stream */}
-			<div className="messages-container" ref={messagesContainerRef} onScroll={handleScroll}>
-				<div className="messages-inner">
-					{loadingMore && (
-						<div className="load-more-indicator">
-							<div className="spinner" style={{ width: 16, height: 16 }} />
-							<span>Cargando más mensajes...</span>
-						</div>
-					)}
-					{messages.length === 0 && !streaming ? (
-						<div className="empty-hero">
-							<div className="hero-avatar-glow">
-								<img src={logoImg} alt="Llama Engine" className="hero-avatar-img" />
+			{/* Chat Body: Messages & Artifacts Split View */}
+			<div
+				className="chat-body-layout"
+				style={{
+					display: "flex",
+					flex: 1,
+					minHeight: 0,
+					position: "relative",
+					overflow: "hidden",
+					width: "100%",
+				}}
+			>
+				{/* Message Stream */}
+				<div
+					className="messages-container"
+					ref={messagesContainerRef}
+					onScroll={handleScroll}
+					style={{ flex: 1, minWidth: 0 }}
+				>
+					<div className="messages-inner">
+						{loadingMore && (
+							<div className="load-more-indicator">
+								<div className="spinner" style={{ width: 16, height: 16 }} />
+								<span>Cargando más mensajes...</span>
 							</div>
-							<h1 className="hero-title">¿En qué puedo ayudarte hoy?</h1>
-							<p className="hero-subtitle">
-								Agente potenciado por LLM y herramientas avanzadas de ejecución de comandos,
-								análisis de archivos y razonamiento en tiempo real.
-							</p>
+						)}
+						{messages.length === 0 && !streaming ? (
+							<div className="empty-hero">
+								<div className="hero-avatar-glow">
+									<img src={logoImg} alt="Llama Engine" className="hero-avatar-img" />
+								</div>
+								<h1 className="hero-title">¿En qué puedo ayudarte hoy?</h1>
+								<p className="hero-subtitle">
+									Agente potenciado por LLM y herramientas avanzadas de ejecución de comandos,
+									análisis de archivos y razonamiento en tiempo real.
+								</p>
 
-							<div className="starter-cards-grid">
-								{STARTER_PROMPTS.map((starter) => (
-									<button
-										key={starter.title}
-										type="button"
-										className="starter-card"
-										onClick={() => handleStarterClick(starter.prompt)}
-									>
-										<div className="starter-card-title">
-											{starter.icon}
-											<span>{starter.title}</span>
-										</div>
-										<div className="starter-card-desc">{starter.desc}</div>
-									</button>
-								))}
+								<div className="starter-cards-grid">
+									{STARTER_PROMPTS.map((starter) => (
+										<button
+											key={starter.title}
+											type="button"
+											className="starter-card"
+											onClick={() => handleStarterClick(starter.prompt)}
+										>
+											<div className="starter-card-title">
+												{starter.icon}
+												<span>{starter.title}</span>
+											</div>
+											<div className="starter-card-desc">{starter.desc}</div>
+										</button>
+									))}
+								</div>
 							</div>
-						</div>
-					) : (
-						<>
-							{(() => {
-								const toolResultsMap: Record<string, string> = {};
-								for (const m of messages) {
-									if (m.role === "tool" && m.toolCallId && m.content) {
-										toolResultsMap[m.toolCallId] = m.content;
+						) : (
+							<>
+								{(() => {
+									const toolResultsMap: Record<string, string> = {};
+									for (const m of messages) {
+										if (m.role === "tool" && m.toolCallId && m.content) {
+											toolResultsMap[m.toolCallId] = m.content;
+										}
 									}
-								}
-								return messages.map((msg) => (
-									<MessageBubble
-										key={msg.id}
-										message={msg}
-										toolResults={toolResultsMap}
-										modelName={selectedModel}
-										onFork={handleFork}
-										onDelete={handleDeleteMsg}
-										onEdit={handleEditMsg}
-										onReload={handleReloadMsg}
-										onFavorite={(msg) => toggleFavoriteMessage(msg.id)}
-									/>
-								));
-							})()}
+									return messages.map((msg) => (
+										<MessageBubble
+											key={msg.id}
+											message={msg}
+											toolResults={toolResultsMap}
+											modelName={selectedModel}
+											onFork={handleFork}
+											onDelete={handleDeleteMsg}
+											onEdit={handleEditMsg}
+											onReload={handleReloadMsg}
+											onFavorite={(m) => toggleFavoriteMessage(m.id)}
+											onOpenArtifact={(art) => setSelectedArtifact(art)}
+											onSpeak={(txt) => {
+												if (currentSpeakingId === msg.id && speaking) {
+													stopSpeaking();
+												} else {
+													speak(txt, msg.id);
+												}
+											}}
+											isSpeakingThis={currentSpeakingId === msg.id && speaking}
+											variants={messageVariants[msg.id]}
+											activeVariantIndex={activeVariantIndices[msg.id] ?? 0}
+											onVariantChange={(idx) =>
+												setActiveVariantIndices((prev) => ({ ...prev, [msg.id]: idx }))
+											}
+										/>
+									));
+								})()}
 
-							{streaming && (currentContent || toolCalls.length > 0) && (
-								<MessageBubble
-									message={{
-										id: "streaming",
-										sessionId: activeSessionId ?? "",
-										role: "assistant",
-										content: currentContent,
-										toolCalls: null,
-										toolCallId: null,
-										createdAt: Date.now(),
-									}}
-									toolCalls={toolCalls}
-									modelName={selectedModel}
-									isStreaming
-								/>
-							)}
-						</>
-					)}
-					<div ref={messagesEndRef} />
+								{streaming && (currentContent || toolCalls.length > 0) && (
+									<MessageBubble
+										message={{
+											id: "streaming",
+											sessionId: activeSessionId ?? "",
+											role: "assistant",
+											content: currentContent,
+											toolCalls: null,
+											toolCallId: null,
+											createdAt: Date.now(),
+										}}
+										toolCalls={toolCalls}
+										modelName={selectedModel}
+										isStreaming
+									/>
+								)}
+							</>
+						)}
+						<div ref={messagesEndRef} />
+					</div>
 				</div>
+
+				{/* Canvas / Artifacts Split Panel (Claude / Bolt style) */}
+				{selectedArtifact && (
+					<ArtifactPanel artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />
+				)}
 			</div>
 
 			{/* Floating Input Composer */}
@@ -778,6 +873,19 @@ export function ChatView() {
 
 			{/* Memories Modal */}
 			{showMemories && <MemoriesModal onClose={() => setShowMemories(false)} />}
+
+			{/* Voice Orb active when text-to-speech is speaking */}
+			{speaking && <VoiceOrb mode="speaking" onStop={stopSpeaking} />}
+
+			{/* Command Palette Modal (Ctrl+K) */}
+			{showCommandPalette && (
+				<CommandPaletteModal
+					onClose={() => setShowCommandPalette(false)}
+					onOpenMemories={() => setShowMemories(true)}
+					onOpenSettings={() => setShowSettings(true)}
+					onExportChat={() => handleExport("markdown")}
+				/>
+			)}
 		</div>
 	);
 }

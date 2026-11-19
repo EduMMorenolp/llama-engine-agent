@@ -13,11 +13,11 @@ import {
 	forkSession as apiForkSession,
 	updateSession as apiUpdateSession,
 	deleteSessionMessage,
-	updateSessionMessage,
 	fetchSession,
 	fetchSessions,
 	type Message,
 	type Session,
+	updateSessionMessage,
 } from "../api.ts";
 import { removeAgentForSession } from "../lib/session-agents.ts";
 

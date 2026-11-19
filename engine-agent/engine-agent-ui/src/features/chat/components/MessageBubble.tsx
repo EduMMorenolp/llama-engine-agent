@@ -12,19 +12,23 @@ import {
 	ClockIcon,
 	CopyIcon,
 	EditIcon,
+	EyeIcon,
 	ForkIcon,
 	LightbulbIcon,
 	RefreshCwIcon,
 	SparklesIcon,
+	SpeakerIcon,
 	StarIcon,
 	TerminalIcon,
 	TrashIcon,
 	UserIcon,
+	VolumeXIcon,
 	XIcon,
 	ZapIcon,
 } from "../../../components/ui/Icons.tsx";
 
 import { useAppSettings } from "../../../lib/useAppSettings.ts";
+import type { ArtifactData } from "./ArtifactPanel.tsx";
 
 export interface ToolCallInfo {
 	id?: string;
@@ -46,6 +50,12 @@ interface MessageBubbleProps {
 	onFavorite?: (message: Message) => void;
 	onFork?: (messageId: string) => void;
 	onDelete?: (messageId: string) => void;
+	onOpenArtifact?: (artifact: ArtifactData) => void;
+	onSpeak?: (text: string) => void;
+	isSpeakingThis?: boolean;
+	variants?: string[];
+	activeVariantIndex?: number;
+	onVariantChange?: (index: number) => void;
 }
 
 function parseThinking(content: string): { thinking: string; rest: string } {
@@ -100,7 +110,20 @@ function CodeCopyButton({ text }: { text: string }) {
 	);
 }
 
-function formatToolArgs(tc: any): string {
+interface GenericToolCall {
+	id?: string;
+	name?: string;
+	args?: unknown;
+	status?: string;
+	result?: unknown;
+	function?: {
+		id?: string;
+		name?: string;
+		arguments?: unknown;
+	};
+}
+
+function formatToolArgs(tc: GenericToolCall | null | undefined): string {
 	if (!tc) return "";
 	if (typeof tc.args === "string") return tc.args;
 	if (tc.args && typeof tc.args === "object") {
@@ -118,18 +141,18 @@ function formatToolArgs(tc: any): string {
 	return "";
 }
 
-function getToolName(tc: any): string {
+function getToolName(tc: GenericToolCall | null | undefined): string {
 	return tc?.name || tc?.function?.name || "herramienta";
 }
 
-function getToolStatus(tc: any): "pending" | "done" | "error" {
+function getToolStatus(tc: GenericToolCall | null | undefined): "pending" | "done" | "error" {
 	if (tc?.status === "pending" || tc?.status === "done" || tc?.status === "error") {
 		return tc.status;
 	}
 	return "done";
 }
 
-function ToolCallItem({ tc }: { tc: any }) {
+function ToolCallItem({ tc }: { tc: GenericToolCall }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const toolName = getToolName(tc);
 	const toolStatus = getToolStatus(tc);
@@ -285,6 +308,12 @@ export function MessageBubble({
 	onFavorite,
 	onFork,
 	onDelete,
+	onOpenArtifact,
+	onSpeak,
+	isSpeakingThis = false,
+	variants,
+	activeVariantIndex = 0,
+	onVariantChange,
 }: MessageBubbleProps) {
 	const appSettings = useAppSettings();
 	const isUser = message.role === "user";
@@ -293,7 +322,10 @@ export function MessageBubble({
 	const [thinkingOpen, setThinkingOpen] = useState(false);
 
 	if (isTool) return null;
-	const content = message.content ?? "";
+	const content =
+		variants && variants.length > 0 && activeVariantIndex !== undefined
+			? (variants[activeVariantIndex] ?? message.content ?? "")
+			: (message.content ?? "");
 	const { thinking, rest } = parseThinking(content);
 	const displayContent = rest;
 
@@ -313,7 +345,7 @@ export function MessageBubble({
 		: (tokenCount / Math.max(0.2, parseFloat(durationSeconds))).toFixed(2);
 
 	// Parse tool calls safely from message if present as JSON string or array
-	let parsedToolCalls: any[] = Array.isArray(toolCalls) ? toolCalls : [];
+	let parsedToolCalls: GenericToolCall[] = Array.isArray(toolCalls) ? toolCalls : [];
 	if (parsedToolCalls.length === 0 && message.toolCalls) {
 		try {
 			const parsed =
@@ -462,7 +494,27 @@ export function MessageBubble({
 													<div className="code-block-wrapper">
 														<div className="code-block-header">
 															<span className="code-lang-label">{match[1]}</span>
-															<CodeCopyButton text={codeString} />
+															<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+																{onOpenArtifact && (
+																	<button
+																		type="button"
+																		className="code-copy-btn"
+																		onClick={() =>
+																			onOpenArtifact({
+																				id: `art-${message.id}-${match[1]}`,
+																				title: `Artefacto (${match[1]})`,
+																				language: match[1],
+																				content: codeString,
+																			})
+																		}
+																		title="Abrir en panel de Artifacts / Canvas"
+																	>
+																		<EyeIcon size={12} />
+																		<span>Canvas</span>
+																	</button>
+																)}
+																<CodeCopyButton text={codeString} />
+															</div>
 														</div>
 														<SyntaxHighlighter
 															style={oneDark}
@@ -533,6 +585,73 @@ export function MessageBubble({
 					)}
 
 					<div className="actions-cluster">
+						{variants && variants.length > 1 && (
+							<div
+								style={{
+									display: "inline-flex",
+									alignItems: "center",
+									gap: "3px",
+									fontSize: "11px",
+									color: "var(--text-muted)",
+									marginRight: "4px",
+									background: "var(--bg-surface)",
+									padding: "1px 6px",
+									borderRadius: "4px",
+									border: "1px solid var(--border-subtle)",
+								}}
+							>
+								<button
+									type="button"
+									disabled={activeVariantIndex <= 0}
+									onClick={() => onVariantChange?.(activeVariantIndex - 1)}
+									style={{
+										background: "none",
+										border: "none",
+										color: "inherit",
+										cursor: activeVariantIndex <= 0 ? "default" : "pointer",
+										opacity: activeVariantIndex <= 0 ? 0.35 : 1,
+										padding: "0 2px",
+										fontWeight: "bold",
+									}}
+									title="Respuesta anterior"
+								>
+									&lt;
+								</button>
+								<span>
+									{activeVariantIndex + 1}/{variants.length}
+								</span>
+								<button
+									type="button"
+									disabled={activeVariantIndex >= variants.length - 1}
+									onClick={() => onVariantChange?.(activeVariantIndex + 1)}
+									style={{
+										background: "none",
+										border: "none",
+										color: "inherit",
+										cursor: activeVariantIndex >= variants.length - 1 ? "default" : "pointer",
+										opacity: activeVariantIndex >= variants.length - 1 ? 0.35 : 1,
+										padding: "0 2px",
+										fontWeight: "bold",
+									}}
+									title="Respuesta siguiente"
+								>
+									&gt;
+								</button>
+							</div>
+						)}
+
+						{!isUser && onSpeak && displayContent && (
+							<button
+								type="button"
+								className="action-icon-btn"
+								title={isSpeakingThis ? "Detener lectura de voz" : "Leer respuesta en voz alta"}
+								onClick={() => onSpeak(displayContent)}
+								style={isSpeakingThis ? { color: "var(--accent)" } : undefined}
+							>
+								{isSpeakingThis ? <VolumeXIcon size={14} /> : <SpeakerIcon size={14} />}
+							</button>
+						)}
+
 						<button
 							type="button"
 							className="action-icon-btn"

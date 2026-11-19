@@ -48,7 +48,11 @@ describe("SystemPromptModal", () => {
 	it("calls onClose when backdrop is clicked", () => {
 		const onClose = vi.fn();
 		render(<SystemPromptModal prompt="test" onSave={vi.fn()} onClose={onClose} />);
-		fireEvent.click(screen.getByLabelText("Cerrar modal").closest(".dialog-backdrop-btn")!);
+		const backdrop = screen.getByLabelText("Cerrar modal").closest(".dialog-backdrop-btn");
+		expect(backdrop).not.toBeNull();
+		if (backdrop) {
+			fireEvent.click(backdrop);
+		}
 		expect(onClose).toHaveBeenCalled();
 	});
 

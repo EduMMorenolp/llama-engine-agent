@@ -80,7 +80,9 @@ describe("MessageBubble", () => {
 		const { container } = render(<MessageBubble message={message} />);
 		const thinkingHeader = container.querySelector(".thinking-header");
 		expect(thinkingHeader).not.toBeNull();
-		fireEvent.click(thinkingHeader!);
+		if (thinkingHeader) {
+			fireEvent.click(thinkingHeader);
+		}
 		const thinkingBody = container.querySelector(".thinking-body");
 		expect(thinkingBody).not.toBeNull();
 		expect(thinkingBody?.textContent).toContain("Let me think...");

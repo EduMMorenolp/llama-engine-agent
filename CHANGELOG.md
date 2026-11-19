@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+- **Added**: **Panel interactivo de "Artifacts" / Canvas a pantalla partida (`ArtifactPanel`)**. Visualizador lateral en split view y modo pantalla completa (estilo Claude / Bolt) para fragmentos de código, HTML interactivo en iframe aislado, SVG y diagramas. Dispone de pestañas "Vista Previa" y "Código", botones de copia con un clic, descarga directa de archivo y botón directo "Canvas" en la cabecera de cada bloque de código dentro de `MessageBubble`. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/ArtifactPanel.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ArtifactPanel.test.tsx, engine-agent/engine-agent-ui/src/features/chat/components/MessageBubble.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx, engine-agent/engine-agent-ui/src/components/ui/Icons.tsx. [2026-11-18]
+
+- **Added**: **Comandos Slash en Composer y Paleta de Comandos global (`Ctrl+K` / `Cmd+K`)**. Popover reactivo de autocompletado en el área de texto ante la pulsación de `/` con sugerencias de comandos (`/web`, `/memo`, `/skill`, `/clear`, `/fork`, `/theme`) con navegación por teclado (`ArrowUp`, `ArrowDown`, `Enter`, `Tab`, `Escape`). Modal global estilo Raycast/Spotlight invocado mediante `Ctrl+K` / `Cmd+K` con búsqueda instantánea de acciones rápidas, cambio de tema, exportación de chat y navegación a sesiones activas. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/Composer.tsx, engine-agent/engine-agent-ui/src/features/chat/components/CommandPaletteModal.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx, engine-agent/engine-agent-ui/src/components/ui/Icons.tsx. [2026-11-18]
+
+- **Added**: **Modo Asistente de Voz Bidireccional (TTS con Web Speech Synthesis y Voice Orb)**. Hook de lectura de texto `useSpeechSynthesis` con filtrado inteligente de bloques `<think>` y sintaxis Markdown, botón de altavoz interactivo (`SpeakerIcon` / `VolumeXIcon`) en cada mensaje del asistente, y widget flotante `VoiceOrb` con gradiente radial y animación de ondas pulsantes para retroalimentación visual de voz en vivo con cancelación inmediata al hacer clic. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/hooks/useSpeechSynthesis.ts, engine-agent/engine-agent-ui/src/features/chat/components/VoiceOrb.tsx, engine-agent/engine-agent-ui/src/features/chat/components/MessageBubble.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx, engine-agent/engine-agent-ui/src/components/ui/Icons.tsx. [2026-11-18]
+
+- **Added**: **Árbol de mensajes y navegación de variantes de respuesta (`< 1 / n >`)**. Paginador numérico y flechas de navegación en la barra inferior de acciones de `MessageBubble` para conmutar entre múltiples respuestas y regeneraciones de un mismo turno sin sobrescribir el historial conversacional ni perder las variantes previas. [2026-11-18]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/MessageBubble.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx. [2026-11-18]
+
 - **Added**: **Gestión interactiva de memorias del asistente (`MemoriesModal`)**. Interfaz gráfica con búsqueda reactiva, visualización de tags y formulario para crear o eliminar memorias persistentes conectadas a `/api/memories`, accesible desde el encabezado del chat. [2026-11-18]
   * **Files (Archivos)**: engine-agent/engine-agent-ui/src/features/chat/components/MemoriesModal.tsx, engine-agent/engine-agent-ui/src/features/chat/components/ChatView.tsx, engine-agent/engine-agent-ui/src/api.ts. [2026-11-18]
 

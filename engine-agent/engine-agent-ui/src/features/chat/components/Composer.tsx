@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchTools } from "../../../api.ts";
+import { createMemory, fetchTools } from "../../../api.ts";
 import {
+	ForkIcon,
+	LightbulbIcon,
 	MicIcon,
 	PlusIcon,
+	SearchIcon,
 	SendIcon,
 	SlidersIcon,
+	SparklesIcon,
 	StopIcon,
 	WrenchIcon,
 } from "../../../components/ui/Icons.tsx";
@@ -57,6 +61,47 @@ const DEFAULT_TOOLS: ToolConfig[] = [
 	{ name: "search_memories", label: "Search Memories", enabled: true },
 ];
 
+interface SlashCommand {
+	name: string;
+	desc: string;
+	usage: string;
+	icon: React.ReactNode;
+}
+
+const SLASH_COMMANDS: SlashCommand[] = [
+	{
+		name: "web",
+		desc: "Buscar información o clima en internet",
+		usage: "/web <consulta>",
+		icon: <SearchIcon size={14} />,
+	},
+	{
+		name: "memo",
+		desc: "Guardar una memoria persistente",
+		usage: "/memo <texto a recordar>",
+		icon: <LightbulbIcon size={14} />,
+	},
+	{
+		name: "skill",
+		desc: "Consultar o ejecutar una skill",
+		usage: "/skill <nombre>",
+		icon: <WrenchIcon size={14} />,
+	},
+	{ name: "clear", desc: "Comenzar un chat nuevo", usage: "/clear", icon: <PlusIcon size={14} /> },
+	{
+		name: "fork",
+		desc: "Bifurcar la conversación activa",
+		usage: "/fork",
+		icon: <ForkIcon size={14} />,
+	},
+	{
+		name: "theme",
+		desc: "Alternar entre tema oscuro y claro",
+		usage: "/theme",
+		icon: <SparklesIcon size={14} />,
+	},
+];
+
 export function Composer({
 	onSend,
 	onStop,
@@ -73,11 +118,23 @@ export function Composer({
 	const [showSystemPrompt, setShowSystemPrompt] = useState(false);
 	const [showMCPServers, setShowMCPServers] = useState(false);
 	const [showModelSettings, setShowModelSettings] = useState(false);
+	const [slashSelectedIndex, setSlashSelectedIndex] = useState(0);
 	const [modelSettings, setModelSettings] = useState<ModelSettings>({
 		...DEFAULT_MODEL_SETTINGS,
 		temperature: appSettings.temperature,
 		topP: appSettings.topP,
 	});
+
+	const isSlashQuery = text.startsWith("/") && !text.includes(" ");
+	const filteredSlashCommands = isSlashQuery
+		? SLASH_COMMANDS.filter((cmd) => cmd.name.toLowerCase().startsWith(text.slice(1).toLowerCase()))
+		: [];
+	const showSlashMenu = isSlashQuery && filteredSlashCommands.length > 0;
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset slash selection when text changes
+	useEffect(() => {
+		setSlashSelectedIndex(0);
+	}, [text]);
 
 	useEffect(() => {
 		if (draftText !== undefined) {
@@ -173,10 +230,28 @@ Tenés acceso a herramientas de búsqueda web, skills, shell, archivos y memoria
 			stopListening();
 			resetTranscript();
 		}
-		const enabledTools = tools.filter((t) => t.enabled).map((t) => t.name);
-		onSend(trimmed, attachments, {
+		let finalMsg = trimmed;
+		let toolsToSend = tools.filter((t) => t.enabled).map((t) => t.name);
+
+		if (trimmed.startsWith("/web ")) {
+			finalMsg = `[Búsqueda Web Solicitada]: ${trimmed.slice(5).trim()}`;
+			if (!toolsToSend.includes("web_search")) {
+				toolsToSend = [...toolsToSend, "web_search", "web_fetch"];
+			}
+		} else if (trimmed.startsWith("/memo ")) {
+			const noteContent = trimmed.slice(6).trim();
+			createMemory(`nota_${Date.now()}`, noteContent, ["nota", "manual"]).catch(() => {});
+			finalMsg = `Memorizá esta nota personal para futuras consultas: "${noteContent}"`;
+		} else if (trimmed.startsWith("/skill ")) {
+			finalMsg = `Activá y ejecutá la skill "${trimmed.slice(7).trim()}"`;
+			if (!toolsToSend.includes("load_skill")) {
+				toolsToSend = [...toolsToSend, "load_skill", "list_skills"];
+			}
+		}
+
+		onSend(finalMsg, attachments, {
 			systemPrompt,
-			enabledTools,
+			enabledTools: toolsToSend,
 			modelSettings,
 		});
 		setText("");
@@ -197,14 +272,72 @@ Tenés acceso a herramientas de búsqueda web, skills, shell, archivos y memoria
 		resetTranscript,
 	]);
 
+	const handleSelectSlashCommand = useCallback(
+		(cmd: SlashCommand) => {
+			if (cmd.name === "theme") {
+				appSettings.updateSettings({ theme: appSettings.theme === "dark" ? "light" : "dark" });
+				setText("");
+				onDraftTextChange?.("");
+			} else if (cmd.name === "clear") {
+				window.dispatchEvent(new CustomEvent("trigger_new_chat"));
+				setText("");
+				onDraftTextChange?.("");
+			} else if (cmd.name === "fork") {
+				window.dispatchEvent(new CustomEvent("trigger_fork_chat"));
+				setText("");
+				onDraftTextChange?.("");
+			} else {
+				const nextText = `/${cmd.name} `;
+				setText(nextText);
+				onDraftTextChange?.(nextText);
+				textareaRef.current?.focus();
+			}
+		},
+		[appSettings, onDraftTextChange],
+	);
+
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
+			if (showSlashMenu) {
+				if (e.key === "ArrowDown") {
+					e.preventDefault();
+					setSlashSelectedIndex((prev) => (prev + 1) % filteredSlashCommands.length);
+					return;
+				}
+				if (e.key === "ArrowUp") {
+					e.preventDefault();
+					setSlashSelectedIndex(
+						(prev) => (prev - 1 + filteredSlashCommands.length) % filteredSlashCommands.length,
+					);
+					return;
+				}
+				if (e.key === "Enter" || e.key === "Tab") {
+					e.preventDefault();
+					const selected = filteredSlashCommands[slashSelectedIndex];
+					if (selected) {
+						handleSelectSlashCommand(selected);
+					}
+					return;
+				}
+				if (e.key === "Escape") {
+					e.preventDefault();
+					setText("");
+					return;
+				}
+			}
+
 			if (e.key === "Enter" && !e.shiftKey) {
 				e.preventDefault();
 				handleSend();
 			}
 		},
-		[handleSend],
+		[
+			showSlashMenu,
+			filteredSlashCommands,
+			slashSelectedIndex,
+			handleSelectSlashCommand,
+			handleSend,
+		],
 	);
 
 	const handleFiles = useCallback(
@@ -284,6 +417,59 @@ Tenés acceso a herramientas de búsqueda web, skills, shell, archivos y memoria
 						onMCPServers={handleMCPServers}
 						onClose={() => setShowAttachMenu(false)}
 					/>
+				)}
+
+				{/* Slash Commands Popover */}
+				{showSlashMenu && (
+					<div
+						className="popover-menu slash-commands-popover"
+						style={{
+							position: "absolute",
+							bottom: "calc(100% + 8px)",
+							left: "12px",
+							right: "12px",
+							maxHeight: "220px",
+							overflowY: "auto",
+							zIndex: 50,
+							boxShadow: "0 -8px 24px rgba(0, 0, 0, 0.4)",
+						}}
+					>
+						<div className="popover-header" style={{ padding: "6px 12px", fontSize: "11px" }}>
+							<span>Comandos rápidos disponibles (Enter o Tab para autocompletar)</span>
+						</div>
+						{filteredSlashCommands.map((cmd, idx) => {
+							const isSelected = idx === slashSelectedIndex;
+							return (
+								<button
+									key={cmd.name}
+									type="button"
+									className={`popover-item ${isSelected ? "active" : ""}`}
+									onClick={() => handleSelectSlashCommand(cmd)}
+									onMouseEnter={() => setSlashSelectedIndex(idx)}
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: "10px",
+										padding: "8px 12px",
+										background: isSelected ? "var(--bg-surface-active)" : "transparent",
+									}}
+								>
+									<span style={{ color: "var(--accent)", flexShrink: 0 }}>{cmd.icon}</span>
+									<div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+										<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+											<span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+												/{cmd.name}
+											</span>
+											<span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+												{cmd.usage}
+											</span>
+										</div>
+										<div style={{ fontSize: "11px", color: "var(--text-dim)" }}>{cmd.desc}</div>
+									</div>
+								</button>
+							);
+						})}
+					</div>
 				)}
 
 				<FileUpload

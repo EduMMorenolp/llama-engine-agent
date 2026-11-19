@@ -41,11 +41,15 @@ flowchart LR
 ```
 
 ### Componentes Clave:
-1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
-2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
-3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
-4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
-5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+1. **Panel de Artifacts / Canvas (`ArtifactPanel.tsx`)**: Renderizador dividido a pantalla partida y pantalla completa para código, HTML en iframe sandbox y SVG seguro, con cambio de pestañas Vista Previa/Código y descarga directa.
+2. **Paleta de Comandos & Slash Commands (`CommandPaletteModal.tsx`, `Composer.tsx`)**: Atajo global `Ctrl+K` para orquestación instantánea de sesiones y acciones, junto con menú reactivo `/` en el área de redacción.
+3. **Modo Asistente de Voz Bidireccional (`useSpeechSynthesis.ts`, `VoiceOrb.tsx`)**: Síntesis TTS en el navegador con limpieza de bloques de razonamiento, botón de altavoz en mensajes y widget flotante `VoiceOrb` animado con ondas sonoras.
+4. **Árbol y Variantes de Mensajes (`MessageBubble.tsx`)**: Paginación `< 1 / n >` para alternar entre regeneraciones de respuestas conservando todo el historial.
+5. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+6. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+7. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+8. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+9. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
 mermaid
 flowchart TD
     subgraph Hardware["Hardware Local (NVIDIA RTX 5050 8GB / 16GB RAM)"]
@@ -113,11 +117,15 @@ flowchart LR
 ```
 
 ### Componentes Clave:
-1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
-2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
-3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
-4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
-5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+1. **Panel de Artifacts / Canvas (`ArtifactPanel.tsx`)**: Renderizador dividido a pantalla partida y pantalla completa para código, HTML en iframe sandbox y SVG seguro, con cambio de pestañas Vista Previa/Código y descarga directa.
+2. **Paleta de Comandos & Slash Commands (`CommandPaletteModal.tsx`, `Composer.tsx`)**: Atajo global `Ctrl+K` para orquestación instantánea de sesiones y acciones, junto con menú reactivo `/` en el área de redacción.
+3. **Modo Asistente de Voz Bidireccional (`useSpeechSynthesis.ts`, `VoiceOrb.tsx`)**: Síntesis TTS en el navegador con limpieza de bloques de razonamiento, botón de altavoz en mensajes y widget flotante `VoiceOrb` animado con ondas sonoras.
+4. **Árbol y Variantes de Mensajes (`MessageBubble.tsx`)**: Paginación `< 1 / n >` para alternar entre regeneraciones de respuestas conservando todo el historial.
+5. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+6. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+7. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+8. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+9. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
 
 
 ---
@@ -163,11 +171,15 @@ flowchart LR
 ```
 
 ### Componentes Clave:
-1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
-2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
-3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
-4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
-5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+1. **Panel de Artifacts / Canvas (`ArtifactPanel.tsx`)**: Renderizador dividido a pantalla partida y pantalla completa para código, HTML en iframe sandbox y SVG seguro, con cambio de pestañas Vista Previa/Código y descarga directa.
+2. **Paleta de Comandos & Slash Commands (`CommandPaletteModal.tsx`, `Composer.tsx`)**: Atajo global `Ctrl+K` para orquestación instantánea de sesiones y acciones, junto con menú reactivo `/` en el área de redacción.
+3. **Modo Asistente de Voz Bidireccional (`useSpeechSynthesis.ts`, `VoiceOrb.tsx`)**: Síntesis TTS en el navegador con limpieza de bloques de razonamiento, botón de altavoz en mensajes y widget flotante `VoiceOrb` animado con ondas sonoras.
+4. **Árbol y Variantes de Mensajes (`MessageBubble.tsx`)**: Paginación `< 1 / n >` para alternar entre regeneraciones de respuestas conservando todo el historial.
+5. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+6. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+7. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+8. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+9. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
 mermaid
 sequenceDiagram
     autonumber
@@ -220,11 +232,15 @@ flowchart LR
 ```
 
 ### Componentes Clave:
-1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
-2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
-3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
-4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
-5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+1. **Panel de Artifacts / Canvas (`ArtifactPanel.tsx`)**: Renderizador dividido a pantalla partida y pantalla completa para código, HTML en iframe sandbox y SVG seguro, con cambio de pestañas Vista Previa/Código y descarga directa.
+2. **Paleta de Comandos & Slash Commands (`CommandPaletteModal.tsx`, `Composer.tsx`)**: Atajo global `Ctrl+K` para orquestación instantánea de sesiones y acciones, junto con menú reactivo `/` en el área de redacción.
+3. **Modo Asistente de Voz Bidireccional (`useSpeechSynthesis.ts`, `VoiceOrb.tsx`)**: Síntesis TTS en el navegador con limpieza de bloques de razonamiento, botón de altavoz en mensajes y widget flotante `VoiceOrb` animado con ondas sonoras.
+4. **Árbol y Variantes de Mensajes (`MessageBubble.tsx`)**: Paginación `< 1 / n >` para alternar entre regeneraciones de respuestas conservando todo el historial.
+5. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+6. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+7. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+8. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+9. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
 
 
 ---
@@ -270,11 +286,15 @@ flowchart LR
 ```
 
 ### Componentes Clave:
-1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
-2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
-3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
-4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
-5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+1. **Panel de Artifacts / Canvas (`ArtifactPanel.tsx`)**: Renderizador dividido a pantalla partida y pantalla completa para código, HTML en iframe sandbox y SVG seguro, con cambio de pestañas Vista Previa/Código y descarga directa.
+2. **Paleta de Comandos & Slash Commands (`CommandPaletteModal.tsx`, `Composer.tsx`)**: Atajo global `Ctrl+K` para orquestación instantánea de sesiones y acciones, junto con menú reactivo `/` en el área de redacción.
+3. **Modo Asistente de Voz Bidireccional (`useSpeechSynthesis.ts`, `VoiceOrb.tsx`)**: Síntesis TTS en el navegador con limpieza de bloques de razonamiento, botón de altavoz en mensajes y widget flotante `VoiceOrb` animado con ondas sonoras.
+4. **Árbol y Variantes de Mensajes (`MessageBubble.tsx`)**: Paginación `< 1 / n >` para alternar entre regeneraciones de respuestas conservando todo el historial.
+5. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+6. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+7. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+8. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+9. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
 mermaid
 sequenceDiagram
     autonumber
@@ -334,11 +354,15 @@ flowchart LR
 ```
 
 ### Componentes Clave:
-1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
-2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
-3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
-4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
-5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+1. **Panel de Artifacts / Canvas (`ArtifactPanel.tsx`)**: Renderizador dividido a pantalla partida y pantalla completa para código, HTML en iframe sandbox y SVG seguro, con cambio de pestañas Vista Previa/Código y descarga directa.
+2. **Paleta de Comandos & Slash Commands (`CommandPaletteModal.tsx`, `Composer.tsx`)**: Atajo global `Ctrl+K` para orquestación instantánea de sesiones y acciones, junto con menú reactivo `/` en el área de redacción.
+3. **Modo Asistente de Voz Bidireccional (`useSpeechSynthesis.ts`, `VoiceOrb.tsx`)**: Síntesis TTS en el navegador con limpieza de bloques de razonamiento, botón de altavoz en mensajes y widget flotante `VoiceOrb` animado con ondas sonoras.
+4. **Árbol y Variantes de Mensajes (`MessageBubble.tsx`)**: Paginación `< 1 / n >` para alternar entre regeneraciones de respuestas conservando todo el historial.
+5. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+6. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+7. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+8. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+9. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
 
 
 ---
@@ -384,11 +408,15 @@ flowchart LR
 ```
 
 ### Componentes Clave:
-1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
-2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
-3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
-4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
-5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+1. **Panel de Artifacts / Canvas (`ArtifactPanel.tsx`)**: Renderizador dividido a pantalla partida y pantalla completa para código, HTML en iframe sandbox y SVG seguro, con cambio de pestañas Vista Previa/Código y descarga directa.
+2. **Paleta de Comandos & Slash Commands (`CommandPaletteModal.tsx`, `Composer.tsx`)**: Atajo global `Ctrl+K` para orquestación instantánea de sesiones y acciones, junto con menú reactivo `/` en el área de redacción.
+3. **Modo Asistente de Voz Bidireccional (`useSpeechSynthesis.ts`, `VoiceOrb.tsx`)**: Síntesis TTS en el navegador con limpieza de bloques de razonamiento, botón de altavoz en mensajes y widget flotante `VoiceOrb` animado con ondas sonoras.
+4. **Árbol y Variantes de Mensajes (`MessageBubble.tsx`)**: Paginación `< 1 / n >` para alternar entre regeneraciones de respuestas conservando todo el historial.
+5. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+6. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+7. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+8. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+9. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
 mermaid
 sequenceDiagram
     autonumber
@@ -447,9 +475,13 @@ flowchart LR
 ```
 
 ### Componentes Clave:
-1. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
-2. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
-3. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
-4. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
-5. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
+1. **Panel de Artifacts / Canvas (`ArtifactPanel.tsx`)**: Renderizador dividido a pantalla partida y pantalla completa para código, HTML en iframe sandbox y SVG seguro, con cambio de pestañas Vista Previa/Código y descarga directa.
+2. **Paleta de Comandos & Slash Commands (`CommandPaletteModal.tsx`, `Composer.tsx`)**: Atajo global `Ctrl+K` para orquestación instantánea de sesiones y acciones, junto con menú reactivo `/` en el área de redacción.
+3. **Modo Asistente de Voz Bidireccional (`useSpeechSynthesis.ts`, `VoiceOrb.tsx`)**: Síntesis TTS en el navegador con limpieza de bloques de razonamiento, botón de altavoz en mensajes y widget flotante `VoiceOrb` animado con ondas sonoras.
+4. **Árbol y Variantes de Mensajes (`MessageBubble.tsx`)**: Paginación `< 1 / n >` para alternar entre regeneraciones de respuestas conservando todo el historial.
+5. **Atomic Context Trimmer (`src/agent/prompt.ts`)**: Agrupa de forma indivisible los mensajes del asistente con llamadas a herramientas y las subsecuentes respuestas `tool`. Evita mensajes huérfanos que violan el contrato de la API de inferencia.
+6. **WebSocket Hub con AbortController (`src/ws.ts`)**: Permite la detención inmediata de ejecuciones agénticas activas cuando el usuario pulsa detener en la UI o se interrumpe la conexión, previniendo consumo fantasma de GPU.
+7. **Eventos Reactivos de Sesión (`session_updated`)**: Actualiza en tiempo real el título autogenerado de la conversación en la barra lateral del cliente sin requerir recarga.
+8. **Inspección de Herramientas (`ToolCallItem`)**: Visualizador interactivo que desglosa argumentos, estados de ejecución y salidas producidas por cada tool ejecutada.
+9. **Gestor de Memorias (`MemoriesModal`)**: CRUD reactivo de memorias persistentes (`/api/memories`) con etiquetado dinámico y búsqueda en tiempo real.
 
