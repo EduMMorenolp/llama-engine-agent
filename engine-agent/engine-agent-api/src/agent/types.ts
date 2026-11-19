@@ -2,6 +2,8 @@ export interface ModelSettings {
 	enableReasoning?: boolean;
 	temperature?: number;
 	topP?: number;
+	topK?: number;
+	repeatPenalty?: number;
 	maxTokens?: number;
 	frequencyPenalty?: number;
 	presencePenalty?: number;

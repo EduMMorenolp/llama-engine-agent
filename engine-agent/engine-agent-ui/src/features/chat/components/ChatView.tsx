@@ -9,6 +9,11 @@ import {
 	SparklesIcon,
 	TerminalIcon,
 } from "../../../components/ui/Icons.tsx";
+import {
+	getNotificationPermission,
+	notifyAgentFinished,
+	requestNotificationPermission,
+} from "../../../lib/notifications.ts";
 import { getAgentForSession, setAgentForSession } from "../../../lib/session-agents.ts";
 import { useAppSettings } from "../../../lib/useAppSettings.ts";
 import { useToast } from "../../../providers/ToastProvider.tsx";
@@ -413,6 +418,10 @@ export function ChatView() {
 			scrollToBottom("smooth");
 		});
 
+		if (appSettings.browserNotifications && getNotificationPermission() === "default") {
+			requestNotificationPermission().catch(() => {});
+		}
+
 		sendMessage(
 			sessionId,
 			fullMessage,
@@ -421,9 +430,36 @@ export function ChatView() {
 				model: selectedModel,
 				systemPrompt: options?.systemPrompt || customSystemPrompt || undefined,
 				enabledTools: options?.enabledTools || enabledTools,
-				modelSettings: options?.modelSettings,
+				modelSettings: options?.modelSettings || {
+					temperature: appSettings.temperature,
+					topP: appSettings.topP,
+					topK: appSettings.topK,
+					repeatPenalty: appSettings.repeatPenalty,
+					enableReasoning: appSettings.expandReasoning,
+					maxTokens: 4096,
+					presencePenalty: 0.0,
+					frequencyPenalty: 0.0,
+				},
 			},
-			(msg) => addMessage(msg),
+			(msg) => {
+				addMessage(msg);
+				if (
+					appSettings.browserNotifications &&
+					msg.role === "assistant" &&
+					msg.content &&
+					!msg.content.startsWith("⚠️ **Aviso**:")
+				) {
+					const activeSession = sessions.find((s) => s.id === sessionId);
+					notifyAgentFinished({
+						agentName: msg._subAgent || getAgentForSession(sessionId) || undefined,
+						sessionTitle: activeSession?.name ?? undefined,
+						content: msg.content ?? undefined,
+						onClick: () => {
+							selectSession(sessionId);
+						},
+					});
+				}
+			},
 			() => {
 				refreshSessions();
 			},

@@ -3,6 +3,7 @@ export interface AppSettings {
 	streamResponses: boolean;
 	showMetrics: boolean;
 	expandReasoning: boolean;
+	browserNotifications: boolean;
 	temperature: number;
 	topP: number;
 	topK: number;
@@ -20,6 +21,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 	streamResponses: true,
 	showMetrics: true,
 	expandReasoning: true,
+	browserNotifications: true,
 	temperature: 0.7,
 	topP: 0.9,
 	topK: 40,

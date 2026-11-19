@@ -80,10 +80,15 @@ export class LLMClient {
 				: undefined;
 
 		try {
-			const extraBody =
-				modelSettings?.enableReasoning === false
+			const extraBody: Record<string, unknown> = {
+				...(modelSettings?.enableReasoning === false
 					? { chat_template_kwargs: { enable_thinking: false } }
-					: {};
+					: {}),
+				...(modelSettings?.topK !== undefined ? { top_k: modelSettings.topK } : {}),
+				...(modelSettings?.repeatPenalty !== undefined
+					? { repeat_penalty: modelSettings.repeatPenalty }
+					: {}),
+			};
 			const response = (await this.client.chat.completions.create({
 				model: useModel,
 				messages: messages as any,
@@ -151,10 +156,15 @@ export class LLMClient {
 
 		const createStream = async () => {
 			try {
-				const extraBody =
-					modelSettings?.enableReasoning === false
+				const extraBody: Record<string, unknown> = {
+					...(modelSettings?.enableReasoning === false
 						? { chat_template_kwargs: { enable_thinking: false } }
-						: {};
+						: {}),
+					...(modelSettings?.topK !== undefined ? { top_k: modelSettings.topK } : {}),
+					...(modelSettings?.repeatPenalty !== undefined
+						? { repeat_penalty: modelSettings.repeatPenalty }
+						: {}),
+				};
 				return (await this.client.chat.completions.create({
 					model: useModel,
 					messages: messages as any,

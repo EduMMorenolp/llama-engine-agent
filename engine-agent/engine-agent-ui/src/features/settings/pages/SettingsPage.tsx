@@ -1,5 +1,7 @@
 import { createSession } from "../../../api.ts";
 import {
+	BellIcon,
+	CheckIcon,
 	DownloadIcon,
 	MoonIcon,
 	RefreshCwIcon,
@@ -8,6 +10,11 @@ import {
 	TrashIcon,
 	UploadIcon,
 } from "../../../components/ui/Icons.tsx";
+import {
+	getNotificationPermission,
+	isNotificationSupported,
+	requestNotificationPermission,
+} from "../../../lib/notifications.ts";
 import { DEFAULT_APP_SETTINGS } from "../../../lib/settings.ts";
 import { useAppSettings } from "../../../lib/useAppSettings.ts";
 import { useToast } from "../../../providers/ToastProvider.tsx";
@@ -109,21 +116,60 @@ export function SettingsPage() {
 					</p>
 				</div>
 
-				<button
-					type="button"
-					className="btn-secondary"
-					onClick={handleResetDefaults}
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: "6px",
-						padding: "8px 14px",
-						fontSize: "12.5px",
-					}}
-				>
-					<RefreshCwIcon size={14} />
-					<span>Restaurar por defecto</span>
-				</button>
+				<div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: "6px",
+							fontSize: "12px",
+							color: "var(--success, #10b981)",
+							background: "rgba(16, 185, 129, 0.1)",
+							border: "1px solid rgba(16, 185, 129, 0.25)",
+							padding: "6px 12px",
+							borderRadius: "var(--r-sm)",
+							fontWeight: 500,
+						}}
+					>
+						<CheckIcon size={14} />
+						<span>Guardado automático activo</span>
+					</div>
+
+					<button
+						type="button"
+						className="btn-secondary"
+						onClick={handleResetDefaults}
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: "6px",
+							padding: "8px 14px",
+							fontSize: "12.5px",
+						}}
+					>
+						<RefreshCwIcon size={14} />
+						<span>Restaurar por defecto</span>
+					</button>
+
+					<button
+						type="button"
+						className="btn-primary"
+						onClick={() => {
+							appSettings.updateSettings({});
+							addToast("Configuración guardada correctamente en el navegador", "success");
+						}}
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: "6px",
+							padding: "8px 16px",
+							fontSize: "12.5px",
+						}}
+					>
+						<CheckIcon size={14} />
+						<span>Guardar Configuración</span>
+					</button>
+				</div>
 			</div>
 
 			<div
@@ -273,7 +319,15 @@ export function SettingsPage() {
 					</div>
 
 					{/* Expand Reasoning */}
-					<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "space-between",
+							paddingBottom: "12px",
+							borderBottom: "1px solid var(--border)",
+						}}
+					>
 						<div>
 							<div style={{ fontWeight: 600, fontSize: "13px", color: "var(--text)" }}>
 								Expandir Razonamiento por Defecto
@@ -287,6 +341,67 @@ export function SettingsPage() {
 								type="checkbox"
 								checked={appSettings.expandReasoning}
 								onChange={(e) => appSettings.updateSettings({ expandReasoning: e.target.checked })}
+							/>
+							<span className="switch-slider" />
+						</label>
+					</div>
+
+					{/* Browser Notifications */}
+					<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+						<div>
+							<div
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: "6px",
+									fontWeight: 600,
+									fontSize: "13px",
+									color: "var(--text)",
+								}}
+							>
+								<BellIcon size={15} style={{ color: "var(--accent)" }} />
+								<span>Notificaciones en el Navegador</span>
+							</div>
+							<div style={{ fontSize: "12px", color: "var(--muted)", marginTop: "2px" }}>
+								Avisar con una notificación nativa cuando el agente termine de responder (ideal para
+								multitarea o pestañas en segundo plano).
+							</div>
+						</div>
+						<label className="switch-control" aria-label="Notificaciones del navegador">
+							<input
+								type="checkbox"
+								checked={appSettings.browserNotifications}
+								onChange={async (e) => {
+									const willEnable = e.target.checked;
+									if (!willEnable) {
+										appSettings.updateSettings({ browserNotifications: false });
+										addToast("Notificaciones del navegador desactivadas", "info");
+										return;
+									}
+
+									if (!isNotificationSupported()) {
+										addToast("Tu navegador no soporta notificaciones de escritorio", "error");
+										return;
+									}
+
+									const perm = getNotificationPermission();
+									if (perm === "granted") {
+										appSettings.updateSettings({ browserNotifications: true });
+										addToast("Notificaciones del navegador activadas", "success");
+									} else {
+										const granted = await requestNotificationPermission();
+										if (granted) {
+											appSettings.updateSettings({ browserNotifications: true });
+											addToast("Notificaciones del navegador concedidas y activadas", "success");
+										} else {
+											appSettings.updateSettings({ browserNotifications: false });
+											addToast(
+												"Permiso no concedido. Habilita las notificaciones en el icono de candado de tu navegador.",
+												"error",
+											);
+										}
+									}
+								}}
 							/>
 							<span className="switch-slider" />
 						</label>
@@ -305,9 +420,15 @@ export function SettingsPage() {
 						gap: "16px",
 					}}
 				>
-					<h3 style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text)", margin: 0 }}>
-						Parámetros de Inferencia (llama.cpp)
-					</h3>
+					<div>
+						<h3 style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text)", margin: 0 }}>
+							Parámetros de Inferencia (llama.cpp)
+						</h3>
+						<p style={{ fontSize: "12px", color: "var(--muted)", margin: "4px 0 0 0" }}>
+							Ajusta el comportamiento del motor local llama.cpp. Estos valores se transmiten
+							directamente al LLM en cada mensaje.
+						</p>
+					</div>
 
 					{/* Modelo LLM Activo */}
 					<div
