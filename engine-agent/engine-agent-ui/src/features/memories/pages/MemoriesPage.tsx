@@ -34,6 +34,8 @@ export function MemoriesPage() {
 
 	useEffect(() => {
 		loadMemories();
+		window.addEventListener("memories_updated", loadMemories);
+		return () => window.removeEventListener("memories_updated", loadMemories);
 	}, [loadMemories]);
 
 	const handleCreate = async (e: React.FormEvent) => {
@@ -50,6 +52,7 @@ export function MemoriesPage() {
 			setNewContent("");
 			setNewTags("");
 			loadMemories();
+			window.dispatchEvent(new CustomEvent("memories_updated"));
 		} catch {
 			// ignore
 		}
@@ -59,6 +62,7 @@ export function MemoriesPage() {
 		try {
 			await deleteMemory(key);
 			loadMemories();
+			window.dispatchEvent(new CustomEvent("memories_updated"));
 		} catch {
 			setMemories((prev) => prev.filter((m) => m.key !== key));
 		}

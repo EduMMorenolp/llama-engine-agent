@@ -6,7 +6,7 @@ import { createAgentRoutes } from "../modules/agents/routes.js";
 import { AgentService } from "../modules/agents/service.js";
 import { createChatRoutes } from "../modules/chat/routes.js";
 import { MCPController } from "../modules/mcp/controller.js";
-import { MCPManager } from "../modules/mcp/manager.js";
+import { getMCPManager } from "../modules/mcp/manager.js";
 import { createMCPRoutes } from "../modules/mcp/routes.js";
 import { MemoryController } from "../modules/memories/controller.js";
 import { createMemoryRoutes } from "../modules/memories/routes.js";
@@ -56,7 +56,7 @@ export function createApiRoutes(
 	const toolController = new ToolController(toolService);
 	router.use("/tools", createToolRoutes(toolController));
 
-	const mcpManager = new MCPManager(toolRegistry);
+	const mcpManager = getMCPManager(toolRegistry);
 	const mcpController = new MCPController(mcpManager);
 	router.use("/mcp", createMCPRoutes(mcpController));
 

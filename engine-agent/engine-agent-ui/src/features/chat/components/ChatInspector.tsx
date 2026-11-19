@@ -26,11 +26,16 @@ export function ChatInspector({
 	const [memories, setMemories] = useState<MemoryItem[]>([]);
 
 	useEffect(() => {
-		if (open) {
+		const load = () => {
 			fetchMemories()
-				.then((mems) => setMemories(mems.slice(0, 12)))
+				.then((mems) => setMemories(mems))
 				.catch(() => {});
+		};
+		if (open) {
+			load();
 		}
+		window.addEventListener("memories_updated", load);
+		return () => window.removeEventListener("memories_updated", load);
 	}, [open]);
 
 	if (!open) {
@@ -161,6 +166,9 @@ export function ChatInspector({
 					<span className="inspector-block-title">
 						<BrainIcon size={14} style={{ color: "#a855f7" }} />
 						Memorias Persistentes
+						<span className="nav-badge" style={{ fontSize: "10px", marginLeft: "4px" }}>
+							{memories.length}
+						</span>
 					</span>
 					<button
 						type="button"

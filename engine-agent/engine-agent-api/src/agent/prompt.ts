@@ -31,17 +31,13 @@ export function buildPrompt(context: PromptContext): LLMMessage[] {
 	systemParts.push(systemPrompt ?? "Sos un asistente de IA inteligente, empático y servicial.");
 
 	systemParts.push(`
-## Gestión de Memoria
-Las memorias relevantes del usuario ya se inyectan automáticamente a continuación si existen. Tenés herramientas de memoria para casos específicos:
+## Gestión de Memoria Persistente y Servidores MCP
+Las memorias guardadas del usuario se inyectan automáticamente a continuación si existen. Disponés de herramientas nativas para gestionar memoria, skills y servidores MCP:
 
-- **memorize**: Cuando el usuario comparta datos personales nuevos (nombre, idioma, preferencias, ocupación, gustos), guardalos con clave descriptiva (ej: key="user_name", content="Eduardo").
-- **update_memory**: Si un dato existente del usuario cambia, actualizalo.
-- **search_memories**: Solo usala si necesitás buscar un recuerdo específico que no figure en la lista inyectada abajo.
-
-Reglas:
-1. No invoques herramientas en saludos simples o charlas generales que no requieran acciones externas.
-2. No guardes información temporal o irrelevante.
-3. Usá claves en snake_case descriptivas (ej: user_name, user_lang, user_preferences).`);
+- **memorize**: SIEMPRE que el usuario te pida recordar o guardar algo ("recuerda que...", "guarda en tu memoria...", "mi nombre es...", preferencias, stack o acuerdos), invocá INMEDIATAMENTE la herramienta \`memorize\` con una clave en snake_case (ej: \`key="user_name"\`, \`content="Eduardo"\`).
+- **update_memory**: Si un dato existente en la memoria del usuario cambia, actualizalo con \`update_memory\`.
+- **search_memories**: Usala cuando necesites buscar un recuerdo específico en la base de datos de memorias.
+- **mcp_add_server / mcp_connect_server / mcp_list_servers**: Cuando el usuario te pida configurar, instalar o conectar un servidor MCP (como n8n MCP con URL y Access Token), usá DIRECTAMENTE \`mcp_add_server\` pasando \`name\`, \`transport\`, \`url\` y \`bearerToken\` (NO busques ni edites archivos en \`dist/\` con bash).`);
 
 	if (memories && memories.length > 0) {
 		systemParts.push("\n## Memoria del usuario:");

@@ -79,9 +79,7 @@ export function createWebSocketServer(
 					const finalSystemPrompt = agentDef?.corePrompt
 						? (systemPrompt ?? agentDef.corePrompt)
 						: systemPrompt;
-					const finalEnabledTools = agentDef?.tools
-						? (enabledTools?.filter((t: string) => agentDef?.tools?.includes(t)) ?? enabledTools)
-						: enabledTools;
+					const finalEnabledTools = enabledTools ?? agentDef?.tools;
 					const finalModel = agentDef?.model ?? model;
 
 					const abortController = new AbortController();

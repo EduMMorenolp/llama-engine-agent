@@ -4,13 +4,23 @@ export const memorizeTool: ToolSpec = {
 	type: "function",
 	function: {
 		name: "memorize",
-		description: "Guardar un dato en memoria persistente",
+		description:
+			"Guardar o actualizar un dato importante del usuario, preferencia técnica, stack, acuerdo o hecho relevante en la memoria persistente (SQLite). Úsala SIEMPRE que el usuario diga 'recuerda', 'memoriza', 'guarda en memoria' o comparta información personal/técnica clave.",
 		parameters: {
 			type: "object",
 			properties: {
-				key: { type: "string", description: "Clave de la memoria" },
-				content: { type: "string", description: "Contenido a guardar" },
-				tags: { type: "string", description: "Tags separados por coma (opcional)" },
+				key: {
+					type: "string",
+					description: "Clave descriptiva en snake_case (ej. 'user_name', 'preferencia_stack')",
+				},
+				content: {
+					type: "string",
+					description: "Contenido o hecho a recordar de forma persistente",
+				},
+				tags: {
+					type: "string",
+					description: "Etiquetas separadas por coma opcionales (ej. 'usuario, stack')",
+				},
 			},
 			required: ["key", "content"],
 		},

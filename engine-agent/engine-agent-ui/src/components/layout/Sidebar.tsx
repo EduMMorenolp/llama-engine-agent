@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { fetchMemories } from "../../api.ts";
 import {
 	BotIcon,
 	BrainIcon,
@@ -67,6 +68,19 @@ export function Sidebar({
 	activeModel = "qwen3.5-4b",
 	activeSessionCount = 0,
 }: SidebarProps) {
+	const [memoriesCount, setMemoriesCount] = useState(0);
+
+	useEffect(() => {
+		const loadMemoriesCount = () => {
+			fetchMemories()
+				.then((mems) => setMemoriesCount(mems.length))
+				.catch(() => {});
+		};
+		loadMemoriesCount();
+		window.addEventListener("memories_updated", loadMemoriesCount);
+		return () => window.removeEventListener("memories_updated", loadMemoriesCount);
+	}, []);
+
 	return (
 		<aside
 			className={`sidebar ${collapsed ? "collapsed" : ""}`}
@@ -131,6 +145,8 @@ export function Sidebar({
 												<span className="nav-label">{item.label}</span>
 												{item.to === "/" && activeSessionCount > 0 ? (
 													<span className="nav-badge">{activeSessionCount}</span>
+												) : item.to === "/memories" ? (
+													<span className="nav-badge">{memoriesCount}</span>
 												) : item.badge ? (
 													<span className="nav-badge">{item.badge}</span>
 												) : null}

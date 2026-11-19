@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { fetchAvailableModels, type ModelInfo } from "../../api.ts";
 import { CommandPaletteModal } from "../../features/chat/components/CommandPaletteModal.tsx";
 import { useSessions } from "../../features/sessions/hooks/useSessions.ts";
+import { useAppSettings } from "../../lib/useAppSettings.ts";
 import { Sidebar } from "./Sidebar.tsx";
 import { Topbar } from "./Topbar.tsx";
 
@@ -20,7 +21,16 @@ export function Layout() {
 	const [subSidebarOpen, setSubSidebarOpen] = useState(true);
 	const [paletteOpen, setPaletteOpen] = useState(false);
 	const [models, setModels] = useState<ModelInfo[]>(FALLBACK_MODELS);
-	const [selectedModel, setSelectedModel] = useState("qwen3.5-4b");
+	const appSettings = useAppSettings();
+	const [selectedModel, setSelectedModel] = useState(
+		() => appSettings.defaultModel || "qwen3.5-4b",
+	);
+
+	useEffect(() => {
+		if (appSettings.defaultModel) {
+			setSelectedModel(appSettings.defaultModel);
+		}
+	}, [appSettings.defaultModel]);
 
 	const { sessions, activeSessionId, selectSession, removeSession, createNewSession, messages } =
 		useSessions();

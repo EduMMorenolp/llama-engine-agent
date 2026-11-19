@@ -36,6 +36,7 @@ interface SessionsContextType {
 	removeSession: (id: string) => Promise<void>;
 	renameSession: (id: string, newName: string) => Promise<void>;
 	tagSession: (id: string, tags: string[]) => Promise<void>;
+	togglePinSession: (id: string) => Promise<void>;
 	forkSession: (upToMessageId: string) => Promise<Session>;
 	deleteMessage: (messageId: string) => void;
 	toggleFavoriteMessage: (messageId: string) => Promise<void>;
@@ -255,6 +256,20 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 		}
 	}, []);
 
+	const togglePinSession = useCallback(
+		async (id: string) => {
+			const session = sessions.find((s) => s.id === id);
+			if (!session) return;
+			const currentTags = session.tags ?? [];
+			const isPinned = currentTags.includes("pinned");
+			const nextTags = isPinned
+				? currentTags.filter((t) => t !== "pinned")
+				: [...currentTags, "pinned"];
+			await tagSession(id, nextTags);
+		},
+		[sessions, tagSession],
+	);
+
 	const toggleFavoriteMessage = useCallback(
 		async (messageId: string) => {
 			if (!activeSessionId) return;
@@ -346,6 +361,7 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
 				removeSession,
 				renameSession,
 				tagSession,
+				togglePinSession,
 				forkSession,
 				deleteMessage,
 				toggleFavoriteMessage,

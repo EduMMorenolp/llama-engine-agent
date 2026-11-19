@@ -4,10 +4,10 @@ import type { ModelInfo, Session } from "../../api.ts";
 import { getAgentForSession } from "../../lib/session-agents.ts";
 import { useAppSettings } from "../../lib/useAppSettings.ts";
 import {
-	ChevronDownIcon,
 	CommandIcon,
 	MoonIcon,
 	PanelRightIcon,
+	PinFilledIcon,
 	PlusIcon,
 	SparklesIcon,
 	SunIcon,
@@ -37,9 +37,9 @@ interface TopbarProps {
 	onSelectSession: (id: string) => void;
 	onCloseSession: (id: string) => void;
 	onNewSession: () => void;
-	models: ModelInfo[];
+	models?: ModelInfo[];
 	selectedModel: string;
-	onSelectModel: (modelId: string) => void;
+	onSelectModel?: (modelId: string) => void;
 	contextPercent?: number;
 	totalChars?: number;
 	inspectorOpen: boolean;
@@ -54,9 +54,9 @@ export function Topbar({
 	onSelectSession,
 	onCloseSession,
 	onNewSession,
-	models,
+	models: _models,
 	selectedModel,
-	onSelectModel,
+	onSelectModel: _onSelectModel,
 	contextPercent = 15,
 	totalChars = 4500,
 	inspectorOpen,
@@ -66,10 +66,8 @@ export function Topbar({
 }: TopbarProps) {
 	const location = useLocation();
 	const appSettings = useAppSettings();
-	const [showModelMenu, setShowModelMenu] = useState(false);
 	const [showContextPopover, setShowContextPopover] = useState(false);
 	const [, setAgentRefreshTick] = useState(0);
-	const modelMenuRef = useRef<HTMLDivElement>(null);
 	const contextMenuRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -90,18 +88,15 @@ export function Topbar({
 
 	useEffect(() => {
 		function handleClickOutside(e: MouseEvent) {
-			if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
-				setShowModelMenu(false);
-			}
 			if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
 				setShowContextPopover(false);
 			}
 		}
-		if (showModelMenu || showContextPopover) {
+		if (showContextPopover) {
 			document.addEventListener("mousedown", handleClickOutside);
 			return () => document.removeEventListener("mousedown", handleClickOutside);
 		}
-	}, [showModelMenu, showContextPopover]);
+	}, [showContextPopover]);
 
 	return (
 		<header className="topbar">
@@ -121,50 +116,70 @@ export function Topbar({
 			{/* Multi-chat Tabs (Visible in Chat View) */}
 			{isChatView && sessions.length > 0 && (
 				<div className="chat-tabs-bar" style={{ flex: 1, margin: "0 14px", minWidth: 0 }}>
-					{sessions.slice(0, 4).map((s) => {
-						const agentTag = getAgentForSession(s.id) || s.tags?.[0] || "asistente";
-						const dotColor = AGENT_COLORS[agentTag] || "#3b82f6";
-						const isActive = s.id === activeSessionId;
-						const displayName = s.name || `Chat ${s.id.slice(0, 6)}`;
+					{(() => {
+						const sortedSessions = [...sessions].sort((a, b) => {
+							const aPinned = a.tags?.includes("pinned") ? 1 : 0;
+							const bPinned = b.tags?.includes("pinned") ? 1 : 0;
+							if (aPinned !== bPinned) return bPinned - aPinned;
+							return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
+						});
 
-						return (
-							<div
-								key={s.id}
-								className={`chat-tab-chip ${isActive ? "active" : ""}`}
-								onClick={() => onSelectSession(s.id)}
-								onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onSelectSession(s.id)}
-								role="tab"
-								tabIndex={0}
-							>
-								<span
-									className="model-dot"
-									style={{
-										background: dotColor,
-										boxShadow: isActive ? `0 0 8px ${dotColor}` : undefined,
-										flexShrink: 0,
-									}}
-									title={`Agente: ${agentTag}`}
-								/>
-								<span
-									className="chat-tab-title"
-									style={{ maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}
+						return sortedSessions.slice(0, 4).map((s) => {
+							const isPinned = s.tags?.includes("pinned");
+							const agentTag =
+								getAgentForSession(s.id) || s.tags?.find((t) => t !== "pinned") || "asistente";
+							const dotColor = AGENT_COLORS[agentTag] || "#3b82f6";
+							const isActive = s.id === activeSessionId;
+							const displayName = s.name || `Chat ${s.id.slice(0, 6)}`;
+
+							return (
+								<div
+									key={s.id}
+									className={`chat-tab-chip ${isActive ? "active" : ""}`}
+									onClick={() => onSelectSession(s.id)}
+									onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onSelectSession(s.id)}
+									role="tab"
+									tabIndex={0}
 								>
-									{displayName}
-								</span>
-								<button
-									type="button"
-									className="chat-tab-close"
-									onClick={(e) => {
-										e.stopPropagation();
-										onCloseSession(s.id);
-									}}
-									title="Cerrar pestaña"
-								>
-									<XIcon size={11} />
-								</button>
-							</div>
-						);
-					})}
+									{isPinned ? (
+										<span
+											title="Chat Fijado"
+											style={{ display: "inline-flex", alignItems: "center" }}
+										>
+											<PinFilledIcon size={12} style={{ color: "var(--accent)", flexShrink: 0 }} />
+										</span>
+									) : (
+										<span
+											className="model-dot"
+											style={{
+												background: dotColor,
+												boxShadow: isActive ? `0 0 8px ${dotColor}` : undefined,
+												flexShrink: 0,
+											}}
+											title={`Agente: ${agentTag}`}
+										/>
+									)}
+									<span
+										className="chat-tab-title"
+										style={{ maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}
+									>
+										{displayName}
+									</span>
+									<button
+										type="button"
+										className="chat-tab-close"
+										onClick={(e) => {
+											e.stopPropagation();
+											onCloseSession(s.id);
+										}}
+										title="Cerrar pestaña"
+									>
+										<XIcon size={11} />
+									</button>
+								</div>
+							);
+						});
+					})()}
 					<button
 						type="button"
 						className="chat-tab-chip new-tab"
@@ -184,44 +199,21 @@ export function Topbar({
 
 			{/* Topbar Right Controls */}
 			<div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto" }}>
-				{/* Model Selector Dropdown */}
-				<div ref={modelMenuRef} style={{ position: "relative" }}>
-					<button
-						type="button"
-						className="model-badge-selector"
-						onClick={() => setShowModelMenu((prev) => !prev)}
-						title="Seleccionar modelo LLM"
-					>
-						<span className="model-dot" style={{ background: "#3b82f6" }} />
-						<span>{selectedModel}</span>
-						<ChevronDownIcon size={13} style={{ color: "var(--muted)" }} />
-					</button>
-
-					{showModelMenu && (
-						<div
-							className="popover-menu"
-							style={{ right: 0, top: "calc(100% + 6px)", minWidth: 200, zIndex: 50 }}
-						>
-							<div className="popover-header">
-								<span>Modelos GGUF (llama.cpp)</span>
-							</div>
-							{models.map((m) => (
-								<button
-									type="button"
-									key={m.id}
-									className={`popover-item ${m.id === selectedModel ? "active-model-item" : ""}`}
-									onClick={() => {
-										onSelectModel(m.id);
-										setShowModelMenu(false);
-									}}
-								>
-									<span style={{ fontWeight: 600 }}>{m.name}</span>
-									{m.badge && <span className="model-tag-badge">{m.badge}</span>}
-								</button>
-							))}
-						</div>
-					)}
-				</div>
+				{/* Model Status Badge (Configurable in Settings) */}
+				<Link
+					to="/settings"
+					className="model-badge-selector static"
+					title={`Modelo activo: ${selectedModel} (Clic para configurar en Ajustes)`}
+					style={{
+						textDecoration: "none",
+						display: "flex",
+						alignItems: "center",
+						gap: "6px",
+					}}
+				>
+					<span className="model-dot" style={{ background: "#3b82f6" }} />
+					<span>{selectedModel}</span>
+				</Link>
 
 				{/* Context Breakdown Button & Popover */}
 				<div ref={contextMenuRef} style={{ position: "relative" }}>

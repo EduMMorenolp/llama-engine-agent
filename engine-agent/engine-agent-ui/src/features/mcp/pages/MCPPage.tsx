@@ -12,6 +12,7 @@ import {
 } from "../../../api.ts";
 import {
 	ActivityIcon,
+	CodeIcon,
 	EditIcon,
 	MessageSquareIcon,
 	PlusIcon,
@@ -41,7 +42,10 @@ export function MCPPage() {
 	const [formTransport, setFormTransport] = useState<"stdio" | "http" | "sse">("http");
 	const [formCommand, setFormCommand] = useState("npx");
 	const [formArgs, setFormArgs] = useState("-y @modelcontextprotocol/server-memory");
-	const [formUrl, setFormUrl] = useState("http://host.docker.internal:5678/mcp");
+	const [formUrl, setFormUrl] = useState("http://localhost:5678/mcp-server/http");
+	const [formBearerToken, setFormBearerToken] = useState("");
+	const [rawJsonConfig, setRawJsonConfig] = useState("");
+	const [showJsonImport, setShowJsonImport] = useState(false);
 	const [saving, setSaving] = useState(false);
 
 	const loadServers = useCallback(() => {
@@ -55,11 +59,11 @@ export function MCPPage() {
 				setServers([
 					{
 						id: "n8n-mcp",
-						name: "n8n MCP Gateway",
+						name: "n8n-mcp",
 						transport: "http",
-						url: "http://host.docker.internal:5678/mcp",
+						url: "http://localhost:5678/mcp-server/http",
 						status: "connected",
-						toolsCount: 6,
+						toolsCount: 1,
 					},
 				]);
 				setLoading(false);
@@ -76,7 +80,10 @@ export function MCPPage() {
 		setFormTransport("http");
 		setFormCommand("npx");
 		setFormArgs("-y @modelcontextprotocol/server-memory");
-		setFormUrl("http://host.docker.internal:5678/mcp");
+		setFormUrl("http://localhost:5678/mcp-server/http");
+		setFormBearerToken("");
+		setRawJsonConfig("");
+		setShowJsonImport(false);
 		setModalOpen(true);
 	};
 
@@ -86,8 +93,42 @@ export function MCPPage() {
 		setFormTransport(server.transport);
 		setFormCommand(server.command || "npx");
 		setFormArgs((server.args || []).join(" "));
-		setFormUrl(server.url || "http://host.docker.internal:5678/mcp");
+		setFormUrl(server.url || "http://localhost:5678/mcp-server/http");
+		const existingAuth = server.headers?.Authorization || "";
+		setFormBearerToken(existingAuth.replace(/^Bearer\s+/i, ""));
+		setRawJsonConfig("");
+		setShowJsonImport(false);
 		setModalOpen(true);
+	};
+
+	const handleParseJsonConfig = () => {
+		if (!rawJsonConfig.trim()) return;
+		try {
+			const parsed = JSON.parse(rawJsonConfig.trim());
+			const serversMap = parsed.mcpServers || parsed;
+			const firstKey = Object.keys(serversMap)[0];
+			if (!firstKey || typeof serversMap[firstKey] !== "object") {
+				addToast("No se encontró un bloque mcpServers válido en el JSON", "error");
+				return;
+			}
+			const cfg = serversMap[firstKey];
+			setFormName(firstKey);
+			const tType = String(
+				cfg.type || cfg.transport || (cfg.command ? "stdio" : "http"),
+			).toLowerCase();
+			setFormTransport(tType === "stdio" ? "stdio" : tType === "sse" ? "sse" : "http");
+			if (cfg.url) setFormUrl(String(cfg.url));
+			if (cfg.command) setFormCommand(String(cfg.command));
+			if (Array.isArray(cfg.args)) setFormArgs(cfg.args.join(" "));
+			const authHeader = cfg.headers?.Authorization || cfg.headers?.authorization || "";
+			if (authHeader) {
+				setFormBearerToken(String(authHeader).replace(/^Bearer\s+/i, ""));
+			}
+			setShowJsonImport(false);
+			addToast(`Configuración de "${firstKey}" autocompletada desde JSON`, "success");
+		} catch {
+			addToast("El formato JSON ingresado no es válido", "error");
+		}
 	};
 
 	const handleSaveServer = async (e: React.FormEvent) => {
@@ -99,49 +140,44 @@ export function MCPPage() {
 
 		const parsedArgs = formArgs.trim().split(/\s+/).filter(Boolean);
 
+		const headers: Record<string, string> = {};
+		if (formBearerToken.trim()) {
+			const cleanToken = formBearerToken.trim().replace(/^Bearer\s+/i, "");
+			headers.Authorization = `Bearer ${cleanToken}`;
+		}
+
 		const payload: Partial<MCPServer> = {
 			name: formName.trim(),
 			transport: formTransport,
 			command: formTransport === "stdio" ? formCommand.trim() : undefined,
 			args: formTransport === "stdio" ? parsedArgs : undefined,
 			url: formTransport !== "stdio" ? formUrl.trim() : undefined,
+			headers: Object.keys(headers).length > 0 ? headers : undefined,
 		};
 
 		setSaving(true);
 		try {
+			let savedServer: MCPServer;
 			if (editingServer) {
-				const updated = await updateMCPServer(editingServer.id, payload);
-				setServers((prev) => prev.map((s) => (s.id === editingServer.id ? updated : s)));
+				savedServer = await updateMCPServer(editingServer.id, payload);
+				setServers((prev) => prev.map((s) => (s.id === editingServer.id ? savedServer : s)));
 				addToast(`Servidor MCP "${formName.trim()}" actualizado`, "success");
 			} else {
-				const created = await addMCPServer(payload);
-				setServers((prev) => [...prev, created]);
+				savedServer = await addMCPServer(payload);
+				setServers((prev) => {
+					const exists = prev.some((s) => s.id === savedServer.id);
+					return exists
+						? prev.map((s) => (s.id === savedServer.id ? savedServer : s))
+						: [...prev, savedServer];
+				});
 				addToast(`Servidor MCP "${formName.trim()}" registrado`, "success");
 			}
 			setModalOpen(false);
-		} catch {
-			// Fallback local update if backend endpoint unavailable
-			if (editingServer) {
-				setServers((prev) =>
-					prev.map((s) => (s.id === editingServer.id ? ({ ...s, ...payload } as MCPServer) : s)),
-				);
-			} else {
-				setServers((prev) => [
-					...prev,
-					{
-						id: Date.now().toString(),
-						name: formName.trim(),
-						transport: formTransport,
-						command: payload.command,
-						args: payload.args,
-						url: payload.url,
-						status: "disconnected",
-						toolsCount: 0,
-					},
-				]);
-			}
-			addToast(`Servidor MCP "${formName.trim()}" guardado`, "success");
-			setModalOpen(false);
+			// Automatically test connection after saving
+			void handleTestConnection(savedServer);
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : "Error al guardar servidor MCP";
+			addToast(msg, "error");
 		} finally {
 			setSaving(false);
 		}
@@ -165,7 +201,7 @@ export function MCPPage() {
 					),
 				);
 				addToast(
-					`Test exitoso: "${server.name}" conectado (${res.tools?.length || 1} tools disponibles)`,
+					`Test exitoso: "${server.name}" conectado (${res.tools?.length || server.toolsCount || 1} tools)`,
 					"success",
 				);
 			} else {
@@ -228,8 +264,8 @@ export function MCPPage() {
 			: "";
 
 		const prompt = server
-			? `Por favor verifica y diagnostica la conexión con el servidor MCP "${server.name}" (transporte: ${server.transport}, destino: "${endpointInfo}", estado actual: ${server.status}${server.errorMessage ? `, error: ${server.errorMessage}` : ""}). Ayúdame a dejarlo operativo o a utilizar sus herramientas.`
-			: "Quiero configurar y conectar un nuevo servidor MCP (Model Context Protocol) en el agente. Ayúdame a definir su comando npx/stdio o endpoint HTTP/SSE y verificar que sus herramientas respondan correctamente.";
+			? `Por favor usa las herramientas "mcp_list_servers" y "mcp_connect_server" para probar y diagnosticar la conexión con el servidor MCP "${server.name}" (transporte: ${server.transport}, destino: "${endpointInfo}").`
+			: `Quiero registrar y conectar un nuevo servidor MCP en el agente usando tus herramientas nativas "mcp_add_server" y "mcp_connect_server". Te indicaré el nombre, URL/comando y token:`;
 
 		try {
 			const newSession = await createNewSession(title);
@@ -265,8 +301,8 @@ export function MCPPage() {
 						Servidores Model Context Protocol (MCP)
 					</h1>
 					<p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "4px" }}>
-						Administra, edita y prueba conexiones con servidores MCP locales (stdio) o remotos
-						(HTTP/SSE).
+						Administra, edita y prueba conexiones con servidores MCP locales (stdio) o remotos (n8n
+						HTTP/SSE).
 					</p>
 				</div>
 
@@ -354,6 +390,7 @@ export function MCPPage() {
 							s.transport === "stdio"
 								? `${s.command || "npx"} ${(s.args || []).join(" ")}`
 								: s.url || "Sin endpoint";
+						const hasAuth = Boolean(s.headers?.Authorization);
 
 						return (
 							<div
@@ -391,6 +428,20 @@ export function MCPPage() {
 										>
 											{s.name}
 										</span>
+										{hasAuth && (
+											<span
+												className="nav-badge"
+												style={{
+													fontSize: "10px",
+													background: "rgba(59, 130, 246, 0.12)",
+													color: "var(--accent-strong)",
+													border: "1px solid rgba(59, 130, 246, 0.25)",
+												}}
+												title="Autenticación Bearer Token configurada"
+											>
+												Bearer Auth
+											</span>
+										)}
 									</div>
 
 									<span
@@ -571,8 +622,10 @@ export function MCPPage() {
 							style={{
 								zIndex: 1,
 								position: "relative",
-								maxWidth: "500px",
+								maxWidth: "540px",
 								width: "92vw",
+								maxHeight: "90vh",
+								overflowY: "auto",
 							}}
 						>
 							<div className="dialog-title-row">
@@ -584,16 +637,73 @@ export function MCPPage() {
 											: "Conectar Servidor MCP"}
 									</span>
 								</div>
-								<button
-									type="button"
-									className="session-action-btn"
-									onClick={() => setModalOpen(false)}
-									title="Cerrar modal"
-									style={{ opacity: 1 }}
-								>
-									<XIcon size={18} />
-								</button>
+								<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+									<button
+										type="button"
+										className="btn-secondary"
+										onClick={() => setShowJsonImport((v) => !v)}
+										style={{
+											fontSize: "11.5px",
+											padding: "4px 9px",
+											display: "flex",
+											alignItems: "center",
+											gap: "4px",
+										}}
+									>
+										<CodeIcon size={13} />
+										<span>{showJsonImport ? "Ocultar JSON" : "Pegar JSON"}</span>
+									</button>
+									<button
+										type="button"
+										className="session-action-btn"
+										onClick={() => setModalOpen(false)}
+										title="Cerrar modal"
+										style={{ opacity: 1 }}
+									>
+										<XIcon size={18} />
+									</button>
+								</div>
 							</div>
+
+							{showJsonImport && (
+								<div
+									style={{
+										background: "rgba(0, 0, 0, 0.3)",
+										border: "1px solid var(--border)",
+										borderRadius: "var(--r-sm)",
+										padding: "12px",
+										display: "flex",
+										flexDirection: "column",
+										gap: "8px",
+									}}
+								>
+									<label
+										htmlFor="mcp-raw-json"
+										style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--muted)" }}
+									>
+										Pegar JSON de Configuración (ej. n8n mcpServers)
+									</label>
+									<textarea
+										id="mcp-raw-json"
+										className="dialog-textarea"
+										rows={4}
+										value={rawJsonConfig}
+										onChange={(e) => setRawJsonConfig(e.target.value)}
+										placeholder={
+											'{\n  "mcpServers": {\n    "n8n-mcp": {\n      "type": "http",\n      "url": "http://localhost:5678/mcp-server/http",\n      "headers": { "Authorization": "Bearer ..." }\n    }\n  }\n}'
+										}
+										style={{ fontFamily: "var(--font-mono)", fontSize: "11.5px" }}
+									/>
+									<button
+										type="button"
+										className="btn-primary"
+										onClick={handleParseJsonConfig}
+										style={{ alignSelf: "flex-end", padding: "5px 12px", fontSize: "12px" }}
+									>
+										Autocompletar desde JSON
+									</button>
+								</div>
+							)}
 
 							<form
 								onSubmit={handleSaveServer}
@@ -619,7 +729,7 @@ export function MCPPage() {
 										style={{ padding: "8px 10px" }}
 										value={formName}
 										onChange={(e) => setFormName(e.target.value)}
-										placeholder="ej. n8n MCP Gateway o Filesystem MCP"
+										placeholder="ej. n8n-mcp o Filesystem MCP"
 										required
 									/>
 								</div>
@@ -648,7 +758,7 @@ export function MCPPage() {
 											cursor: "pointer",
 										}}
 									>
-										<option value="http">HTTP Endpoint (Remoto / Docker)</option>
+										<option value="http">HTTP Endpoint (n8n / Streamable HTTP / Docker)</option>
 										<option value="sse">SSE Stream (Server-Sent Events)</option>
 										<option value="stdio">STDIO (Proceso local npx / node / python)</option>
 									</select>
@@ -705,30 +815,56 @@ export function MCPPage() {
 										</div>
 									</>
 								) : (
-									<div>
-										<label
-											htmlFor="mcp-server-url"
-											style={{
-												fontSize: "12px",
-												fontWeight: 600,
-												color: "var(--muted)",
-												display: "block",
-												marginBottom: "6px",
-											}}
-										>
-											URL del Endpoint (HTTP / SSE)
-										</label>
-										<input
-											id="mcp-server-url"
-											type="text"
-											className="sidebar-search-input"
-											style={{ padding: "8px 10px", fontFamily: "var(--font-mono)" }}
-											value={formUrl}
-											onChange={(e) => setFormUrl(e.target.value)}
-											placeholder="http://host.docker.internal:5678/mcp"
-											required
-										/>
-									</div>
+									<>
+										<div>
+											<label
+												htmlFor="mcp-server-url"
+												style={{
+													fontSize: "12px",
+													fontWeight: 600,
+													color: "var(--muted)",
+													display: "block",
+													marginBottom: "6px",
+												}}
+											>
+												URL del Endpoint (HTTP / SSE)
+											</label>
+											<input
+												id="mcp-server-url"
+												type="text"
+												className="sidebar-search-input"
+												style={{ padding: "8px 10px", fontFamily: "var(--font-mono)" }}
+												value={formUrl}
+												onChange={(e) => setFormUrl(e.target.value)}
+												placeholder="http://localhost:5678/mcp-server/http"
+												required
+											/>
+										</div>
+
+										<div>
+											<label
+												htmlFor="mcp-bearer-token"
+												style={{
+													fontSize: "12px",
+													fontWeight: 600,
+													color: "var(--muted)",
+													display: "block",
+													marginBottom: "6px",
+												}}
+											>
+												Access Token / Bearer Token (Opcional)
+											</label>
+											<input
+												id="mcp-bearer-token"
+												type="password"
+												className="sidebar-search-input"
+												style={{ padding: "8px 10px", fontFamily: "var(--font-mono)" }}
+												value={formBearerToken}
+												onChange={(e) => setFormBearerToken(e.target.value)}
+												placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+											/>
+										</div>
+									</>
 								)}
 
 								<div className="dialog-footer">
@@ -743,8 +879,8 @@ export function MCPPage() {
 										{saving
 											? "Guardando..."
 											: editingServer
-												? "Guardar Cambios"
-												: "Guardar Servidor"}
+												? "Guardar y Probar"
+												: "Guardar y Conectar"}
 									</button>
 								</div>
 							</form>

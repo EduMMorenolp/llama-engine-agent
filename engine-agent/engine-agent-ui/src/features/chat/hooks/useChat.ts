@@ -162,6 +162,12 @@ export function useChat(): UseChatReturn {
 								existing.status = data.payload.error ? "error" : "done";
 							}
 							setToolCalls([...activeToolCalls]);
+							if (
+								typeof window !== "undefined" &&
+								(name === "memorize" || name === "update_memory")
+							) {
+								window.dispatchEvent(new CustomEvent("memories_updated"));
+							}
 							break;
 						}
 						case "session_updated": {

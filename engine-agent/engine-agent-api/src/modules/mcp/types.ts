@@ -6,6 +6,7 @@ export interface MCPServerConfig {
 	args?: string[];
 	url?: string;
 	env?: Record<string, string>;
+	headers?: Record<string, string>;
 	status: "connected" | "disconnected" | "error";
 	toolsCount?: number;
 	errorMessage?: string;

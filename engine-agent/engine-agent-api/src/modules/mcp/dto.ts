@@ -7,6 +7,7 @@ export const addServerDto = z.object({
 	args: z.array(z.string()).optional(),
 	url: z.string().optional(),
 	env: z.record(z.string()).optional(),
+	headers: z.record(z.string()).optional(),
 });
 
 export const updateServerDto = addServerDto.partial();

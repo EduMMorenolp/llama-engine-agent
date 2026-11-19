@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import type { Session } from "../../../api.ts";
+import { fetchMemories, type Session } from "../../../api.ts";
 import {
 	BotIcon,
 	BrainIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
+	PinFilledIcon,
+	PinIcon,
 	PlusIcon,
 	SearchIcon,
 	SlidersIcon,
@@ -28,6 +30,7 @@ interface ChatSubSidebarProps {
 	onSelectSession: (id: string) => void;
 	onNewSession: () => void;
 	onDeleteSession: (id: string) => void;
+	onTogglePinSession?: (id: string) => void;
 	onOpenSystemPrompt: () => void;
 	onOpenMemories: () => void;
 	onAgentChange?: (agentId: string) => void;
@@ -41,12 +44,25 @@ export function ChatSubSidebar({
 	onSelectSession,
 	onNewSession,
 	onDeleteSession,
+	onTogglePinSession,
 	onOpenSystemPrompt,
 	onOpenMemories,
 	onAgentChange,
 }: ChatSubSidebarProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [currentAgent, setCurrentAgent] = useState("asistente");
+	const [memoriesCount, setMemoriesCount] = useState(0);
+
+	useEffect(() => {
+		const loadMemoriesCount = () => {
+			fetchMemories()
+				.then((mems) => setMemoriesCount(mems.length))
+				.catch(() => {});
+		};
+		loadMemoriesCount();
+		window.addEventListener("memories_updated", loadMemoriesCount);
+		return () => window.removeEventListener("memories_updated", loadMemoriesCount);
+	}, []);
 
 	useEffect(() => {
 		const syncAgent = () => {
@@ -239,9 +255,13 @@ export function ChatSubSidebar({
 							type="button"
 							className="session-action-btn"
 							onClick={onOpenMemories}
-							title="Ver Memorias persistentes"
+							title={`Ver Memorias persistentes (${memoriesCount})`}
+							style={{ gap: "3px", padding: "3px 6px" }}
 						>
 							<BrainIcon size={12} />
+							<span style={{ fontSize: "10.5px", fontFamily: "var(--font-mono)" }}>
+								{memoriesCount}
+							</span>
 						</button>
 						<button
 							type="button"
@@ -288,66 +308,174 @@ export function ChatSubSidebar({
 					gap: "2px",
 				}}
 			>
-				{filteredSessions.map((s) => {
-					const isActive = s.id === activeSessionId;
-					const agentTag = getAgentForSession(s.id) || s.tags?.[0] || "asistente";
-					const displayName = s.name || `Chat ${s.id.slice(0, 6)}`;
+				{(() => {
+					const pinnedSessions = filteredSessions.filter((s) => s.tags?.includes("pinned"));
+					const recentSessions = filteredSessions.filter((s) => !s.tags?.includes("pinned"));
 
-					return (
-						<button
-							type="button"
-							key={s.id}
-							className={`session-item ${isActive ? "active" : ""}`}
-							onClick={() => onSelectSession(s.id)}
-							style={{
-								padding: "8px 10px",
-								borderRadius: "var(--r-sm)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "space-between",
-								background: isActive ? "rgba(59, 130, 246, 0.12)" : "transparent",
-								border: isActive ? "1px solid rgba(59, 130, 246, 0.25)" : "1px solid transparent",
-								cursor: "pointer",
-								width: "100%",
-								textAlign: "left",
-							}}
-						>
-							<div
-								style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}
-								title={`Agente: ${agentTag}`}
-							>
-								<BotIcon
-									size={14}
-									style={{ color: isActive ? "var(--accent)" : "var(--muted)", flexShrink: 0 }}
-								/>
-								<span
-									style={{
-										fontSize: "12.5px",
-										fontWeight: isActive ? 600 : 400,
-										color: isActive ? "var(--accent)" : "var(--text)",
-										whiteSpace: "nowrap",
-										overflow: "hidden",
-										textOverflow: "ellipsis",
-									}}
-								>
-									{displayName}
-								</span>
-							</div>
+					const renderSessionItem = (s: Session, isPinned: boolean) => {
+						const isActive = s.id === activeSessionId;
+						const agentTag =
+							getAgentForSession(s.id) || s.tags?.find((t) => t !== "pinned") || "asistente";
+						const displayName = s.name || `Chat ${s.id.slice(0, 6)}`;
 
+						return (
 							<button
 								type="button"
-								className="session-action-btn danger-hover"
-								onClick={(e) => {
-									e.stopPropagation();
-									onDeleteSession(s.id);
+								key={s.id}
+								className={`session-item ${isActive ? "active" : ""}`}
+								onClick={() => onSelectSession(s.id)}
+								style={{
+									padding: "7px 9px",
+									borderRadius: "var(--r-sm)",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+									background: isActive
+										? "rgba(59, 130, 246, 0.12)"
+										: isPinned
+											? "rgba(59, 130, 246, 0.04)"
+											: "transparent",
+									border: isActive
+										? "1px solid rgba(59, 130, 246, 0.25)"
+										: isPinned
+											? "1px solid rgba(59, 130, 246, 0.12)"
+											: "1px solid transparent",
+									cursor: "pointer",
+									width: "100%",
+									textAlign: "left",
+									marginBottom: "2px",
 								}}
-								title="Eliminar sesión"
 							>
-								<TrashIcon size={12} />
+								<div
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: "7px",
+										minWidth: 0,
+										flex: 1,
+									}}
+									title={`Agente: ${agentTag}${isPinned ? " (Fijado)" : ""}`}
+								>
+									{isPinned ? (
+										<PinFilledIcon size={13} style={{ color: "var(--accent)", flexShrink: 0 }} />
+									) : (
+										<BotIcon
+											size={13}
+											style={{ color: isActive ? "var(--accent)" : "var(--muted)", flexShrink: 0 }}
+										/>
+									)}
+									<span
+										style={{
+											fontSize: "12.5px",
+											fontWeight: isActive || isPinned ? 600 : 400,
+											color: isActive ? "var(--accent)" : "var(--text)",
+											whiteSpace: "nowrap",
+											overflow: "hidden",
+											textOverflow: "ellipsis",
+										}}
+									>
+										{displayName}
+									</span>
+								</div>
+
+								<div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+									{onTogglePinSession && (
+										<button
+											type="button"
+											className="session-action-btn"
+											onClick={(e) => {
+												e.stopPropagation();
+												onTogglePinSession(s.id);
+											}}
+											title={isPinned ? "Desfijar chat" : "Fijar chat al inicio"}
+											style={{
+												color: isPinned ? "var(--accent)" : "var(--muted)",
+												padding: "3px 4px",
+											}}
+										>
+											{isPinned ? <PinFilledIcon size={12} /> : <PinIcon size={12} />}
+										</button>
+									)}
+									<button
+										type="button"
+										className="session-action-btn danger-hover"
+										onClick={(e) => {
+											e.stopPropagation();
+											onDeleteSession(s.id);
+										}}
+										title="Eliminar sesión"
+										style={{ padding: "3px 4px" }}
+									>
+										<TrashIcon size={12} />
+									</button>
+								</div>
 							</button>
-						</button>
+						);
+					};
+
+					if (filteredSessions.length === 0) {
+						return (
+							<div
+								style={{
+									padding: "16px 8px",
+									textAlign: "center",
+									fontSize: "12px",
+									color: "var(--muted)",
+								}}
+							>
+								No se encontraron chats
+							</div>
+						);
+					}
+
+					return (
+						<>
+							{pinnedSessions.length > 0 && (
+								<div style={{ marginBottom: "8px" }}>
+									<div
+										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: "5px",
+											padding: "4px 6px 6px 6px",
+											fontSize: "10.5px",
+											fontWeight: 700,
+											color: "var(--accent)",
+											textTransform: "uppercase",
+											letterSpacing: "0.5px",
+										}}
+									>
+										<PinFilledIcon size={11} />
+										<span>Fijados ({pinnedSessions.length})</span>
+									</div>
+									{pinnedSessions.map((s) => renderSessionItem(s, true))}
+								</div>
+							)}
+
+							{recentSessions.length > 0 && (
+								<div>
+									{pinnedSessions.length > 0 && (
+										<div
+											style={{
+												padding: "6px 6px 4px 6px",
+												fontSize: "10.5px",
+												fontWeight: 700,
+												color: "var(--muted)",
+												textTransform: "uppercase",
+												letterSpacing: "0.5px",
+												borderTop: "1px solid var(--border)",
+												marginTop: "4px",
+											}}
+										>
+											Recientes
+										</div>
+									)}
+									{recentSessions.map((s) => renderSessionItem(s, false))}
+								</div>
+							)}
+						</>
 					);
-				})}
+				})()}
 			</div>
 		</aside>
 	);

@@ -120,6 +120,7 @@ export function ChatView() {
 		createNewSession,
 		selectSession,
 		removeSession,
+		togglePinSession,
 		forkSession,
 		deleteMessage,
 		toggleFavoriteMessage,
@@ -147,8 +148,21 @@ export function ChatView() {
 		"web_search",
 		"web_fetch",
 		"execute_bash",
+		"bash",
 		"read_file",
 		"write_file",
+		"edit_file",
+		"glob_search",
+		"grep_search",
+		"list_skills",
+		"load_skill",
+		"create_skill",
+		"update_skill",
+		"delete_skill",
+		"memorize",
+		"search_memories",
+		"update_memory",
+		"reflect",
 		"mcp",
 	]);
 
@@ -494,6 +508,7 @@ export function ChatView() {
 				onSelectSession={selectSession}
 				onNewSession={() => createNewSession()}
 				onDeleteSession={removeSession}
+				onTogglePinSession={togglePinSession}
 				onOpenSystemPrompt={() => setShowSettings(true)}
 				onOpenMemories={() => setShowMemories(true)}
 			/>

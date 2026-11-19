@@ -12,6 +12,7 @@ export interface AppSettings {
 	engineUrl: string;
 	debugLogs: boolean;
 	theme: "dark" | "light";
+	defaultModel: string;
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -28,6 +29,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 	engineUrl: "http://localhost:3050",
 	debugLogs: false,
 	theme: "dark",
+	defaultModel: "qwen3.5-4b",
 };
 
 const SETTINGS_KEY = "llama_engine_settings";

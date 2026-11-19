@@ -52,6 +52,7 @@ export function MemoriesModal({ onClose }: MemoriesModalProps) {
 		try {
 			await deleteMemory(key);
 			setMemories((prev) => prev.filter((m) => m.key !== key));
+			window.dispatchEvent(new CustomEvent("memories_updated"));
 			addToast(`Memoria "${key}" eliminada`, "info");
 		} catch {
 			addToast(`Error al eliminar la memoria "${key}"`, "error");
@@ -76,6 +77,7 @@ export function MemoriesModal({ onClose }: MemoriesModalProps) {
 			setNewContent("");
 			setNewTags("");
 			setShowAddForm(false);
+			window.dispatchEvent(new CustomEvent("memories_updated"));
 			addToast(`Memoria "${key}" guardada correctamente`, "success");
 		} catch {
 			addToast("Error al crear la memoria", "error");
@@ -118,6 +120,9 @@ export function MemoriesModal({ onClose }: MemoriesModalProps) {
 						<h2 style={{ fontSize: "17px", fontWeight: 600, color: "var(--text-primary)" }}>
 							Memorias del Asistente
 						</h2>
+						<span className="nav-badge" style={{ fontSize: "11px" }}>
+							{memories.length}
+						</span>
 					</div>
 					<button
 						type="button"

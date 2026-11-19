@@ -40,7 +40,41 @@ export async function runAgent(
 	let tools = toolRegistry.getSpecs();
 	if (enabledTools !== undefined && enabledTools.length > 0) {
 		const allowedTools = new Set(enabledTools);
-		tools = tools.filter((t) => allowedTools.has(t.function.name));
+		// Always enable core memory & skill management tools when UI toggles are active
+		if (
+			allowedTools.has("web_search") ||
+			allowedTools.has("execute_bash") ||
+			allowedTools.has("read_file") ||
+			allowedTools.has("mcp")
+		) {
+			allowedTools.add("memorize");
+			allowedTools.add("search_memories");
+			allowedTools.add("update_memory");
+			allowedTools.add("list_skills");
+			allowedTools.add("load_skill");
+			allowedTools.add("create_skill");
+			allowedTools.add("update_skill");
+			allowedTools.add("delete_skill");
+		}
+		if (allowedTools.has("execute_bash")) {
+			allowedTools.add("bash");
+		}
+		if (allowedTools.has("web_search")) {
+			allowedTools.add("web_fetch");
+		}
+		if (allowedTools.has("read_file")) {
+			allowedTools.add("write_file");
+			allowedTools.add("edit_file");
+			allowedTools.add("glob_search");
+			allowedTools.add("grep_search");
+		}
+		const hasMcpToggle = allowedTools.has("mcp");
+		tools = tools.filter((t) => {
+			const name = t.function.name;
+			if (allowedTools.has(name)) return true;
+			if (hasMcpToggle && name.startsWith("mcp_")) return true;
+			return false;
+		});
 	} else if (enabledTools !== undefined && enabledTools.length === 0) {
 		tools = [];
 	}

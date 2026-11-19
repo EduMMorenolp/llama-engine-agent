@@ -309,6 +309,69 @@ export function SettingsPage() {
 						Parámetros de Inferencia (llama.cpp)
 					</h3>
 
+					{/* Modelo LLM Activo */}
+					<div
+						style={{
+							display: "flex",
+							flexDirection: "column",
+							gap: "8px",
+							paddingBottom: "16px",
+							borderBottom: "1px solid var(--border)",
+						}}
+					>
+						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+							<div>
+								<div style={{ fontWeight: 600, fontSize: "13px", color: "var(--text)" }}>
+									Modelo LLM Predeterminado
+								</div>
+								<div style={{ fontSize: "12px", color: "var(--muted)" }}>
+									Modelo principal suministrado por llama-engine para generación e inferencia
+								</div>
+							</div>
+							<span
+								className="model-tag-badge"
+								style={{
+									background: "rgba(59, 130, 246, 0.1)",
+									color: "var(--accent)",
+									border: "1px solid rgba(59, 130, 246, 0.25)",
+								}}
+							>
+								{appSettings.defaultModel || "qwen3.5-4b"}
+							</span>
+						</div>
+
+						<select
+							value={appSettings.defaultModel || "qwen3.5-4b"}
+							onChange={(e) => {
+								const newModel = e.target.value;
+								appSettings.updateSettings({ defaultModel: newModel });
+								addToast(`Modelo activo actualizado a ${newModel}`, "success");
+							}}
+							style={{
+								width: "100%",
+								padding: "8px 10px",
+								background: "var(--bg)",
+								border: "1px solid var(--border)",
+								borderRadius: "var(--r-sm)",
+								color: "var(--text)",
+								fontSize: "12.5px",
+								outline: "none",
+								cursor: "pointer",
+							}}
+						>
+							<option value="qwen3.5-4b">
+								Qwen 3.5 4B (Recomendado - Inferencia local rápida & tools)
+							</option>
+							<option value="qwen3.5-9b">Qwen 3.5 9B (Razonamiento profundo & análisis)</option>
+							<option value="qwen2.5-coder-7b">
+								Qwen 2.5 Coder 7B (Especializado en programación)
+							</option>
+							<option value="gemma-4-e4b">Google Gemma 4 E4B (Visión y multimodal)</option>
+							<option value="mistral-small-7b">Mistral Small 7B (Instrucciones complejas)</option>
+							<option value="llama-3.2-3b">Meta Llama 3.2 3B (Ultra liviano)</option>
+						</select>
+					</div>
+
 					<div className="settings-slider-row">
 						<div style={{ display: "flex", justifyContent: "space-between" }}>
 							<span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>
