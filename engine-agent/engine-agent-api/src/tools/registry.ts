@@ -45,6 +45,14 @@ export class ToolRegistry {
 		if (tool) tool.enabled = enabled;
 	}
 
+	updateTool(name: string, data: { description?: string; enabled?: boolean }): boolean {
+		const tool = this.tools.get(name);
+		if (!tool) return false;
+		if (data.enabled !== undefined) tool.enabled = data.enabled;
+		if (data.description !== undefined) tool.spec.function.description = data.description;
+		return true;
+	}
+
 	enableAll(): void {
 		for (const tool of this.tools.values()) {
 			tool.enabled = true;
@@ -57,11 +65,19 @@ export class ToolRegistry {
 		}
 	}
 
-	list(): Array<{ name: string; description: string; enabled: boolean }> {
+	list(): Array<{
+		name: string;
+		description: string;
+		enabled: boolean;
+		parameters?: CustomToolConfig["parameters"];
+		spec?: ToolSpec;
+	}> {
 		return Array.from(this.tools.values()).map((t) => ({
 			name: t.spec.function.name,
 			description: t.spec.function.description,
 			enabled: t.enabled,
+			parameters: t.spec.function.parameters,
+			spec: t.spec,
 		}));
 	}
 

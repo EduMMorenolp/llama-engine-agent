@@ -29,6 +29,15 @@ export interface Tool {
 	name: string;
 	description: string;
 	enabled: boolean;
+	parameters?: Record<string, unknown>;
+	spec?: {
+		type: "function";
+		function: {
+			name: string;
+			description: string;
+			parameters?: Record<string, unknown>;
+		};
+	};
 }
 
 export interface StreamEvent {
@@ -167,6 +176,13 @@ export async function forkSession(
 export async function fetchTools(): Promise<Tool[]> {
 	const res = await apiGet<{ tools: Tool[] }>("/api/tools");
 	return res.tools;
+}
+
+export async function updateTool(
+	name: string,
+	data: { enabled?: boolean; description?: string },
+): Promise<{ ok: boolean; tool: Tool }> {
+	return apiPatch<{ ok: boolean; tool: Tool }>(`/api/tools/${name}`, data);
 }
 
 export interface HealthStatus {
