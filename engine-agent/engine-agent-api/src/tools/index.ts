@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 import { getConfig } from "../config/index.js";
+import { registerAgentTools } from "../modules/agents/tools.js";
 import { registerMCPTools } from "../modules/mcp/tools.js";
 import { bashTool } from "./bash.js";
 import { createSkillTool } from "./create_skill.js";
@@ -701,4 +702,5 @@ export function registerAllTools(registry: ToolRegistry): void {
 	registry.register(updateMemoryTool, updateMemoryHandler);
 	registry.register(reflectTool, reflectHandler);
 	registerMCPTools(registry);
+	registerAgentTools(registry);
 }

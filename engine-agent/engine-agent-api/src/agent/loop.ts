@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { AgentService } from "../modules/agents/service.js";
 import type { MemoryService } from "../modules/memories/service.js";
 import type { SessionService } from "../modules/sessions/service.js";
 import type { SkillService } from "../modules/skills/service.js";
@@ -21,6 +22,7 @@ export interface AgentLoopConfig {
 	store: SessionService;
 	memoryService: MemoryService;
 	skillService: SkillService;
+	agentService?: AgentService;
 	maxIterations: number;
 	workDir: string;
 }
@@ -55,6 +57,10 @@ export async function runAgent(
 			allowedTools.add("create_skill");
 			allowedTools.add("update_skill");
 			allowedTools.add("delete_skill");
+			allowedTools.add("list_agents");
+			allowedTools.add("create_agent");
+			allowedTools.add("update_agent");
+			allowedTools.add("delete_agent");
 		}
 		if (allowedTools.has("execute_bash")) {
 			allowedTools.add("bash");
@@ -84,6 +90,7 @@ export async function runAgent(
 		store,
 		memoryService,
 		skillService: config.skillService,
+		agentService: config.agentService,
 	};
 
 	const reasoningInstruction =

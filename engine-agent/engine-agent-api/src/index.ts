@@ -36,6 +36,7 @@ async function bootstrap() {
 		store: sessionService,
 		memoryService,
 		skillService,
+		agentService,
 		maxIterations: config.MAX_ITERATIONS,
 		workDir: process.cwd(),
 	};

@@ -1,3 +1,4 @@
+import type { AgentService } from "../modules/agents/service.js";
 import type { MemoryService } from "../modules/memories/service.js";
 import type { SessionService } from "../modules/sessions/service.js";
 import type { SkillService } from "../modules/skills/service.js";
@@ -23,6 +24,7 @@ export interface ToolContext {
 	store: SessionService;
 	memoryService?: MemoryService;
 	skillService?: SkillService;
+	agentService?: AgentService;
 }
 
 export type ToolHandler = (args: Record<string, unknown>, context: ToolContext) => Promise<string>;
