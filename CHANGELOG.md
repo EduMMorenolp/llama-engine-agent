@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- **Fixed**: **Cálculo Real de Ventana de Contexto por Modelo y Protección contra Desbordamiento de Historial**. Corrección del límite quemado de `32,768 tok` en `Topbar.tsx` mediante mapeo dinámico de capacidades reales (`MODEL_CONTEXT_WINDOWS`: 65,536 tok para `qwen3.5-4b`/`qwen3.5-9b`, 131,072 para `llama-3.2-3b`, etc.); cálculo proporcional de las barras de segmento (System, Tools, Historial); y reescritura del algoritmo de poda (*Sliding Window*) en `engine-agent-api/src/agent/prompt.ts` que preserva siempre el último mensaje del usuario (`lastMsg`) y el mensaje inicial (`firstMsg`) manteniendo turnos atómicos recientes y evitando saturar la memoria KV cache de `llama.cpp`. [2026-11-19]
+  * **Files (Archivos)**: engine-agent/engine-agent-ui/src/components/layout/Topbar.tsx, engine-agent/engine-agent-api/src/agent/prompt.ts. [2026-11-19]
+
 - **Fixed**: **Corrección de Identificador Duplicado en Registro de Tools de Agente**. Remoción del import redundante `registerAgentTools` en `engine-agent-api/src/tools/index.ts` que provocaba el fallo `TS2300: Duplicate identifier 'registerAgentTools'` en la etapa de compilación de Docker. [2026-11-19]
   * **Files (Archivos)**: engine-agent/engine-agent-api/src/tools/index.ts. [2026-11-19]
 

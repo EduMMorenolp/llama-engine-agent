@@ -31,6 +31,25 @@ const AGENT_COLORS: Record<string, string> = {
 	reviewer: "#f59e0b",
 };
 
+export const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
+	"qwen3.5-4b": 65536,
+	"qwen3.5-9b": 65536,
+	"mistral-small-7b": 32768,
+	"llama-3.2-3b": 131072,
+	"gemma-4-e4b": 32768,
+	"phi-4-mini": 16384,
+	"qwen2.5-coder-7b": 65536,
+};
+
+export function getModelContextWindow(modelId?: string): number {
+	if (!modelId) return 65536;
+	const lower = modelId.toLowerCase();
+	for (const [key, val] of Object.entries(MODEL_CONTEXT_WINDOWS)) {
+		if (lower.includes(key)) return val;
+	}
+	return 65536;
+}
+
 interface TopbarProps {
 	sessions: Session[];
 	activeSessionId: string | null;
@@ -80,11 +99,20 @@ export function Topbar({
 	const currentTitle = SECTION_LABELS[pathSegment] ?? "Chats";
 	const isChatView = location.pathname === "/" || location.pathname.startsWith("/chat");
 
-	// Estimated token division
-	const estTotalTokens = Math.max(120, Math.round(totalChars / 4));
+	// Dynamic context window calculation based on active model
+	const maxTokens = getModelContextWindow(selectedModel);
 	const systemTokens = 1450;
 	const toolsTokens = 2100;
-	const historyTokens = Math.max(0, estTotalTokens - 3550);
+	const historyTokens = Math.max(0, Math.round(totalChars / 4));
+	const estTotalTokens = systemTokens + toolsTokens + historyTokens;
+	const effectivePercent = Math.min(100, Math.round((estTotalTokens / maxTokens) * 100));
+
+	const systemPercent = Math.min(100, (systemTokens / maxTokens) * 100);
+	const toolsPercent = Math.min(100, (toolsTokens / maxTokens) * 100);
+	const historyPercent = Math.min(
+		Math.max(0, 100 - systemPercent - toolsPercent),
+		(historyTokens / maxTokens) * 100,
+	);
 
 	useEffect(() => {
 		function handleClickOutside(e: MouseEvent) {
@@ -222,8 +250,8 @@ export function Topbar({
 						className="model-tag-badge"
 						style={{
 							background:
-								contextPercent >= 85 ? "rgba(248, 113, 113, 0.15)" : "rgba(59, 130, 246, 0.1)",
-							color: contextPercent >= 85 ? "var(--danger)" : "var(--accent)",
+								effectivePercent >= 85 ? "rgba(248, 113, 113, 0.15)" : "rgba(59, 130, 246, 0.1)",
+							color: effectivePercent >= 85 ? "var(--danger)" : "var(--accent)",
 							border: "1px solid rgba(59, 130, 246, 0.25)",
 							cursor: "pointer",
 							padding: "4px 8px",
@@ -231,7 +259,7 @@ export function Topbar({
 						onClick={() => setShowContextPopover((prev) => !prev)}
 						title="Ver desglose y gestión de ventana de contexto"
 					>
-						Contexto {contextPercent}%
+						Contexto {effectivePercent}%
 					</button>
 
 					{showContextPopover && (
@@ -243,16 +271,22 @@ export function Topbar({
 									Uso de Ventana de Contexto
 								</span>
 								<span style={{ fontSize: "11px", color: "var(--muted)" }}>
-									{estTotalTokens.toLocaleString()} / 32,768 tok
+									{estTotalTokens.toLocaleString()} / {maxTokens.toLocaleString()} tok
 								</span>
 							</div>
 
 							<div className="context-bar-segmented">
-								<div className="context-seg-system" style={{ width: "25%" }} />
-								<div className="context-seg-tools" style={{ width: "35%" }} />
+								<div
+									className="context-seg-system"
+									style={{ width: `${Math.max(1, systemPercent).toFixed(1)}%` }}
+								/>
+								<div
+									className="context-seg-tools"
+									style={{ width: `${Math.max(1, toolsPercent).toFixed(1)}%` }}
+								/>
 								<div
 									className="context-seg-history"
-									style={{ width: `${Math.min(40, contextPercent)}%` }}
+									style={{ width: `${historyPercent.toFixed(1)}%` }}
 								/>
 							</div>
 

@@ -13,7 +13,24 @@ export interface PromptContext {
 	skills?: Skill[];
 }
 
-const DEFAULT_MAX_HISTORY_CHARS = 60000; // ~15,000 tokens safe budget
+export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
+	"qwen3.5-4b": 65536,
+	"qwen3.5-9b": 65536,
+	"mistral-small-7b": 32768,
+	"llama-3.2-3b": 131072,
+	"gemma-4-e4b": 32768,
+	"phi-4-mini": 16384,
+	"qwen2.5-coder-7b": 65536,
+};
+
+export function getModelContextLimit(modelName?: string): number {
+	if (!modelName) return 65536;
+	const lower = modelName.toLowerCase();
+	for (const [key, limit] of Object.entries(MODEL_CONTEXT_LIMITS)) {
+		if (lower.includes(key)) return limit;
+	}
+	return 65536;
+}
 
 export function buildPrompt(context: PromptContext): LLMMessage[] {
 	const {
@@ -21,10 +38,15 @@ export function buildPrompt(context: PromptContext): LLMMessage[] {
 		sessionId,
 		systemPrompt,
 		memories,
-		maxHistoryChars = DEFAULT_MAX_HISTORY_CHARS,
-		model: _model,
+		maxHistoryChars,
+		model,
 		skills = [],
 	} = context;
+
+	const modelLimit = getModelContextLimit(model);
+	// Reserve 8,000 tokens for system prompt, tool definitions and generation buffer
+	const safeBudgetTokens = Math.max(8000, modelLimit - 8000);
+	const budgetChars = maxHistoryChars ?? safeBudgetTokens * 4;
 	const messages: LLMMessage[] = [];
 
 	const systemParts: string[] = [];
@@ -139,8 +161,8 @@ Las memorias guardadas del usuario se inyectan automáticamente a continuación 
 	// Calculate total characters (ignoring image base64 length for budget calculation)
 	const totalChars = convertedMessages.reduce((sum, m) => sum + countMessageChars(m), 0);
 
-	if (totalChars > maxHistoryChars && convertedMessages.length > 2) {
-		const trimmed = trimHistoryPreservingPairs(convertedMessages, maxHistoryChars);
+	if (totalChars > budgetChars && convertedMessages.length > 2) {
+		const trimmed = trimHistoryPreservingPairs(convertedMessages, budgetChars);
 		messages.push(...trimmed);
 	} else {
 		messages.push(...convertedMessages);
@@ -164,22 +186,21 @@ function trimHistoryPreservingPairs(messages: LLMMessage[], maxChars: number): L
 	if (messages.length <= 2) return messages;
 
 	const firstMsg = messages[0];
-	let currentChars = countMessageChars(firstMsg);
+	const lastMsg = messages[messages.length - 1];
+	// Ensure the current user prompt (lastMsg) and conversation origin (firstMsg) are ALWAYS preserved
+	let currentChars = countMessageChars(firstMsg) + countMessageChars(lastMsg);
 
-	// Group messages (excluding firstMsg) into atomic units
-	// An atomic unit is either:
-	// - a single non-tool message (user, assistant without tool_calls)
-	// - an assistant with tool_calls + ALL its subsequent tool responses
+	// Group intermediate messages into atomic units
+	const middle = messages.slice(1, -1);
 	const blocks: LLMMessage[][] = [];
-	const rest = messages.slice(1);
 	let i = 0;
-	while (i < rest.length) {
-		const m = rest[i];
+	while (i < middle.length) {
+		const m = middle[i];
 		if (m.role === "assistant" && m.tool_calls && m.tool_calls.length > 0) {
 			const group: LLMMessage[] = [m];
 			i++;
-			while (i < rest.length && rest[i].role === "tool") {
-				group.push(rest[i]);
+			while (i < middle.length && middle[i].role === "tool") {
+				group.push(middle[i]);
 				i++;
 			}
 			blocks.push(group);
@@ -187,12 +208,11 @@ function trimHistoryPreservingPairs(messages: LLMMessage[], maxChars: number): L
 			blocks.push([m]);
 			i++;
 		} else {
-			// Orphan tool message, skip
 			i++;
 		}
 	}
 
-	// Walk backwards through blocks from the end
+	// Walk backwards from most recent intermediate blocks
 	const keptBlocks: LLMMessage[][] = [];
 	for (let b = blocks.length - 1; b >= 0; b--) {
 		const block = blocks[b];
@@ -206,7 +226,7 @@ function trimHistoryPreservingPairs(messages: LLMMessage[], maxChars: number): L
 	}
 
 	keptBlocks.reverse();
-	return [firstMsg, ...keptBlocks.flat()];
+	return [firstMsg, ...keptBlocks.flat(), lastMsg];
 }
 
 export function getMemoriesForContext(
@@ -229,18 +249,21 @@ export function getMemoriesForContext(
 export function calculateContextUsage(
 	store: SessionService,
 	sessionId: string,
-	maxHistoryChars = DEFAULT_MAX_HISTORY_CHARS,
+	model?: string,
+	customMaxChars?: number,
 ): { contextChars: number; maxHistoryChars: number; contextPercent: number; compacted: boolean } {
 	const rawHistory = store.getMessages(sessionId);
 	let totalChars = 0;
 	for (const msg of rawHistory) {
 		totalChars += (msg.content || "").length;
 	}
-	const contextPercent = Math.min(100, Math.round((totalChars / maxHistoryChars) * 100));
-	const compacted = totalChars > maxHistoryChars;
+	const modelLimit = getModelContextLimit(model);
+	const safeMaxChars = customMaxChars ?? Math.max(8000, modelLimit - 8000) * 4;
+	const contextPercent = Math.min(100, Math.round((totalChars / safeMaxChars) * 100));
+	const compacted = totalChars > safeMaxChars;
 	return {
 		contextChars: totalChars,
-		maxHistoryChars,
+		maxHistoryChars: safeMaxChars,
 		contextPercent,
 		compacted,
 	};
